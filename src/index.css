@@ -1,0 +1,31 @@
+@import './styles/ui-tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  font-family: var(--ui-font-sans);
+  background: var(--ui-bg);
+  color: var(--ui-fg);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
