@@ -1,6 +1,12 @@
 /** 排版模式：打印 B5 或手机竖屏 9:16 */
 export type PosterLayoutProfile = 'clipPosterPrint' | 'mobilePoster';
 
+/** 分页结果：正文 HTML 片段 + 可选防孤行行距缩放 */
+export type PosterPageSlice = {
+  html: string;
+  spacingScale: number;
+};
+
 /** 假名排版引擎维度参数（精简版，仅含假名管线需要的字段） */
 export interface FuriganaEngineDim {
   profile: PosterLayoutProfile;

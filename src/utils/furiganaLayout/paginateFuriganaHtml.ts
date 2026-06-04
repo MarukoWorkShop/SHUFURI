@@ -1,10 +1,12 @@
 import {
+  applyPosterBodyMaxHeight,
   buildFuriganaPosterInnerCss,
   buildFuriganaPosterRootStyle,
+  measurePosterBodyNaturalHeightPx,
   getFuriganaPosterCanvasDimensions,
-  getFuriganaCanvasInsets,
 } from './furiganaPosterShared';
-import type { PosterLayoutProfile } from './types';
+import { applyPosterTitleElement, resolveDisplayArtist, resolveDisplayTitle } from './posterTitle';
+import type { PosterLayoutProfile, PosterPageSlice } from './types';
 
 type PosterMeasurer = {
   contentFits: (nodes: HTMLElement[], showTitle: boolean) => boolean;
@@ -14,7 +16,17 @@ type PosterMeasurer = {
 };
 
 const FIT_EPSILON_PX = 1;
-const SAFETY_MARGIN_PX = 16;
+const ORPHAN_MAX_LINES = 2;
+const MIN_ORPHAN_SPACING_SCALE = 0.9;
+const ORPHAN_SPACING_STEPS = [1.0, 0.97, 0.94, 0.91, 0.9] as const;
+
+const PAGE_LINE_SELECTORS =
+  '.jp-line,.zh-line,.vocab-line1,.vocab-ex-ja,.vocab-ex-zh,h3.grammar-point-title,.grammar-detail,.grammar-ex-ja,.grammar-ex-zh,h2.lyrics-section-title';
+
+type PagePack = {
+  blocks: HTMLElement[];
+  spacingScale: number;
+};
 
 /**
  * 正文溢出判定（fv-body-h overflow:hidden）。
@@ -23,43 +35,51 @@ const SAFETY_MARGIN_PX = 16;
  * 保证 body.clientHeight 被约束到固定值。否则在离屏 DOM 上 flex 布局
  * 可能不会正确收缩 body，导致 clientHeight=scrollHeight 始终不溢出。
  */
-function bodyContentOverflows(body: HTMLElement): boolean {
+function bodyContentOverflows(body: HTMLElement, profile: PosterLayoutProfile): boolean {
+  void body.offsetHeight;
   const clientH = body.clientHeight;
-  return clientH >= 1 && body.scrollHeight > clientH + FIT_EPSILON_PX;
+  const slack = profile === 'mobilePoster' ? 10 : FIT_EPSILON_PX;
+  if (clientH >= 1) {
+    return body.scrollHeight > clientH + slack;
+  }
+  const maxH =
+    parseFloat(body.dataset.posterBodyMaxHeight || '') || parseFloat(body.style.maxHeight);
+  if (!Number.isFinite(maxH) || maxH <= 0) {
+    return false;
+  }
+  return measurePosterBodyNaturalHeightPx(body) > maxH + slack;
 }
 
 function createPosterMeasurer(
   doc: Document,
   profile: PosterLayoutProfile,
   title: string,
+  artist?: string,
+  spacingScale = 1,
 ): PosterMeasurer {
   const { width: canvasW, height: canvasH } = getFuriganaPosterCanvasDimensions(profile);
-  const insets = getFuriganaCanvasInsets(profile);
-  const shellInnerH = canvasH - insets.top - insets.bottom;
 
   // wrapper 提供固定尺寸的 containing block，避免 shell 用 position:fixed
   // 导致内部 max-width:100% 按视口宽度计算而低估实际高度
   const wrapper = doc.createElement('div');
-  wrapper.style.position = 'relative';
+  wrapper.style.position = 'fixed';
+  wrapper.style.left = '0';
+  wrapper.style.top = '0';
   wrapper.style.width = canvasW + 'px';
   wrapper.style.height = canvasH + 'px';
   wrapper.style.overflow = 'hidden';
-  wrapper.style.left = '-20000px';
-  wrapper.style.top = '0';
-  wrapper.style.opacity = '0';
+  wrapper.style.visibility = 'hidden';
   wrapper.style.pointerEvents = 'none';
+  wrapper.style.zIndex = '-1';
 
   const shell = doc.createElement('div');
   shell.className = 'fv-html-poster-root';
-  // 复用预览页完全一致的根样式（flex 布局、padding 等），仅覆盖 position/size
-  // 以适配 wrapper 的 relative 定位
+  // 直接使用 buildFuriganaPosterRootStyle 的完整样式（已含带 px 单位的 width/height）
   Object.assign(shell.style, buildFuriganaPosterRootStyle(profile));
   shell.style.position = 'relative';
-  shell.style.width = '100%';
-  shell.style.height = '100%';
 
   const styleEl = doc.createElement('style');
-  styleEl.textContent = buildFuriganaPosterInnerCss(profile);
+  styleEl.textContent = buildFuriganaPosterInnerCss(profile, { spacingScale });
   const titleEl = doc.createElement('h1');
   titleEl.className = 'fv-title-h';
   const body = doc.createElement('div');
@@ -71,7 +91,8 @@ function createPosterMeasurer(
   wrapper.appendChild(shell);
   doc.body.appendChild(wrapper);
 
-  const normalizedTitle = title.trim() || '歌词笔记';
+  const normalizedTitle = resolveDisplayTitle(title);
+  const displayArtist = resolveDisplayArtist(artist);
 
   // 关键：不依赖 flex 约束，而是用已知画布尺寸显式设置 body 的 max-height。
   // body 有 box-sizing:border-box + padding-bottom，max-height 包含 padding。
@@ -79,17 +100,16 @@ function createPosterMeasurer(
   const setPageContext = (showTitle: boolean) => {
     if (showTitle) {
       titleEl.style.display = '';
-      titleEl.textContent = normalizedTitle;
+      applyPosterTitleElement(titleEl, normalizedTitle, displayArtist);
     } else {
       titleEl.style.display = 'none';
       titleEl.textContent = '';
     }
     void shell.offsetHeight;
-    // 标题占用的垂直空间 = offsetHeight + margin-bottom
-    const titleH = showTitle ? titleEl.offsetHeight : 0;
-    const titleMB =
-      showTitle ? parseFloat(getComputedStyle(titleEl).marginBottom) || 0 : 0;
-    body.style.maxHeight = Math.max(0, shellInnerH - titleH - titleMB - SAFETY_MARGIN_PX) + 'px';
+    applyPosterBodyMaxHeight(body, profile, {
+      showTitle,
+      titleEl: showTitle ? titleEl : null,
+    });
   };
 
   const fillBodyAndMeasure = (nodes: HTMLElement[]) => {
@@ -98,13 +118,13 @@ function createPosterMeasurer(
       body.appendChild(node.cloneNode(true));
     }
     void body.offsetHeight;
-    return bodyContentOverflows(body);
+    return bodyContentOverflows(body, profile);
   };
 
   const fillBodyHtmlAndMeasure = (html: string) => {
     body.innerHTML = html;
     void body.offsetHeight;
-    return bodyContentOverflows(body);
+    return bodyContentOverflows(body, profile);
   };
 
   const contentFits = (nodes: HTMLElement[], showTitle: boolean): boolean => {
@@ -182,6 +202,11 @@ function ensureLyricPairsInBodyRoot(root: HTMLElement): void {
         !last.querySelector('.jp-line')
       ) {
         last.insertBefore(pendingJp, last.firstChild);
+      } else {
+        const group = document.createElement('div');
+        group.className = 'lyrics-group';
+        group.appendChild(pendingJp);
+        rebuilt.push(group);
       }
       pendingJp = null;
     }
@@ -194,6 +219,11 @@ function ensureLyricPairsInBodyRoot(root: HTMLElement): void {
         !last.querySelector('.zh-line')
       ) {
         last.appendChild(pendingZh);
+      } else {
+        const group = document.createElement('div');
+        group.className = 'lyrics-group';
+        group.appendChild(pendingZh);
+        rebuilt.push(group);
       }
       pendingZh = null;
     }
@@ -637,15 +667,96 @@ function verifyAndRepairPages(
   return finalPages.length > 0 ? finalPages : current;
 }
 
+function countPageContentLines(blocks: HTMLElement[]): number {
+  let count = 0;
+  for (const block of blocks) {
+    if (block.matches(PAGE_LINE_SELECTORS)) {
+      count += 1;
+    } else {
+      count += block.querySelectorAll(PAGE_LINE_SELECTORS).length;
+    }
+  }
+  return count;
+}
+
+function createMeasurerAtScale(
+  doc: Document,
+  profile: PosterLayoutProfile,
+  title: string,
+  artist: string | undefined,
+  scale: number,
+): PosterMeasurer {
+  return createPosterMeasurer(doc, profile, title, artist, scale);
+}
+
+/** 末页 ≤2 行时尝试收紧行距并并回上一页；行距不低于 0.9，否则保留孤页 */
+function preventOrphanPages(
+  pages: HTMLElement[][],
+  doc: Document,
+  profile: PosterLayoutProfile,
+  title: string,
+  artist?: string,
+): PagePack[] {
+  let packs: PagePack[] = pages.map((blocks) => ({ blocks, spacingScale: 1 }));
+
+  for (;;) {
+    if (packs.length < 2) {
+      break;
+    }
+
+    const lastIdx = packs.length - 1;
+    const last = packs[lastIdx]!;
+    if (countPageContentLines(last.blocks) > ORPHAN_MAX_LINES) {
+      break;
+    }
+
+    const prevIdx = lastIdx - 1;
+    const prev = packs[prevIdx]!;
+    const combined = [...prev.blocks, ...last.blocks];
+    const showTitle = prevIdx === 0;
+    const maxScale = prev.spacingScale;
+
+    let mergedScale: number | null = null;
+    for (const scale of ORPHAN_SPACING_STEPS) {
+      if (scale > maxScale + 1e-6) {
+        continue;
+      }
+      if (scale < MIN_ORPHAN_SPACING_SCALE - 1e-6) {
+        continue;
+      }
+
+      const probeMeasurer = createMeasurerAtScale(doc, profile, title, artist, scale);
+      try {
+        const html = joinPageBlocks(combined, new Set<string>());
+        if (!probeMeasurer.pageHtmlOverflows(html, showTitle)) {
+          mergedScale = scale;
+          break;
+        }
+      } finally {
+        probeMeasurer.dispose();
+      }
+    }
+
+    if (mergedScale == null) {
+      break;
+    }
+
+    packs = [...packs.slice(0, prevIdx), { blocks: combined, spacingScale: mergedScale }];
+  }
+
+  return packs;
+}
+
 export function paginateFuriganaBodyHtml(
   safeBodyHtml: string,
   title: string,
   profile: PosterLayoutProfile = 'clipPosterPrint',
   doc: Document = document,
-): string[] {
+  artist?: string,
+): PosterPageSlice[] {
   const trimmed = safeBodyHtml.trim();
   if (!trimmed) {
-    return [''];
+    return [{ html: '', spacingScale: 1 }];
   }
 
   const wrapper = doc.createElement('div');
@@ -657,21 +768,25 @@ export function paginateFuriganaBodyHtml(
   atoms = repairLyricsGroupAtoms(atoms);
   atoms = preparePaginationAtoms(atoms);
 
-  const measurer = createPosterMeasurer(doc, profile, title);
+  const measurer = createPosterMeasurer(doc, profile, title, artist);
 
   try {
     const rawPages = flowAtomsIntoPages(atoms, measurer);
     const pages = verifyAndRepairPages(rawPages, measurer);
+    const pagePacks = preventOrphanPages(pages, doc, profile, title, artist);
 
-    if (pages.length === 0) {
-      return [trimmed];
+    if (pagePacks.length === 0) {
+      return [{ html: trimmed, spacingScale: 1 }];
     }
 
     const emittedSectionTitles = new Set<string>();
 
-    return pages
-      .map((blocks) => joinPageBlocks(blocks, emittedSectionTitles))
-      .filter((html) => pageHtmlHasContent(html, doc));
+    return pagePacks
+      .map(({ blocks, spacingScale }) => ({
+        html: joinPageBlocks(blocks, emittedSectionTitles),
+        spacingScale,
+      }))
+      .filter((slice) => pageHtmlHasContent(slice.html, doc));
   } finally {
     measurer.dispose();
   }

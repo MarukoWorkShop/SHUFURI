@@ -3,6 +3,7 @@ node_modules/
 
 # build
 dist/
+src/utils/vectorPrint/printFontBase64.generated.ts
 
 # debug
 npm-debug.*
@@ -18,3 +19,8 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Capacitor
+ios/
+android/
+.expo/

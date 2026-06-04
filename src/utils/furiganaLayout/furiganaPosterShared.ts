@@ -2,7 +2,7 @@ import type { PosterLayoutProfile, FuriganaEngineDim } from './types';
 import { B5_DIM, MOBILE_DIM, POSTER_ELASTIC_FONT_BASE_PX } from './dimensions';
 import {
   KOZUKA_MINCHO_EL_FAMILY,
-  POSTER_JP_FONT_FACE_CSS,
+  getPosterJapaneseFontFaceCss,
   ZH_FONT_FAMILY,
 } from './fonts';
 
@@ -46,10 +46,101 @@ export function getFuriganaBodyBottomPaddingPx(profile: PosterLayoutProfile): nu
   return 32;
 }
 
-/** 与 paginateFuriganaHtml 一致的 body 溢出判定（供预览 debug 复用） */
-export function detectFuriganaPosterBodyOverflow(body: HTMLElement): boolean {
+/** 分页测量与预览共用的正文区安全余量（吸收 WebKit 字体/ruby 子像素误差） */
+export function getPosterBodySafetyMarginPx(profile: PosterLayoutProfile): number {
+  return profile === 'mobilePoster' ? 36 : 20;
+}
+
+/** 计算 fv-body-h 的 max-height（px），测量与预览共用同一公式 */
+export function computePosterBodyMaxHeightPx(
+  profile: PosterLayoutProfile,
+  options: { showTitle: boolean; titleEl: HTMLElement | null },
+): number {
+  const { height: canvasH } = getFuriganaPosterCanvasDimensions(profile);
+  const insets = getFuriganaCanvasInsets(profile);
+  const shellInnerH = canvasH - insets.top - insets.bottom;
+
+  let titleH = 0;
+  let titleMB = 0;
+  if (options.showTitle && options.titleEl) {
+    void options.titleEl.offsetHeight;
+    titleH = options.titleEl.offsetHeight;
+    titleMB = parseFloat(getComputedStyle(options.titleEl).marginBottom) || 0;
+  }
+
+  const margin = getPosterBodySafetyMarginPx(profile);
+  return Math.max(0, shellInnerH - titleH - titleMB - margin);
+}
+
+/**
+ * 测量正文自然高度（临时取消 max-height 约束，避免 iOS WebKit 下 offsetHeight 累加失真）。
+ */
+export function measurePosterBodyNaturalHeightPx(body: HTMLElement): number {
+  const prevMax = body.style.maxHeight;
+  const prevOverflow = body.style.overflow;
+  const prevHeight = body.style.height;
+  body.style.maxHeight = 'none';
+  body.style.height = 'auto';
+  body.style.overflow = 'visible';
+  void body.offsetHeight;
+  const natural = body.scrollHeight;
+  body.style.maxHeight = prevMax;
+  body.style.height = prevHeight;
+  body.style.overflow = prevOverflow;
+  void body.offsetHeight;
+  return natural;
+}
+
+/** @deprecated 使用 measurePosterBodyNaturalHeightPx */
+export function measurePosterBodyContentHeightPx(body: HTMLElement): number {
+  return measurePosterBodyNaturalHeightPx(body);
+}
+
+/**
+ * 判断正文是否超出 max-height 预算（scrollHeight 对比，block 布局下 iOS 更可靠）。
+ */
+export function posterBodyExceedsMaxHeight(body: HTMLElement, maxPx: number): boolean {
+  if (!Number.isFinite(maxPx) || maxPx <= 0) {
+    return false;
+  }
+  applyPosterBodyMaxHeightToPx(body, maxPx);
+  void body.offsetHeight;
+  return body.scrollHeight > maxPx + 1;
+}
+
+function applyPosterBodyMaxHeightToPx(body: HTMLElement, maxPx: number): void {
+  body.style.flexShrink = '0';
+  body.style.flexGrow = '0';
+  body.style.maxHeight = `${maxPx}px`;
+  body.style.overflow = 'hidden';
+  body.dataset.posterBodyMaxHeight = String(maxPx);
+}
+
+/**
+ * 与 createPosterMeasurer 一致的 fv-body-h max-height。
+ * 预览/导出必须与分页测量使用同一 max-height，否则 iOS 会出现切页错位。
+ */
+export function applyPosterBodyMaxHeight(
+  body: HTMLElement,
+  profile: PosterLayoutProfile,
+  options: { showTitle: boolean; titleEl: HTMLElement | null },
+): void {
+  const maxPx = computePosterBodyMaxHeightPx(profile, options);
+  applyPosterBodyMaxHeightToPx(body, maxPx);
+}
+
+/** 与 paginateFuriganaHtml 一致的 body 溢出判定（受约束 clientHeight + scrollHeight） */
+export function detectFuriganaPosterBodyOverflow(
+  body: HTMLElement,
+  profile: PosterLayoutProfile = 'clipPosterPrint',
+): boolean {
+  void body.offsetHeight;
   const clientH = body.clientHeight;
-  return clientH >= 1 && body.scrollHeight > clientH + 1;
+  if (clientH < 1) {
+    return false;
+  }
+  const slack = profile === 'mobilePoster' ? 10 : 1;
+  return body.scrollHeight > clientH + slack;
 }
 
 /** 词汇/语法条目间距 = 日文正文行高（line-height × font-size）× 1.5 */
@@ -57,11 +148,22 @@ function itemEntryGapPx(jpLineHeight: number, jpFontSizePx: number): number {
   return Math.round(1.5 * jpLineHeight * jpFontSizePx);
 }
 
+export type FuriganaPosterCssOptions = {
+  /** 防孤行页级行距缩放，1 为默认；测量与渲染一致 */
+  spacingScale?: number;
+};
+
 /**
  * 打印版：标题约为正文 1.25×、日文行 26px（经 elasticFontBase 缩放）、中文行 14px
  * 手机版：标题约为正文 1.22×；词汇/语法条目间距为日文行高的 1.5 倍
  */
-export function buildFuriganaPosterInnerCss(profile: PosterLayoutProfile): string {
+export function buildFuriganaPosterInnerCss(
+  profile: PosterLayoutProfile,
+  options: FuriganaPosterCssOptions = {},
+): string {
+  const spacingScale = options.spacingScale ?? 1;
+  const scale = (n: number) => n * spacingScale;
+  const scaleEm = (n: number) => `${scale(n)}em`;
   const d = dimForFuriganaPoster(profile);
   const isM = profile === 'mobilePoster';
   const base = POSTER_ELASTIC_FONT_BASE_PX;
@@ -76,40 +178,58 @@ export function buildFuriganaPosterInnerCss(profile: PosterLayoutProfile): strin
   const zhLyricsPx = Math.round(18 * scaleBody);
 
   const h2Fs = Math.round(18 * scaleBody);
-  const grammarPointTitleFs = Math.round(26 * scaleBody);
 
-  const jpLh = isM ? d.elasticLhBase : 1.75;
-  const zhLyricsLh = isM ? 1.3 : 1.35;
+  const jpLhBase = isM ? d.elasticLhBase : 1.75;
+  const zhLyricsLhBase = isM ? 1.3 : 1.35;
+  const jpLh = scale(jpLhBase);
+  const zhLyricsLh = scale(zhLyricsLhBase);
   const jpWght = 200;
   const jpEmphasisWght = 700;
   const zhAuxWght = 300;
-  const groupMb = isM ? '1.5em' : '1.35em';
-  const lyricsJpZhGap = isM ? '0.06em' : '0.04em';
-  const auxJpZhGap = isM ? '0.05em' : '0.03em';
-  const itemEntryMb = `${itemEntryGapPx(jpLh, jpFs)}px`;
-  const grammarDetailMb = isM ? '0.7em' : '0.55em';
-  const grammarExMt = isM ? '0.65em' : '0.5em';
-  const grammarTitleMt = isM ? '1.15em' : '1.35em';
+  const groupMbNum = isM ? 1.5 : 1.35;
+  const groupMb = scaleEm(groupMbNum);
+  const lyricsJpZhGap = scaleEm(isM ? 0.06 : 0.04);
+  const auxJpZhGap = scaleEm(isM ? 0.05 : 0.03);
+  const itemEntryMb = `${Math.round(scale(itemEntryGapPx(jpLhBase, jpFs)))}px`;
+  const grammarDetailMb = scaleEm(isM ? 0.7 : 0.55);
+  const grammarExMt = scaleEm(isM ? 0.65 : 0.5);
+  const grammarTitleMt = scaleEm(isM ? 1.15 : 1.35);
+  const grammarTitleFirstMt = scaleEm(isM ? 0.45 : 0.55);
+  const sectionTitleMt = scaleEm(isM ? 1 : 1.25);
+  const sectionTitleFirstMt = scaleEm(isM ? 0.35 : 0.5);
   const bodyBottomPad = getFuriganaBodyBottomPaddingPx(profile);
 
   return `
-  ${POSTER_JP_FONT_FACE_CSS}
+  ${getPosterJapaneseFontFaceCss()}
   .fv-html-poster-root .fv-title-h {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY};
+    font-family: ${ZH_FONT_FAMILY};
     font-size: ${titleFs}px;
-    font-weight: ${jpEmphasisWght};
+    font-weight: ${zhAuxWght};
     color: #111827;
     text-align: center;
     margin: 0 0 ${titleMb}px 0;
     line-height: ${isM ? d.titleLineHeightRatio : 1.45};
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.35em;
   }
-  .fv-html-poster-root .fv-title-h {
-    flex: 0 0 auto;
+  .fv-html-poster-root .fv-title-artist {
+    font-size: 0.58em;
+    font-weight: ${zhAuxWght};
+    color: #64748b;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .fv-html-poster-root .fv-title-name--placeholder,
+  .fv-html-poster-root .fv-title-artist--placeholder {
+    color: #cbd5e1;
+    font-weight: 400;
   }
   .fv-html-poster-root .fv-body-h {
     font-family: ${ZH_FONT_FAMILY};
-    flex: 1 1 auto;
-    min-height: 0;
+    display: block;
     width: 100%;
     box-sizing: border-box;
     overflow: hidden;
@@ -141,6 +261,11 @@ export function buildFuriganaPosterInnerCss(profile: PosterLayoutProfile): strin
   .fv-html-poster-root .fv-body-h .lyrics-grammar-item {
     break-inside: avoid;
     page-break-inside: avoid;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
   .fv-html-poster-root .fv-body-h .lyrics-group .jp-line,
   .fv-html-poster-root .fv-body-h .lyrics-group .zh-line {
@@ -154,10 +279,6 @@ export function buildFuriganaPosterInnerCss(profile: PosterLayoutProfile): strin
   .fv-html-poster-root .fv-body-h .lyrics-pagination-unit .grammar-ex-ja,
   .fv-html-poster-root .fv-body-h .lyrics-pagination-unit .grammar-ex-zh {
     overflow: visible;
-  }
-  .fv-html-poster-root .fv-body-h.fv-body-overflow-debug {
-    outline: 2px solid #ef4444;
-    outline-offset: -2px;
   }
   .fv-html-poster-root .fv-body-h .lyrics-group .jp-line,
   .fv-html-poster-root .fv-body-h .lyrics-group .zh-line {
@@ -232,6 +353,10 @@ export function buildFuriganaPosterInnerCss(profile: PosterLayoutProfile): strin
   }
   .fv-html-poster-root .fv-body-h .vocab-line1 {
     margin: 0 0 ${auxJpZhGap} 0 !important;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
   }
   .fv-html-poster-root .fv-body-h .vocab-ex-zh,
   .fv-html-poster-root .fv-body-h .grammar-ex-zh {
@@ -239,6 +364,19 @@ export function buildFuriganaPosterInnerCss(profile: PosterLayoutProfile): strin
   }
   .fv-html-poster-root .fv-body-h .grammar-detail {
     margin: 0.15em 0 ${grammarDetailMb} 0 !important;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+  }
+  .fv-html-poster-root .fv-body-h .vocab-ex-ja,
+  .fv-html-poster-root .fv-body-h .vocab-ex-zh,
+  .fv-html-poster-root .fv-body-h .grammar-ex-ja,
+  .fv-html-poster-root .fv-body-h .grammar-ex-zh {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
   }
   .fv-html-poster-root .fv-body-h .grammar-ex-ja {
     margin-top: ${grammarExMt} !important;
@@ -276,32 +414,59 @@ export function buildFuriganaPosterInnerCss(profile: PosterLayoutProfile): strin
   .fv-html-poster-root .fv-body-h h2.lyrics-section-title {
     font-family: ${ZH_FONT_FAMILY};
     font-size: ${h2Fs}px;
-    font-weight: 600;
+    font-weight: ${zhAuxWght};
     color: #1e293b;
-    margin: ${isM ? '1em' : '1.25em'} 0 0.5em;
+    margin: ${sectionTitleMt} 0 0.5em;
   }
   .fv-html-poster-root .fv-body-h .lyrics-grammar > h2.lyrics-section-title:first-child,
   .fv-html-poster-root .fv-body-h .lyrics-vocabulary > h2.lyrics-section-title:first-child {
-    margin-top: ${isM ? '0.35em' : '0.5em'};
+    margin-top: ${sectionTitleFirstMt};
   }
   .fv-html-poster-root .fv-body-h .lyrics-grammar-item:first-child h3.grammar-point-title {
-    margin-top: ${isM ? '0.45em' : '0.55em'};
-  }
-  .fv-html-poster-root .fv-body-h h3.grammar-point-title,
-  .fv-html-poster-root .fv-body-h h3.grammar-point-title *:not(rp) {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY} !important;
-    font-size: ${grammarPointTitleFs}px !important;
-    font-weight: ${jpEmphasisWght} !important;
-    color: #2c3e50 !important;
-    line-height: ${isM ? d.elasticLhBase : 1.35};
+    margin-top: ${grammarTitleFirstMt};
   }
   .fv-html-poster-root .fv-body-h h3.grammar-point-title {
+    font-family: ${ZH_FONT_FAMILY} !important;
+    font-size: ${zhLyricsPx}px !important;
+    font-weight: ${zhAuxWght} !important;
+    color: #0a0a0a !important;
+    line-height: ${zhLyricsLh} !important;
     margin: ${grammarTitleMt} 0 0.4em 0;
+    width: 100%;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+  }
+  .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-ja,
+  .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-ja *:not(rt):not(rp) {
+    font-family: ${KOZUKA_MINCHO_EL_FAMILY} !important;
+    font-size: ${jpFs}px !important;
+    font-weight: ${jpEmphasisWght} !important;
+    line-height: ${jpLh} !important;
+    color: #0a0a0a !important;
+  }
+  .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-zh,
+  .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-zh * {
+    font-family: ${ZH_FONT_FAMILY} !important;
+    font-size: ${zhLyricsPx}px !important;
+    font-weight: ${zhAuxWght} !important;
+    line-height: ${zhLyricsLh} !important;
+    color: #0a0a0a !important;
+    -webkit-text-size-adjust: 100%;
   }
   .fv-html-poster-root .fv-body-h h3.grammar-point-title ruby rt {
     font-family: ${KOZUKA_MINCHO_EL_FAMILY};
-    font-weight: ${jpEmphasisWght};
+    font-size: ${isM ? '0.54em' : '0.58em'};
+    font-weight: ${jpWght};
     color: #64748b;
+    line-height: 1.1;
+  }
+  .fv-html-poster-root .fv-body-h .vocab-line1 .vocab-meaning,
+  .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-zh,
+  .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-zh * {
+    font-family: ${ZH_FONT_FAMILY} !important;
+    font-weight: ${zhAuxWght} !important;
   }
 `;
 }
@@ -313,15 +478,50 @@ export function buildFuriganaPosterRootStyle(
   const { width: w, height: h } = getFuriganaPosterCanvasDimensions(profile);
   const pad = getFuriganaCanvasInsets(profile);
   return {
-    width: w,
-    height: h,
+    width: `${w}px`,
+    height: `${h}px`,
     boxSizing: 'border-box',
     padding: `${pad.top}px ${pad.right}px ${pad.bottom}px ${pad.left}px`,
     background: '#fff',
     overflow: 'hidden',
     textAlign: 'left',
-    display: 'flex',
-    flexDirection: 'column',
+    display: 'block',
     position: 'relative',
   };
+}
+
+/** 编辑层连续文档根节点：固定画布宽、高度随内容伸展 */
+export function buildFuriganaEditDocumentRootStyle(
+  profile: PosterLayoutProfile,
+): Record<string, string | number> {
+  const { width: w } = getFuriganaPosterCanvasDimensions(profile);
+  const pad = getFuriganaCanvasInsets(profile);
+  return {
+    width: `${w}px`,
+    height: 'auto',
+    minHeight: 'unset',
+    boxSizing: 'border-box',
+    padding: `${pad.top}px ${pad.right}px ${pad.bottom}px ${pad.left}px`,
+    background: '#fff',
+    overflow: 'visible',
+    textAlign: 'left',
+    display: 'block',
+    position: 'relative',
+  };
+}
+
+/** 编辑层 modifier：取消正文 max-height 与裁切 */
+export function buildFuriganaEditDocumentCssOverrides(): string {
+  return `
+  .fv-html-poster-root.fv-edit-document-root {
+    height: auto !important;
+    min-height: unset !important;
+    overflow: visible !important;
+  }
+  .fv-html-poster-root.fv-edit-document-root .fv-body-h {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    flex: none !important;
+  }`;
 }

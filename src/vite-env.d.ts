@@ -1,9 +1,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_ARK_API_KEY?: string;
-  readonly VITE_ARK_HOME_MODEL?: string;
-  readonly ARK_API_KEY?: string;
+  readonly [key: string]: string | undefined;
 }
 
 interface ImportMeta {

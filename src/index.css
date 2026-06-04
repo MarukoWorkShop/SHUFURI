@@ -1,16 +1,50 @@
-@import './styles/ui-tokens.css';
+@import './styles/theme.css';
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
+/* 彻底锁死网页的浏览器外溢行为，使其具备原生铜版纸的稳定性 */
 html,
 body,
 #root {
-  height: 100%;
   margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+
+  /* 核心一：禁止滚动、禁止溢出 */
+  overflow: hidden;
+
+  /* 核心二：禁止用户双指放大或缩放页面，保持 1:1 的手账本硬挺质感 */
+  touch-action: none;
+
+  /* 核心三：全面禁止系统级长按文字弹出拷贝气泡、禁止长按图片弹出保存菜单 */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+
+  /* 核心四：禁用 WebView 弹簧 / 橡皮筋效果 */
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+
+  /* 底色铺满视口包括安全区，确保无白边 */
+  background: var(--ui-bg);
+}
+
+/* 全局禁止 iOS 长按链接 / 图片弹出系统菜单 */
+a, img, button, [role="button"] {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 全局禁用所有滚动容器的弹簧效果 */
+* {
+  overscroll-behavior: none;
 }
 
 html {
@@ -27,5 +61,96 @@ body {
   background: var(--ui-bg);
   color: var(--ui-fg);
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+}
+
+/* 如果你的歌词列表需要滚动，不要滚动整个网页，只允许内部特定的盒子滚动 */
+.lyrics-scroll-container {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.lyrics-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
+  -webkit-touch-callout: default;
+}
+
+button,
+a,
+[role='button'],
+label {
+  touch-action: manipulation;
+  pointer-events: auto;
+}
+
+/* ---- 离线模式提示横幅 ---- */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  background: #f59e0b;
+  color: #1c1917;
+  font-family: var(--ui-font-sans);
+  font-size: 12px;
+  font-weight: var(--ui-weight-medium);
+  letter-spacing: 0.03em;
+  animation: offline-banner-slide-in 0.35s ease;
+}
+
+.offline-banner--restored {
+  background: #10b981;
+}
+
+.offline-banner--exit {
+  animation: offline-banner-slide-out 0.35s ease forwards;
+}
+
+.offline-banner__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.offline-banner__text {
+  flex-shrink: 0;
+}
+
+@keyframes offline-banner-slide-in {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes offline-banner-slide-out {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
 }

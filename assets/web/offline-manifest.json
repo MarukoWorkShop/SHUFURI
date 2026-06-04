@@ -1,0 +1,8 @@
+{
+  "builtAt": "2026-06-04T09:05:57.080Z",
+  "source": "dist/",
+  "target": "assets/web/",
+  "fileCount": 11,
+  "hasIndexHtml": true,
+  "hasJapaneseFont": true
+}

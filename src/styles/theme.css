@@ -1,0 +1,444 @@
+/**
+ * SHUFURI — 全局设计令牌与换肤
+ *
+ * 层级：
+ * 1. 静态基元（间距 / 字体 / 圆角 / 动效）— 不随主题变化
+ * 2. 语义色（--color-*）— 由 data-theme 切换
+ * 3. 组件令牌（--input-* / --btn-* / --panel-*）— 引用语义色
+ * 4. 兼容别名（--ui-*）— 供现有样式平滑迁移
+ *
+ * 主题：mono（墨）| blue（绀）| red（赤）
+ * 切换：document.documentElement.dataset.theme = 'blue'
+ */
+
+/* ------------------------------------------------------------------ */
+/* 1. 静态基元                                                         */
+/* ------------------------------------------------------------------ */
+
+:root {
+  /* Typography — 字体族 */
+  --font-sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "SF Mono", "Menlo", monospace;
+
+  /* Typography — 字号阶梯 */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+  --text-home-title: 24px;
+
+  /* Typography — 字重 */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 600;
+
+  /* Typography — 行高 */
+  --leading-tight: 1.2;
+  --leading-normal: 1.45;
+  --leading-relaxed: 1.6;
+
+  /* Spacing */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 48px;
+  --space-6: 64px;
+
+  /* iOS 刘海 / 灵动岛（需 viewport-fit=cover） */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* Radius — 圆角阶梯 */
+  --radius-xs: 2px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 9999px;
+
+  /* Motion */
+  --duration-fast: 0.15s;
+  --duration-normal: 0.28s;
+  --duration-drawer: 0.4s;
+  --ease-out: cubic-bezier(0.25, 1, 0.5, 1);
+  --transition-fast: var(--duration-fast) ease;
+  --transition-normal: var(--duration-normal) var(--ease-out);
+
+  /* 按键按压反馈 — 配合 triggerButtonPressFeedback / useGlobalButtonFeedback */
+  --btn-press-scale: 0.965;
+  --btn-press-duration: 0.1s;
+  --btn-press-ease: cubic-bezier(0.33, 1, 0.68, 1);
+
+  /* Z-index */
+  --z-drawer: 300;
+  --z-modal: 400;
+  --z-export-backdrop: 2147483646;
+
+  /* 图片预览模态（深色遮罩，各主题结构一致） */
+  --color-image-modal-scrim: rgba(0, 0, 0, 0.88);
+  --color-image-modal-scrim-light: rgba(255, 255, 255, 0.72);
+  --color-image-modal-on-scrim: #ffffff;
+  --color-image-modal-on-scrim-muted: rgba(255, 255, 255, 0.55);
+  --color-image-modal-control-bg: rgba(255, 255, 255, 0.15);
+  --color-image-modal-control-bg-hover: rgba(255, 255, 255, 0.28);
+  --color-image-modal-control-border: rgba(255, 255, 255, 0.3);
+  --color-image-modal-control-border-hover: rgba(255, 255, 255, 0.65);
+  --color-image-modal-control-fill-hover: rgba(255, 255, 255, 0.1);
+  --shadow-image-modal: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. 语义色 — mono / 墨（默认）                                        */
+/* ------------------------------------------------------------------ */
+
+:root,
+[data-theme="mono"] {
+  --color-bg: #f7f7f7;
+  --color-bg-elevated: #ffffff;
+  --color-bg-muted: #efefef;
+  --color-bg-muted-active: #e8e8e8;
+  --color-bg-subtle: #f4f4f4;
+  --color-bg-segment: #f8fafc;
+  --color-bg-textarea: #f4f4f4;
+
+  --color-fg: #000000;
+  --color-fg-secondary: #666666;
+  --color-fg-muted: #999999;
+  --color-fg-subtle: #94a3b8;
+  --color-fg-faint: #cbd5e1;
+  --color-fg-disabled: #b0b8c4;
+
+  --color-border: #e0e0e0;
+  --color-border-subtle: #f1f5f9;
+  --color-border-faint: #f8fafc;
+  --color-border-strong: #000000;
+  --color-border-input: #d0d0d0;
+
+  --color-accent: #000000;
+  --color-accent-hover: #333333;
+  --color-accent-muted: #555555;
+  --color-accent-on: #ffffff;
+
+  --color-overlay: rgba(15, 23, 42, 0.18);
+  --color-overlay-hover: rgba(15, 23, 42, 0.05);
+  --color-overlay-hover-active: rgba(15, 23, 42, 0.08);
+  --color-focus-ring: rgba(15, 23, 42, 0.2);
+  --color-scrim-light: rgba(255, 255, 255, 0.72);
+  --color-scrim-dark: rgba(0, 0, 0, 0.88);
+  --color-row-hover: rgba(0, 0, 0, 0.02);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 12px 40px rgba(15, 23, 42, 0.12);
+  --shadow-segment: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-popover: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  --color-drawer-binding: #4a4a4a;
+  --color-ink-popover: #f2f2f2;
+
+  --gradient-divider: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.035) 20%,
+    rgba(0, 0, 0, 0.065) 50%,
+    rgba(0, 0, 0, 0.035) 80%,
+    transparent 100%
+  );
+
+  --btn-filled-shadow: 0 2px 8px rgba(0, 0, 0, 0.16), 0 1px 2px rgba(0, 0, 0, 0.08);
+  --btn-filled-shadow-hover: 0 4px 14px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. 语义色 — blue / 绀                                               */
+/* ------------------------------------------------------------------ */
+
+[data-theme="blue"] {
+  --color-bg: #f3f5f7;
+  --color-bg-elevated: #ffffff;
+  --color-bg-muted: #e4e9ed;
+  --color-bg-muted-active: #d8dfe5;
+  --color-bg-subtle: #eaeef2;
+  --color-bg-segment: #eaeef2;
+  --color-bg-textarea: #eaeef2;
+
+  --color-fg: #1a2330;
+  --color-fg-secondary: #4a5568;
+  --color-fg-muted: #64748b;
+  --color-fg-subtle: #64748b;
+  --color-fg-faint: #94a3b8;
+  --color-fg-disabled: #94a3b8;
+
+  --color-border: #c5cdd6;
+  --color-border-subtle: #dde3ea;
+  --color-border-faint: #eef1f5;
+  --color-border-strong: #2b3a4a;
+  --color-border-input: #94a3b8;
+
+  --color-accent: #2b3a4a;
+  --color-accent-hover: #1e2834;
+  --color-accent-muted: #3d5066;
+  --color-accent-on: #ffffff;
+
+  --color-overlay: rgba(26, 35, 48, 0.22);
+  --color-overlay-hover: rgba(43, 58, 74, 0.08);
+  --color-overlay-hover-active: rgba(43, 58, 74, 0.14);
+  --color-focus-ring: rgba(43, 58, 74, 0.35);
+  --color-scrim-light: rgba(243, 245, 247, 0.85);
+  --color-scrim-dark: rgba(26, 35, 48, 0.88);
+  --color-row-hover: rgba(43, 58, 74, 0.04);
+
+  --shadow-sm: 0 1px 3px rgba(43, 58, 74, 0.08);
+  --shadow-md: 0 12px 40px rgba(26, 35, 48, 0.14);
+  --shadow-segment: 0 1px 3px rgba(43, 58, 74, 0.12);
+  --shadow-popover: 0 4px 24px rgba(26, 35, 48, 0.1);
+  --shadow-modal: 0 8px 32px rgba(26, 35, 48, 0.45);
+
+  --color-drawer-binding: #2b3a4a;
+  --color-ink-popover: #eaeef2;
+
+  --gradient-divider: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(43, 58, 74, 0.06) 20%,
+    rgba(43, 58, 74, 0.12) 50%,
+    rgba(43, 58, 74, 0.06) 80%,
+    transparent 100%
+  );
+
+  --btn-filled-shadow: 0 3px 10px rgba(43, 58, 74, 0.24), 0 1px 3px rgba(43, 58, 74, 0.12);
+  --btn-filled-shadow-hover: 0 5px 16px rgba(43, 58, 74, 0.3), 0 2px 5px rgba(43, 58, 74, 0.14);
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. 语义色 — red / 赤                                                */
+/* ------------------------------------------------------------------ */
+
+[data-theme="red"] {
+  --color-bg: #faf6f5;
+  --color-bg-elevated: #ffffff;
+  --color-bg-muted: #f0e8e6;
+  --color-bg-muted-active: #e8dcd8;
+  --color-bg-subtle: #f5ecea;
+  --color-bg-segment: #f5ecea;
+  --color-bg-textarea: #f5ecea;
+
+  --color-fg: #1c1917;
+  --color-fg-secondary: #57534e;
+  --color-fg-muted: #78716c;
+  --color-fg-subtle: #a8a29e;
+  --color-fg-faint: #d6d3d1;
+  --color-fg-disabled: #a8a29e;
+
+  --color-border: #e7e5e4;
+  --color-border-subtle: #f5f5f4;
+  --color-border-faint: #fafaf9;
+  --color-border-strong: #a63e3e;
+  --color-border-input: #d6d3d1;
+
+  --color-accent: #a63e3e;
+  --color-accent-hover: #8b3535;
+  --color-accent-muted: #b85555;
+  --color-accent-on: #ffffff;
+
+  --color-overlay: rgba(28, 25, 23, 0.2);
+  --color-overlay-hover: rgba(166, 62, 62, 0.08);
+  --color-overlay-hover-active: rgba(166, 62, 62, 0.14);
+  --color-focus-ring: rgba(166, 62, 62, 0.35);
+  --color-scrim-light: rgba(250, 246, 245, 0.88);
+  --color-scrim-dark: rgba(28, 25, 23, 0.88);
+  --color-row-hover: rgba(166, 62, 62, 0.04);
+
+  --shadow-sm: 0 1px 3px rgba(166, 62, 62, 0.08);
+  --shadow-md: 0 12px 40px rgba(28, 25, 23, 0.12);
+  --shadow-segment: 0 1px 3px rgba(166, 62, 62, 0.1);
+  --shadow-popover: 0 4px 24px rgba(28, 25, 23, 0.08);
+  --shadow-modal: 0 8px 32px rgba(28, 25, 23, 0.5);
+
+  --color-drawer-binding: #a63e3e;
+  --color-ink-popover: #f5ecea;
+
+  --gradient-divider: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(166, 62, 62, 0.05) 20%,
+    rgba(166, 62, 62, 0.1) 50%,
+    rgba(166, 62, 62, 0.05) 80%,
+    transparent 100%
+  );
+
+  /* 首页重要按钮：Filled 使用主题强调色 */
+  --btn-filled-bg: var(--color-accent);
+  --btn-filled-bg-hover: var(--color-accent-hover);
+  --btn-filled-shadow: 0 3px 10px rgba(166, 62, 62, 0.22), 0 1px 3px rgba(166, 62, 62, 0.1);
+  --btn-filled-shadow-hover: 0 5px 16px rgba(166, 62, 62, 0.28), 0 2px 5px rgba(166, 62, 62, 0.12);
+}
+
+/* ------------------------------------------------------------------ */
+/* 3. 组件令牌                                                         */
+/* ------------------------------------------------------------------ */
+
+:root {
+  /* 输入框 / 文本域 */
+  --input-bg: var(--color-bg-muted);
+  --input-bg-focus: var(--color-bg-muted-active);
+  --input-fg: var(--color-fg-secondary);
+  --input-fg-focus: var(--color-fg);
+  --input-placeholder: var(--color-fg-muted);
+  --input-border: transparent;
+  --input-radius: var(--radius-pill);
+  --input-accent: var(--color-accent);
+
+  /* 标签 chip（歌名 / 歌手）— Material 风格 */
+  --chip-bg: color-mix(in srgb, var(--color-bg-elevated) 88%, var(--color-bg-muted));
+  --chip-fg: var(--color-fg-secondary);
+  --chip-border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  --chip-radius: var(--radius-pill);
+  --chip-padding-y: 4px;
+  --chip-padding-x: 10px;
+  --chip-font-size: 11px;
+
+  /* 按钮 — Filled（主操作） */
+  --btn-filled-bg: var(--color-accent);
+  --btn-filled-bg-hover: var(--color-accent-hover);
+  --btn-filled-bg-disabled: var(--color-fg-muted);
+  --btn-filled-fg: var(--color-accent-on);
+  --btn-filled-radius: var(--radius-pill);
+  --btn-filled-height: 40px;
+  --btn-filled-padding-x: 24px;
+  --btn-filled-font-size: var(--text-base);
+  --btn-filled-font-weight: var(--weight-medium);
+  --btn-filled-shadow: 0 2px 8px rgba(43, 58, 74, 0.2), 0 1px 2px rgba(43, 58, 74, 0.1);
+  --btn-filled-shadow-hover: 0 4px 14px rgba(43, 58, 74, 0.26), 0 2px 4px rgba(43, 58, 74, 0.12);
+
+  /* 按钮 — Tonal / Text（次操作） */
+  --btn-tonal-fg: #4a627a;
+  --btn-tonal-fg-hover: #3a5063;
+  --btn-tonal-fg-disabled: rgba(74, 98, 122, 0.42);
+  --btn-tonal-bg: transparent;
+  --btn-tonal-bg-hover: rgba(74, 98, 122, 0.06);
+  --btn-tonal-border: 1px solid rgba(74, 98, 122, 0.14);
+  --btn-tonal-shadow: 0 1px 2px rgba(43, 58, 74, 0.05);
+  --btn-tonal-radius: var(--radius-pill);
+  --btn-tonal-height: 40px;
+  --btn-tonal-padding-x: 20px;
+  --btn-tonal-font-size: var(--text-sm);
+  --btn-tonal-font-weight: var(--weight-regular);
+
+  /* 按钮 — 兼容旧令牌 */
+  --btn-primary-fg: var(--btn-tonal-fg);
+  --btn-primary-border: rgba(74, 98, 122, 0.14);
+  --btn-primary-border-hover: var(--btn-tonal-fg-hover);
+  --btn-primary-bg: var(--btn-tonal-bg);
+
+  --btn-solid-bg: var(--color-accent);
+  --btn-solid-bg-hover: var(--color-accent-hover);
+  --btn-solid-fg: var(--color-accent-on);
+
+  --btn-muted-bg: var(--color-fg-secondary);
+  --btn-muted-bg-hover: var(--color-fg);
+  --btn-muted-fg: var(--color-accent-on);
+
+  --btn-ghost-fg: var(--color-fg-secondary);
+  --btn-ghost-fg-hover: var(--color-fg);
+
+  /* 面板 / 弹窗 / 抽屉 */
+  --panel-bg: var(--color-bg-elevated);
+  --panel-bg-muted: var(--color-bg);
+  --panel-border: var(--color-border);
+  --panel-border-subtle: var(--color-border-subtle);
+  --panel-shadow: var(--shadow-md);
+  --panel-radius: var(--radius-lg);
+  --panel-overlay: var(--color-overlay);
+
+  /* 歌词本 / 列表 */
+  --library-row-hover: var(--color-row-hover);
+  --library-binding: var(--color-drawer-binding);
+
+  /* 错误提示 */
+  --error-bg: var(--color-bg-muted);
+  --error-fg: var(--color-fg);
+
+  /* 文本域（首页粘贴区） */
+  --textarea-bg: var(--color-bg-textarea);
+  --textarea-radius: var(--radius-md);
+}
+
+/* ------------------------------------------------------------------ */
+/* 4. 兼容别名 — 现有 --ui-* 引用                                       */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --ui-bg: var(--color-bg);
+  --ui-bg-surface: var(--color-bg-elevated);
+  --ui-bg-muted: var(--color-bg-muted);
+  --ui-fg: var(--color-fg);
+  --ui-fg-secondary: var(--color-fg-secondary);
+  --ui-fg-muted: var(--color-fg-muted);
+  --ui-line: var(--color-border);
+  --ui-line-strong: var(--color-border-strong);
+
+  --ui-font-sans: var(--font-sans);
+  --ui-font-mono: var(--font-mono);
+
+  --ui-text-xs: var(--text-xs);
+  --ui-text-sm: var(--text-sm);
+  --ui-text-base: var(--text-base);
+  --ui-text-lg: var(--text-lg);
+  --ui-text-xl: var(--text-xl);
+  --ui-text-home-title: var(--text-home-title);
+
+  --ui-weight-regular: var(--weight-regular);
+  --ui-weight-medium: var(--weight-medium);
+  --ui-weight-bold: var(--weight-bold);
+
+  --ui-space-1: var(--space-1);
+  --ui-space-2: var(--space-2);
+  --ui-space-3: var(--space-3);
+  --ui-space-4: var(--space-4);
+  --ui-space-5: var(--space-5);
+  --ui-space-6: var(--space-6);
+
+  --ui-radius-xs: var(--radius-xs);
+  --ui-radius-sm: var(--radius-sm);
+  --ui-radius-md: var(--radius-md);
+  --ui-radius-lg: var(--radius-lg);
+  --ui-radius-pill: var(--radius-pill);
+
+  --ui-border-hairline: 1px solid var(--color-border);
+  --ui-border-active: 2px solid var(--color-fg);
+  --ui-accent-bar: 3px solid var(--color-accent);
+
+  --ui-transition: var(--transition-fast);
+}
+
+/* ------------------------------------------------------------------ */
+/* 5. 按键按压 — 视觉反馈（配合 useGlobalButtonFeedback 触觉/カタ声）   */
+/* ------------------------------------------------------------------ */
+
+:is(
+  button,
+  [role="button"],
+  label.app-settings__row,
+  .saved-library-toggle
+):where(:not(:disabled):not([aria-disabled="true"]):not([data-no-press-feedback])) {
+  transform-origin: center center;
+  transition:
+    transform var(--btn-press-duration) var(--btn-press-ease),
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+:is(
+  button,
+  [role="button"],
+  label.app-settings__row,
+  .saved-library-toggle
+):where(:not(:disabled):not([aria-disabled="true"]):not([data-no-press-feedback])):active {
+  transform: scale(var(--btn-press-scale));
+}

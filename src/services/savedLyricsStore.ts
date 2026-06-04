@@ -1,17 +1,26 @@
 import type { PosterLayoutProfile } from '../utils/furiganaLayout/types';
+import { extractArtistFromLyricsRaw } from './lyricsHtml';
 
 const DB_NAME = 'japanese-kana-app';
 const DB_VERSION = 1;
 const STORE_NAME = 'saved-lyrics';
 
+function createProjectId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `proj-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
 export type SavedLyricsProject = {
   id: string;
   title: string;
+  artist?: string;
   rawLyrics: string;
   bodyHtml: string;
   pageHtmls: string[];
   layoutProfile: PosterLayoutProfile;
-  includeVocabAndGrammar: boolean;
+  includeVocabAndGrammar?: boolean;
   savedAt: number;
 };
 
@@ -57,6 +66,7 @@ export async function listSavedLyricsProjects(): Promise<SavedLyricsProject[]> {
   return items
     .map((item) => ({
       ...item,
+      artist: item.artist?.trim() || extractArtistFromLyricsRaw(item.rawLyrics) || undefined,
       includeVocabAndGrammar: item.includeVocabAndGrammar ?? true,
     }))
     .sort((a, b) => b.savedAt - a.savedAt);
@@ -69,6 +79,7 @@ export async function getSavedLyricsProject(id: string): Promise<SavedLyricsProj
   if (!item) return null;
   return {
     ...item,
+    artist: item.artist?.trim() || extractArtistFromLyricsRaw(item.rawLyrics) || undefined,
     includeVocabAndGrammar: item.includeVocabAndGrammar ?? true,
   };
 }
@@ -77,13 +88,19 @@ export async function saveLyricsProject(
   project: Omit<SavedLyricsProject, 'id' | 'savedAt'> & { id?: string; savedAt?: number },
 ): Promise<SavedLyricsProject> {
   const record: SavedLyricsProject = {
-    id: project.id ?? crypto.randomUUID(),
+    id: project.id ?? createProjectId(),
     title: project.title.trim() || '歌词笔记',
+    artist:
+      project.artist?.trim() ||
+      extractArtistFromLyricsRaw(project.rawLyrics) ||
+      undefined,
     rawLyrics: project.rawLyrics,
     bodyHtml: project.bodyHtml,
     pageHtmls: project.pageHtmls,
     layoutProfile: project.layoutProfile,
-    includeVocabAndGrammar: project.includeVocabAndGrammar ?? true,
+    ...(project.includeVocabAndGrammar !== undefined
+      ? { includeVocabAndGrammar: project.includeVocabAndGrammar }
+      : {}),
     savedAt: project.savedAt ?? Date.now(),
   };
   await runTransaction('readwrite', (store) => store.put(record));

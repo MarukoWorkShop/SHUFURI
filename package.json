@@ -5,20 +5,44 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "dev:web": "vite --host",
+    "generate:print-font": "node scripts/generatePrintFontBase64.mjs",
+    "build:web": "npm run generate:print-font && tsc -b && vite build",
+    "build": "npm run build:web",
+    "preview": "vite preview",
+    "cap:add:ios": "npx cap add ios",
+    "cap:add:android": "npx cap add android",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:open:ios": "npx cap open ios",
+    "cap:open:android": "npx cap open android",
+    "cap:run:ios": "npm run build && npx cap run ios",
+    "cap:run:android": "npm run build && npx cap run android"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/clipboard": "^8.0.1",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.4.0",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/share": "^8.0.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
+    "nanoid": "^5.1.11",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.0",
+    "@esbuild/darwin-arm64": "^0.28.0",
     "@types/node": "^25.9.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-legacy": "^6.1.1",
     "@vitejs/plugin-react": "^4.7.0",
+    "esbuild": "^0.28.0",
+    "terser": "^5.48.0",
     "typescript": "~5.9.3",
     "vite": "^6.4.1"
   }

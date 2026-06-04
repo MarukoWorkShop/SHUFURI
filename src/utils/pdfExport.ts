@@ -4,9 +4,11 @@
  */
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { ensurePosterJapaneseFontLoaded } from './furiganaLayout/fonts';
-import type { PosterLayoutProfile } from './furiganaLayout/types';
+import { ensurePosterFontsLoaded } from './furiganaLayout/fonts';
+import type { PosterLayoutProfile, PosterPageSlice } from './furiganaLayout/types';
+import { isNativeWebView, postShareImage } from './nativeBridge';
 import {
+  mountPosterExportPage,
   mountPosterExportPages,
   getPosterExportCanvasSize,
 } from './posterExportMount';
@@ -16,7 +18,10 @@ const CSS_PX_TO_MM = 25.4 / 96;
 
 /** html2canvas 栅格倍率（大图自动降采样，避免空白或内存溢出） */
 const PDF_HTML2CANVAS_SCALE = 3;
-const JPEG_ADD_COMPRESSION: 'FAST' | 'NONE' | 'SLOW' = 'NONE';
+/** JPEG 写入 PDF 时的压缩模式，与 shufu life paperExport 栅格化一致 */
+const JPEG_ADD_COMPRESSION: 'FAST' | 'NONE' = 'FAST';
+/** JPEG 质量（体积与锐度折中） */
+const PDF_JPEG_QUALITY = 0.95;
 const MIN_PDF_BYTES = 512;
 
 type Html2CanvasOpts = Parameters<typeof html2canvas>[1];
@@ -98,51 +103,46 @@ export async function preloadImagesInElementForPdf(el: HTMLElement): Promise<voi
   );
 }
 
+/**
+ * 自适应栅格倍率：大尺寸画布（手机 1080×1920）降为 2× 以避免 canvas 超限；
+ * B5 打印画布（600×852）使用 3× 高清栅格。
+ */
 function pickRasterScale(width: number, height: number): number {
   const maxDim = Math.max(width, height);
   if (maxDim > 1500) return 2;
-  if (maxDim > 900) return 2;
   return PDF_HTML2CANVAS_SCALE;
 }
 
-function buildHtml2CanvasOpts(
-  target: HTMLElement,
-  scale: number,
-  foreignObjectRendering: boolean,
-): Html2CanvasOpts {
-  const width = target.offsetWidth || target.getBoundingClientRect().width;
-  const height = target.offsetHeight || target.getBoundingClientRect().height;
+/**
+ * html2canvas 选项：
+ * 1) windowWidth/windowHeight —— 把 clone iframe 的视口钉到与目标元素同宽同高，防止
+ *    fixed 全屏 backdrop 导致 clone 文档视口过大，内部 width:100% / flex 子项被撑宽。
+ * 2) width/height —— 强制 canvas 像素尺寸严格等于目标元素 border-box × scale，
+ *    禁止 html2canvas 因内部子元素溢出（scrollWidth > offsetWidth）而自动扩展 canvas。
+ * 3) 不传入 x/y —— html2canvas 内部会把 opts.x/y 与 clone 元素的 left/top 叠加，
+ *    而我们无法精确控制 clone iframe 中元素的绝对坐标，叠加后反而导致偏移或裁剪。
+ * 4) 优先使用 data 属性中存储的预期画布尺寸（exportCanvasW/H），避免内容较少的末页
+ *    offsetHeight < 预期高度导致 canvas 偏小，PDF 写入时被拉伸。
+ */
+function buildHtml2CanvasOpts(target: HTMLElement, scale: number): Html2CanvasOpts {
+  // 优先使用 shell 上存储的预期尺寸（来自 mountPosterExportPage），fallback 到 offset 尺寸
+  const expectedW = target.dataset.exportCanvasW
+    ? Math.max(1, parseInt(target.dataset.exportCanvasW, 10))
+    : Math.max(1, target.offsetWidth);
+  const expectedH = target.dataset.exportCanvasH
+    ? Math.max(1, parseInt(target.dataset.exportCanvasH, 10))
+    : Math.max(1, target.offsetHeight);
   return {
     scale,
-    width,
-    height,
+    width: expectedW,
+    height: expectedH,
     useCORS: true,
     allowTaint: false,
     backgroundColor: '#ffffff',
     logging: false,
-    foreignObjectRendering,
+    windowWidth: expectedW,
+    windowHeight: expectedH,
   };
-}
-
-function isCanvasMostlyBlank(canvas: HTMLCanvasElement): boolean {
-  if (canvas.width <= 1 || canvas.height <= 1) return true;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return true;
-
-  const w = Math.min(48, canvas.width);
-  const h = Math.min(48, canvas.height);
-  const { data } = ctx.getImageData(0, 0, w, h);
-  let nonWhite = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i]!;
-    const g = data[i + 1]!;
-    const b = data[i + 2]!;
-    const a = data[i + 3]!;
-    if (a > 8 && (r < 250 || g < 250 || b < 250)) {
-      nonWhite += 1;
-    }
-  }
-  return nonWhite < 4;
 }
 
 async function waitForLayoutStable(target: HTMLElement): Promise<void> {
@@ -152,48 +152,119 @@ async function waitForLayoutStable(target: HTMLElement): Promise<void> {
   });
 }
 
-async function rasterizeWithHtml2canvas(target: HTMLElement): Promise<HTMLCanvasElement> {
-  const width = target.offsetWidth || target.getBoundingClientRect().width;
-  const height = target.offsetHeight || target.getBoundingClientRect().height;
-  const scale = pickRasterScale(width, height);
-
-  const attempts: Array<{ foreignObjectRendering: boolean }> = [
-    { foreignObjectRendering: false },
-    { foreignObjectRendering: true },
-  ];
-
-  let lastCanvas: HTMLCanvasElement | null = null;
-
-  for (const attempt of attempts) {
-    try {
-      const canvas = await html2canvas(
-        target,
-        buildHtml2CanvasOpts(target, scale, attempt.foreignObjectRendering),
-      );
-      lastCanvas = canvas;
-      if (!isCanvasMostlyBlank(canvas)) {
-        return canvas;
-      }
-    } catch {
-      /* try next mode */
-    }
+/** 强制把 canvas 裁剪/填充到精确的期望像素尺寸 */
+function forceCanvasSize(
+  source: HTMLCanvasElement,
+  expectedW: number,
+  expectedH: number,
+): HTMLCanvasElement {
+  if (source.width === expectedW && source.height === expectedH) {
+    return source;
   }
+  const fixed = document.createElement('canvas');
+  fixed.width = expectedW;
+  fixed.height = expectedH;
+  const ctx = fixed.getContext('2d')!;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, expectedW, expectedH);
+  // 从 source 左上角裁剪出 expectedW × expectedH，不做任何缩放
+  const srcW = Math.min(source.width, expectedW);
+  const srcH = Math.min(source.height, expectedH);
+  ctx.drawImage(source, 0, 0, srcW, srcH, 0, 0, srcW, srcH);
+  return fixed;
+}
 
-  if (lastCanvas && !isCanvasMostlyBlank(lastCanvas)) {
-    return lastCanvas;
+/** 给任意 Promise 加超时，超时抛出描述性错误 */
+function withDeadline<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} 超时（${ms}ms）`)), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
+/** 长按单页保存：更低倍率，避免 iOS WebView 内存溢出 */
+const QUICK_SAVE_RASTERIZE_TIMEOUT_MS = 30_000;
+const QUICK_SAVE_JPEG_QUALITY = 0.9;
+
+export type QuickSaveImageOptions = {
+  format?: 'jpeg' | 'png';
+  jpegQuality?: number;
+  /** 是否在栅格化前把离屏 DOM 移入视口（长按保存应 false，避免全屏白屏卡顿感） */
+  prepareVisible?: boolean;
+  maxScale?: number;
+};
+
+/** 长按保存专用栅格倍率：大画布强制 1× */
+function pickQuickSaveRasterScale(width: number, height: number): number {
+  const pixels = width * height;
+  if (pixels >= 1_800_000) return 1;
+  if (pixels >= 450_000) return 2;
+  return PDF_HTML2CANVAS_SCALE;
+}
+
+/** 单页面栅格化超时（毫秒），极端情况 html2canvas 可能挂起 */
+const RASTERIZE_PAGE_TIMEOUT_MS = 45_000;
+
+/** 单次 html2canvas 栅格化（强制截取区域等于元素精确尺寸，禁止自动扩展） */
+async function rasterizeWithHtml2canvas(
+  target: HTMLElement,
+  scaleOverride?: number,
+  timeoutMs = RASTERIZE_PAGE_TIMEOUT_MS,
+): Promise<HTMLCanvasElement> {
+  // 使用与 buildHtml2CanvasOpts 一致的预期尺寸来源
+  const w = target.dataset.exportCanvasW
+    ? Math.max(1, parseInt(target.dataset.exportCanvasW, 10))
+    : Math.max(1, target.offsetWidth);
+  const h = target.dataset.exportCanvasH
+    ? Math.max(1, parseInt(target.dataset.exportCanvasH, 10))
+    : Math.max(1, target.offsetHeight);
+  const scale = scaleOverride ?? pickRasterScale(w, h);
+  const rawCanvas = await withDeadline(
+    html2canvas(target, buildHtml2CanvasOpts(target, scale)),
+    timeoutMs,
+    'html2canvas 栅格化',
+  );
+  const expectedW = Math.round(w * scale);
+  const expectedH = Math.round(h * scale);
+  return forceCanvasSize(rawCanvas, expectedW, expectedH);
+}
+
+async function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  mimeType: 'image/jpeg' | 'image/png',
+  quality: number,
+): Promise<Blob> {
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((b) => resolve(b), mimeType, quality);
+  });
+  if (!blob) {
+    throw new Error('无法生成图片');
   }
-
-  throw new Error('海报栅格化失败：导出结果为空白，请刷新后重试');
+  return blob;
 }
 
 /** 将单页根节点栅格化为 Canvas（导出 mount 已在离屏 1:1，直接栅格化） */
 export async function rasterizePosterLayoutPageRoot(el: HTMLElement): Promise<HTMLCanvasElement> {
-  await ensurePosterJapaneseFontLoaded();
+  await ensurePosterFontsLoaded();
   await waitForLayoutStable(el);
   await waitForImagesInElement(el);
   await preloadImagesInElementForPdf(el);
   await waitForLayoutStable(el);
-  return await rasterizeWithHtml2canvas(el);
+  return await withDeadline(
+    rasterizeWithHtml2canvas(el),
+    RASTERIZE_PAGE_TIMEOUT_MS,
+    '整页栅格化',
+  );
+}
+
+/** 根据排版模式为 PDF 文件名追加 wide / narrow 后缀 */
+export function posterPdfExportFilename(baseName: string, layoutProfile: PosterLayoutProfile): string {
+  const sizeTag = layoutProfile === 'mobilePoster' ? 'narrow' : 'wide';
+  const safeBase = baseName.replace(/[/\\?*:|"]/g, '_').slice(0, 110) || 'poster';
+  return `${safeBase}_${sizeTag}`;
 }
 
 /** Web：触发浏览器下载 PDF Blob */
@@ -257,7 +328,7 @@ function assertValidPdfBlob(blob: Blob): void {
   }
 }
 
-/** 将栅格 canvas 写入 jsPDF 当前页（避免 toDataURL 大字符串损坏） */
+/** 将栅格 canvas 写入 jsPDF 当前页（与 shufu life 对齐：先 toDataURL 再 addImage） */
 function addCanvasToPdfPage(
   pdf: jsPDF,
   canvas: HTMLCanvasElement,
@@ -268,7 +339,8 @@ function addCanvasToPdfPage(
   if (!isFirstPage) {
     pdf.addPage([wMm, hMm], hMm >= wMm ? 'portrait' : 'landscape');
   }
-  pdf.addImage(canvas, 'JPEG', 0, 0, wMm, hMm, undefined, JPEG_ADD_COMPRESSION);
+  const imgData = canvas.toDataURL('image/jpeg', PDF_JPEG_QUALITY);
+  pdf.addImage(imgData, 'JPEG', 0, 0, wMm, hMm, undefined, JPEG_ADD_COMPRESSION);
 }
 
 function deliverDownloadBlob(blob: Blob, filename: string): void {
@@ -414,16 +486,18 @@ export async function exportPosterLayoutPngPages(
  * 从分页 HTML 导出 PDF（不依赖预览 DOM ref；点击时先弹出保存对话框保留用户手势）
  */
 export async function exportPosterPdfFromPageHtmls(
-  pageHtmls: string[],
+  pageSlices: PosterPageSlice[],
   title: string,
   layoutProfile: PosterLayoutProfile,
   filename: string,
+  artist?: string,
 ): Promise<void> {
-  if (pageHtmls.length === 0) {
+  if (pageSlices.length === 0) {
     throw new Error('没有可导出的页面');
   }
 
-  const saveHandle = await pickPdfSaveHandle(filename);
+  const exportFilename = posterPdfExportFilename(filename, layoutProfile);
+  const saveHandle = await pickPdfSaveHandle(exportFilename);
   const hasNativePicker = Boolean(
     (window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker,
   );
@@ -431,9 +505,14 @@ export async function exportPosterPdfFromPageHtmls(
     return;
   }
 
-  await ensurePosterJapaneseFontLoaded();
-  const mounts = mountPosterExportPages(document, pageHtmls, title, layoutProfile);
+  await ensurePosterFontsLoaded();
+  const mounts = mountPosterExportPages(document, pageSlices, title, layoutProfile, artist);
   const { width, height } = getPosterExportCanvasSize(layoutProfile);
+
+  // 【闪烁修复】在栅格化前才将所有页面的 backdrop 移入可见区域
+  for (const mount of mounts) {
+    mount.prepare();
+  }
 
   try {
     const flatPages = mounts.map((mount) => ({
@@ -465,7 +544,7 @@ export async function exportPosterPdfFromPageHtmls(
     if (saveHandle) {
       await writeBlobToFileHandle(saveHandle, blob);
     } else {
-      await deliverPosterPdfBlob(blob, filename);
+      await deliverPosterPdfBlob(blob, exportFilename);
     }
   } finally {
     for (const mount of mounts) {
@@ -475,46 +554,168 @@ export async function exportPosterPdfFromPageHtmls(
 }
 
 /**
- * 从分页 HTML 导出 PNG（不依赖预览 DOM ref）
+ * 将单页 HTML 栅格化为 Blob（用于长按保存等场景，默认 JPEG + 低倍率）。
+ */
+export async function rasterizePageHtmlToBlob(
+  pageHtml: string,
+  title: string,
+  artist: string | undefined,
+  showTitle: boolean,
+  pageIndex: number,
+  pageCount: number,
+  layoutProfile: PosterLayoutProfile,
+  spacingScale = 1,
+  options: QuickSaveImageOptions = {},
+): Promise<{ blob: Blob; mimeType: 'image/jpeg' | 'image/png' }> {
+  const format = options.format ?? 'jpeg';
+  const jpegQuality = options.jpegQuality ?? QUICK_SAVE_JPEG_QUALITY;
+  const prepareVisible = options.prepareVisible ?? false;
+  const { width, height } = getPosterExportCanvasSize(layoutProfile);
+  const scale = options.maxScale ?? pickQuickSaveRasterScale(width, height);
+
+  await ensurePosterFontsLoaded();
+  const mount = mountPosterExportPage(document, {
+    title,
+    artist,
+    showTitle,
+    bodyFragmentHtml: pageHtml,
+    pageIndex,
+    pageCount,
+    layoutProfile,
+    spacingScale,
+  });
+  mount.prepare({ visible: prepareVisible });
+  try {
+    await waitForLayoutStable(mount.root);
+    await waitForImagesInElement(mount.root);
+    await preloadImagesInElementForPdf(mount.root);
+    await waitForLayoutStable(mount.root);
+    const canvas = await withDeadline(
+      rasterizeWithHtml2canvas(mount.root, scale, QUICK_SAVE_RASTERIZE_TIMEOUT_MS),
+      QUICK_SAVE_RASTERIZE_TIMEOUT_MS,
+      '长按保存栅格化',
+    );
+    const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
+    const blob = await canvasToBlob(
+      canvas,
+      mimeType,
+      format === 'png' ? 1 : jpegQuality,
+    );
+    return { blob, mimeType };
+  } finally {
+    mount.dispose();
+  }
+}
+
+/**
+ * 将单页 HTML 栅格化为 data URL（用于长按保存等场景）。
+ * 使用离屏挂载 → 1:1 栅格化 → data URL，不影响当前页面 DOM。
+ */
+export async function rasterizePageHtmlToDataUrl(
+  pageHtml: string,
+  title: string,
+  artist: string | undefined,
+  showTitle: boolean,
+  pageIndex: number,
+  pageCount: number,
+  layoutProfile: PosterLayoutProfile,
+  spacingScale = 1,
+): Promise<string> {
+  const { blob } = await rasterizePageHtmlToBlob(
+    pageHtml,
+    title,
+    artist,
+    showTitle,
+    pageIndex,
+    pageCount,
+    layoutProfile,
+    spacingScale,
+    { format: 'jpeg', jpegQuality: QUICK_SAVE_JPEG_QUALITY, prepareVisible: false },
+  );
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('无法读取图片'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('无法读取图片'));
+    reader.readAsDataURL(blob);
+  });
+  const comma = dataUrl.indexOf(',');
+  return comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
+}
+
+/** 逐页导出间隙让出主线程，便于 WebView GC 回收大 canvas */
+async function yieldBetweenExportPages(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
+
+/**
+ * 从分页 HTML 导出 PNG（不依赖预览 DOM ref）。
+ * App 内：逐页 1× JPEG + 原生分享，避免 html2canvas 2× 多页同时挂载 OOM。
+ * 浏览器：逐页 1× PNG 下载。
  */
 export async function exportPosterPngFromPageHtmls(
-  pageHtmls: string[],
+  pageSlices: PosterPageSlice[],
   title: string,
   layoutProfile: PosterLayoutProfile,
   baseFilename: string,
+  artist?: string,
 ): Promise<number> {
-  if (pageHtmls.length === 0) {
+  if (pageSlices.length === 0) {
     throw new Error('没有可导出的页面');
   }
 
-  await ensurePosterJapaneseFontLoaded();
-  const mounts = mountPosterExportPages(document, pageHtmls, title, layoutProfile);
+  const native = isNativeWebView();
   const safeBase = baseFilename.replace(/[/\\?*:|"]/g, '_').slice(0, 120) || 'poster';
-  const n = pageHtmls.length;
+  const trimmedTitle = title.trim() || '歌词笔记';
+  const n = pageSlices.length;
 
-  try {
-    for (let i = 0; i < n; i++) {
-      const name = n === 1 ? `${safeBase}.png` : `${safeBase}_${String(i + 1).padStart(2, '0')}.png`;
-      const canvas = await rasterizePosterLayoutPageRoot(mounts[i]!.root);
-      const blob: Blob | null = await new Promise((resolve) => {
-        canvas.toBlob((b) => resolve(b), 'image/png', 1);
+  for (let i = 0; i < n; i++) {
+    const slice = pageSlices[i]!;
+    const { blob, mimeType } = await rasterizePageHtmlToBlob(
+      slice.html,
+      trimmedTitle,
+      artist,
+      i === 0,
+      i,
+      n,
+      layoutProfile,
+      slice.spacingScale ?? 1,
+      {
+        format: native ? 'jpeg' : 'png',
+        prepareVisible: false,
+      },
+    );
+
+    const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+    const downloadName =
+      n === 1 ? `${safeBase}.${ext}` : `${safeBase}_${String(i + 1).padStart(2, '0')}.${ext}`;
+
+    if (native) {
+      const shareBase = downloadName.replace(/\.(png|jpg)$/i, '');
+      await postShareImage({
+        dataBase64: await blobToBase64(blob),
+        mimeType,
+        filename: shareBase,
       });
-      if (!blob) {
-        throw new Error('PNG 导出失败：无法生成图片');
+    } else {
+      deliverDownloadBlob(blob, downloadName);
+      if (i < n - 1) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 350));
       }
-      deliverDownloadBlob(blob, name);
-
-      if (i >= n - 1) {
-        break;
-      }
-
-      // 短暂延迟，降低浏览器批量拦截下载的概率，同时避免弹窗打断用户手势链
-      await new Promise<void>((resolve) => setTimeout(resolve, 350));
     }
-    return n;
-  } finally {
-    for (const mount of mounts) {
-      mount.dispose();
-    }
+
+    await yieldBetweenExportPages();
   }
+
+  return n;
 }

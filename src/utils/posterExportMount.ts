@@ -1,15 +1,17 @@
 import {
+  applyPosterBodyMaxHeight,
   buildFuriganaPosterInnerCss,
   buildFuriganaPosterRootStyle,
   getFuriganaCanvasInsets,
   getFuriganaPosterCanvasDimensions,
 } from './furiganaLayout/furiganaPosterShared';
+import { ZH_FONT_FAMILY } from './furiganaLayout/fonts';
 import type { PosterLayoutProfile } from './furiganaLayout/types';
+import { applyPosterTitleElement } from './furiganaLayout/posterTitle';
 
 const PAGE_NUMBER_FONT_PX = 13;
 const PAGE_NUMBER_TEXT_COLOR = '#94A3B8';
-const PAGE_NUMBER_FONT_FAMILY =
-  '"PingFang SC", "PingFang TC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif';
+const PAGE_NUMBER_FONT_FAMILY = ZH_FONT_FAMILY;
 
 function sanitizeFragmentHtml(html: string): string {
   let s = html.replace(/\r\n/g, '\n');
@@ -26,6 +28,8 @@ function formatPosterPageNo(current: number, total: number): string {
 
 export type PosterExportPageMount = {
   root: HTMLDivElement;
+  /** 在栅格化前调用；visible:false 时保持离屏，避免长按保存时全屏白屏 */
+  prepare: (opts?: { visible?: boolean }) => void;
   dispose: () => void;
 };
 
@@ -34,14 +38,25 @@ export function mountPosterExportPage(
   doc: Document,
   opts: {
     title: string;
+    artist?: string;
     showTitle: boolean;
     bodyFragmentHtml: string;
     pageIndex: number;
     pageCount: number;
     layoutProfile: PosterLayoutProfile;
+    spacingScale?: number;
   },
 ): PosterExportPageMount {
-  const { title, showTitle, bodyFragmentHtml, pageIndex, pageCount, layoutProfile } = opts;
+  const {
+    title,
+    artist,
+    showTitle,
+    bodyFragmentHtml,
+    pageIndex,
+    pageCount,
+    layoutProfile,
+    spacingScale = 1,
+  } = opts;
   const { width: canvasW, height: canvasH } = getFuriganaPosterCanvasDimensions(layoutProfile);
   const pad = getFuriganaCanvasInsets(layoutProfile);
   const rootStyle = buildFuriganaPosterRootStyle(layoutProfile);
@@ -52,9 +67,12 @@ export function mountPosterExportPage(
   //    —— html2canvas 会直接裁切或忽略不可见内容，导致栅格化全空白。
   // 2) position:fixed 用于 backdrop 遮罩没问题，html2canvas 以 shell（position:relative）
   //    为渲染 target，其坐标在 backdrop 的 absolute 坐标系内，不受 viewport 影响。
+  //
+  // 【闪烁修复】初始将 backdrop 移出视口（left: -99999vw），避免挂载时的白屏闪现。
+  // 调用方在准备好栅格化前调用 prepare() 将其移回可见位置。
   const backdrop = doc.createElement('div');
   backdrop.style.position = 'fixed';
-  backdrop.style.left = '0';
+  backdrop.style.left = '-99999vw'; // 初始隐藏，prepare() 时移回 0
   backdrop.style.top = '0';
   backdrop.style.width = '100vw';
   backdrop.style.height = '100vh';
@@ -72,18 +90,21 @@ export function mountPosterExportPage(
 
   const shell = doc.createElement('div');
   shell.className = 'fv-html-poster-root';
-  // rootStyle 已包含 position:relative、width、height、padding、overflow:hidden、
+  // rootStyle 已包含 position:relative、width、height（带px单位）、padding、overflow:hidden、
   // display:flex 等全部关键样式
   Object.assign(shell.style, rootStyle);
+  // 将预期画布尺寸存为 data 属性，供 rasterize 阶段读取以确保 canvas 尺寸精确
+  shell.dataset.exportCanvasW = String(canvasW);
+  shell.dataset.exportCanvasH = String(canvasH);
 
   const styleEl = doc.createElement('style');
-  styleEl.textContent = buildFuriganaPosterInnerCss(layoutProfile);
+  styleEl.textContent = buildFuriganaPosterInnerCss(layoutProfile, { spacingScale });
   shell.appendChild(styleEl);
 
   if (showTitle) {
     const h1 = doc.createElement('h1');
     h1.className = 'fv-title-h';
-    h1.textContent = title.trim() || '歌词笔记';
+    applyPosterTitleElement(h1, title, artist);
     shell.appendChild(h1);
   }
 
@@ -113,13 +134,33 @@ export function mountPosterExportPage(
   });
   shell.appendChild(pageNo);
 
+  const titleElForMeasure = showTitle ? shell.querySelector('h1.fv-title-h') : null;
+  applyPosterBodyMaxHeight(body, layoutProfile, {
+    showTitle,
+    titleEl: titleElForMeasure instanceof HTMLElement ? titleElForMeasure : null,
+  });
+
   wrapper.appendChild(shell);
   backdrop.appendChild(wrapper);
   doc.body.appendChild(backdrop);
   void shell.offsetHeight;
 
+  let prepared = false;
+
   return {
     root: shell,
+    prepare: (opts?: { visible?: boolean }) => {
+      const visible = opts?.visible ?? true;
+      if (!prepared) {
+        prepared = true;
+        if (visible) {
+          backdrop.style.left = '0';
+        }
+      } else if (visible) {
+        backdrop.style.left = '0';
+      }
+      void shell.offsetHeight;
+    },
     dispose: () => {
       if (backdrop.parentNode) {
         backdrop.parentNode.removeChild(backdrop);
@@ -130,19 +171,22 @@ export function mountPosterExportPage(
 
 export function mountPosterExportPages(
   doc: Document,
-  pageHtmls: string[],
+  pageSlices: Array<{ html: string; spacingScale?: number }>,
   title: string,
   layoutProfile: PosterLayoutProfile,
+  artist?: string,
 ): PosterExportPageMount[] {
-  const n = pageHtmls.length;
-  return pageHtmls.map((html, i) =>
+  const n = pageSlices.length;
+  return pageSlices.map((slice, i) =>
     mountPosterExportPage(doc, {
       title,
+      artist,
       showTitle: i === 0,
-      bodyFragmentHtml: html,
+      bodyFragmentHtml: slice.html,
       pageIndex: i,
       pageCount: n,
       layoutProfile,
+      spacingScale: slice.spacingScale ?? 1,
     }),
   );
 }
