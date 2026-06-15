@@ -13,6 +13,15 @@ const PAGE_NUMBER_FONT_PX = 13;
 const PAGE_NUMBER_TEXT_COLOR = '#94A3B8';
 const PAGE_NUMBER_FONT_FAMILY = ZH_FONT_FAMILY;
 
+/**
+ * 导出 html2canvas 渲染补偿因子。
+ * html2canvas 的 canvas 文字排版比浏览器 DOM 渲染略大（~1-3%），
+ * 导致分页测量时认为能装下的内容在 PDF 中溢出/截断。
+ * 此处将 CSS spacingScale 微缩 2% 以补偿该差异，
+ * 确保屏幕预览与 PDF 导出 1:1 对齐。
+ */
+const EXPORT_HTML2CANVAS_SCALE_FUDGE = 0.98;
+
 function sanitizeFragmentHtml(html: string): string {
   let s = html.replace(/\r\n/g, '\n');
   s = s.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
@@ -98,7 +107,9 @@ export function mountPosterExportPage(
   shell.dataset.exportCanvasH = String(canvasH);
 
   const styleEl = doc.createElement('style');
-  styleEl.textContent = buildFuriganaPosterInnerCss(layoutProfile, { spacingScale });
+  // 叠加 html2canvas 渲染补偿因子，确保 PDF 栅格化不溢出
+  const exportScale = spacingScale * EXPORT_HTML2CANVAS_SCALE_FUDGE;
+  styleEl.textContent = buildFuriganaPosterInnerCss(layoutProfile, { spacingScale: exportScale });
   shell.appendChild(styleEl);
 
   if (showTitle) {

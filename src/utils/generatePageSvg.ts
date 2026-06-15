@@ -1,0 +1,156 @@
+/**
+ * 矢量 SVG 页面生成器
+ *
+ * 将海报页面 HTML 转换为自包含 SVG（含嵌入字体与全量 CSS），
+ * 支持任意缩放无锯齿，通过 foreignObject 保留原始 HTML 布局。
+ */
+import type { PosterLayoutProfile } from './furiganaLayout/types';
+import {
+  buildFuriganaPosterInnerCss,
+  buildFuriganaPosterRootStyle,
+  getFuriganaCanvasInsets,
+  getFuriganaPosterCanvasDimensions,
+} from './furiganaLayout/furiganaPosterShared';
+import { applyPosterTitleElement } from './furiganaLayout/posterTitle';
+import { getPosterJapaneseFontFaceCss, ZH_FONT_FAMILY } from './furiganaLayout/fonts';
+
+/** 将 JS 样式对象转为内联 style 属性字符串 */
+function styleObjToAttr(style: Record<string, string | number>): string {
+  return Object.entries(style)
+    .map(([key, val]) => {
+      const cssKey = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+      return `${cssKey}:${val}`;
+    })
+    .join(';');
+}
+
+/** SVG 特殊字符转义 */
+function xmlEscape(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+export interface GeneratePageSvgOptions {
+  title: string;
+  artist?: string;
+  showTitle: boolean;
+  bodyFragmentHtml: string;
+  pageIndex: number;
+  pageCount: number;
+  layoutProfile: PosterLayoutProfile;
+  spacingScale?: number;
+}
+
+/**
+ * 生成单页自包含矢量 SVG（foreignObject + 内联 CSS + 嵌入字体）
+ */
+export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<string> {
+  const {
+    title,
+    artist,
+    showTitle,
+    bodyFragmentHtml,
+    pageIndex,
+    pageCount,
+    layoutProfile,
+    spacingScale = 1,
+  } = opts;
+
+  const { width: w, height: h } = getFuriganaPosterCanvasDimensions(layoutProfile);
+  const pad = getFuriganaCanvasInsets(layoutProfile);
+  const rootStyle = buildFuriganaPosterRootStyle(layoutProfile);
+  const innerCss = buildFuriganaPosterInnerCss(layoutProfile, { spacingScale });
+
+  // 嵌入日文字体（base64）
+  const jpFontCss = getPosterJapaneseFontFaceCss();
+
+  // 页码
+  const pageNoText = `— ${String(pageIndex + 1).padStart(2, '0')} / ${String(pageCount).padStart(2, '0')} —`;
+  const pageNoBottom = layoutProfile === 'mobilePoster'
+    ? Math.round(pad.bottom * 0.42)
+    : Math.round(pad.bottom * 0.28);
+
+  // 构建标题 HTML
+  let titleHtml = '';
+  if (showTitle) {
+    // 使用临时元素生成标题 HTML
+    const tmp = document.createElement('h1');
+    tmp.className = 'fv-title-h';
+    applyPosterTitleElement(tmp, title, artist);
+    titleHtml = `\n    ${tmp.outerHTML}`;
+  }
+
+  // 清理片段 HTML
+  const cleanBody = bodyFragmentHtml
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+
+  // 构建 root 内联样式
+  const rootInlineStyle = styleObjToAttr(rootStyle);
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="${w}" height="${h}"
+     viewBox="0 0 ${w} ${h}"
+     version="1.1">
+  <defs>
+    <style>
+      ${xmlEscape(jpFontCss)}
+      ${xmlEscape(innerCss)}
+      .fv-poster-page-no {
+        position: absolute;
+        right: ${pad.right}px;
+        bottom: ${pageNoBottom}px;
+        font-size: 13px;
+        color: #94A3B8;
+        font-family: ${ZH_FONT_FAMILY};
+        font-weight: 400;
+        letter-spacing: 0.04em;
+      }
+    </style>
+  </defs>
+  <foreignObject width="100%" height="100%">
+    <div xmlns="http://www.w3.org/1999/xhtml"
+         class="fv-html-poster-root"
+         style="${rootInlineStyle}">${titleHtml}
+      <div class="fv-body-h" style="flex:1 1 auto;min-height:0;overflow:hidden;box-sizing:border-box;text-align:left;">
+        ${cleanBody}
+      </div>
+      <div class="fv-poster-page-no">${xmlEscape(pageNoText)}</div>
+    </div>
+  </foreignObject>
+</svg>`;
+}
+
+/**
+ * 生成多页 SVG 合集（多 SVG 包装在 HTML 中，供浏览器预览/打印）
+ */
+export async function generateMultiPageSvgHtml(
+  pages: GeneratePageSvgOptions[],
+): Promise<string> {
+  const svgs = await Promise.all(pages.map(generatePageSvg));
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHUFURI Poster Export</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f0f0f0; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .svg-page { max-width: 100%; height: auto; box-shadow: 0 2px 16px rgba(0,0,0,0.12); background: #fff; }
+    @media print {
+      body { background: #fff; padding: 0; gap: 0; }
+      .svg-page { box-shadow: none; page-break-after: always; width: 100%; height: 100vh; }
+      .svg-page:last-child { page-break-after: auto; }
+    }
+  </style>
+</head>
+<body>
+  ${svgs.map((svg) => `<div class="svg-page">${svg}</div>`).join('\n  ')}
+</body>
+</html>`;
+}

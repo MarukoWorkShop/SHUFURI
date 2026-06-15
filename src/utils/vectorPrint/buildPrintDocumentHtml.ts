@@ -5,6 +5,9 @@ import { buildVectorPrintInnerCss } from './buildVectorPrintInnerCss';
 import { getPrintFontFaceCss } from './printFonts';
 import { printPageSpec } from './printPageSpec';
 
+/** html2canvas 渲染补偿因子（与 posterExportMount.ts 保持同步） */
+const EXPORT_HTML2CANVAS_SCALE_FUDGE = 0.98;
+
 function formatPosterPageNo(current: number, total: number): string {
   const a = String(current).padStart(2, '0');
   const b = String(total).padStart(2, '0');
@@ -34,8 +37,9 @@ function buildSinglePrintPageHtml(
     ? `<h1 class="fv-title-h">${buildPosterTitleInnerHtml(title, artist)}</h1>`
     : '';
   const pageNo = formatPosterPageNo(pageIndex + 1, pageCount);
+  const exportScale = slice.spacingScale * EXPORT_HTML2CANVAS_SCALE_FUDGE;
   const scaleAttr =
-    slice.spacingScale !== 1 ? ` data-spacing-scale="${slice.spacingScale}"` : '';
+    slice.spacingScale !== 1 ? ` data-spacing-scale="${exportScale}"` : '';
 
   return `<section class="print-page"${scaleAttr}>
   <div class="fv-html-poster-root">
@@ -59,9 +63,9 @@ export async function buildPrintDocumentHtml(
 
   const spec = printPageSpec(layoutProfile);
   const fontFaceCss = await getPrintFontFaceCss();
-  const baseCss = buildVectorPrintInnerCss(layoutProfile, spec, { spacingScale: 1 });
+  const baseCss = buildVectorPrintInnerCss(layoutProfile, spec, { spacingScale: EXPORT_HTML2CANVAS_SCALE_FUDGE });
 
-  const spacingScales = [...new Set(pageSlices.map((s) => s.spacingScale))].filter((s) => s !== 1);
+  const spacingScales = [...new Set(pageSlices.map((s) => s.spacingScale * EXPORT_HTML2CANVAS_SCALE_FUDGE))].filter((s) => s !== EXPORT_HTML2CANVAS_SCALE_FUDGE);
   const scaledCss = spacingScales
     .map((scale) => {
       const inner = buildVectorPrintInnerCss(layoutProfile, spec, { spacingScale: scale });

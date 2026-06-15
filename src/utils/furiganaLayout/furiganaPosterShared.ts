@@ -2,6 +2,7 @@ import type { PosterLayoutProfile, FuriganaEngineDim } from './types';
 import { B5_DIM, MOBILE_DIM, POSTER_ELASTIC_FONT_BASE_PX } from './dimensions';
 import {
   KOZUKA_MINCHO_EL_FAMILY,
+  KO_FONT_FAMILY,
   getPosterJapaneseFontFaceCss,
   ZH_FONT_FAMILY,
 } from './fonts';
@@ -48,7 +49,7 @@ export function getFuriganaBodyBottomPaddingPx(profile: PosterLayoutProfile): nu
 
 /** 分页测量与预览共用的正文区安全余量（吸收 WebKit 字体/ruby 子像素误差） */
 export function getPosterBodySafetyMarginPx(profile: PosterLayoutProfile): number {
-  return profile === 'mobilePoster' ? 36 : 20;
+  return profile === 'mobilePoster' ? 12 : 8;
 }
 
 /** 计算 fv-body-h 的 max-height（px），测量与预览共用同一公式 */
@@ -186,6 +187,8 @@ export function buildFuriganaPosterInnerCss(
   const jpWght = 200;
   const jpEmphasisWght = 700;
   const zhAuxWght = 300;
+  const koWght = isM ? 400 : 350;  // 韩文 sans-serif 需要稍重字重
+  const koLh = jpLh;               // 韩文行高复用日文行高
   const groupMbNum = isM ? 1.5 : 1.35;
   const groupMb = scaleEm(groupMbNum);
   const lyricsJpZhGap = scaleEm(isM ? 0.06 : 0.04);
@@ -239,6 +242,9 @@ export function buildFuriganaPosterInnerCss(
     margin-bottom: ${groupMb};
     break-inside: avoid;
     page-break-inside: avoid;
+    overflow: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   .fv-html-poster-root .fv-body-h > .lyrics-group:last-child {
     margin-bottom: 0;
@@ -267,25 +273,32 @@ export function buildFuriganaPosterInnerCss(
     overflow-wrap: break-word;
     word-break: break-word;
   }
+  /* 防止 ruby 注音和中文翻译从右侧溢出：overflow:hidden + 换行约束 */
   .fv-html-poster-root .fv-body-h .lyrics-group .jp-line,
   .fv-html-poster-root .fv-body-h .lyrics-group .zh-line {
-    overflow: visible;
+    overflow: hidden;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
   }
   .fv-html-poster-root .fv-body-h .lyrics-pagination-unit .vocab-line1,
   .fv-html-poster-root .fv-body-h .lyrics-pagination-unit .vocab-ex-ja,
+  .fv-html-poster-root .fv-body-h .lyrics-pagination-unit .vocab-ex-ko,
   .fv-html-poster-root .fv-body-h .lyrics-pagination-unit .vocab-ex-zh,
   .fv-html-poster-root .fv-body-h .lyrics-pagination-unit h3.grammar-point-title,
   .fv-html-poster-root .fv-body-h .lyrics-pagination-unit .grammar-detail,
   .fv-html-poster-root .fv-body-h .lyrics-pagination-unit .grammar-ex-ja,
+  .fv-html-poster-root .fv-body-h .lyrics-pagination-unit .grammar-ex-ko,
   .fv-html-poster-root .fv-body-h .lyrics-pagination-unit .grammar-ex-zh {
-    overflow: visible;
+    overflow: hidden;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
   }
   .fv-html-poster-root .fv-body-h .lyrics-group .jp-line,
   .fv-html-poster-root .fv-body-h .lyrics-group .zh-line {
-    width: fit-content;
+    width: 100%;
     max-width: 100%;
-    margin-left: auto;
-    margin-right: auto;
     text-align: left;
   }
   .fv-html-poster-root .fv-body-h .lyrics-vocabulary,
@@ -327,6 +340,15 @@ export function buildFuriganaPosterInnerCss(
     font-kerning: normal;
     font-feature-settings: "palt" 0;
   }
+  .fv-html-poster-root .fv-body-h .ko-line,
+  .fv-html-poster-root .fv-body-h .ko-line * {
+    font-family: ${KO_FONT_FAMILY} !important;
+    font-size: ${jpFs}px !important;
+    font-weight: ${koWght} !important;
+    color: #0a0a0a !important;
+    line-height: ${koLh} !important;
+    letter-spacing: normal;
+  }
   .fv-html-poster-root .fv-body-h .vocab-ex-ja,
   .fv-html-poster-root .fv-body-h .vocab-ex-ja *:not(rt):not(rp),
   .fv-html-poster-root .fv-body-h .grammar-ex-ja,
@@ -334,6 +356,17 @@ export function buildFuriganaPosterInnerCss(
     font-family: ${KOZUKA_MINCHO_EL_FAMILY} !important;
     font-size: ${jpFs}px !important;
     font-weight: ${jpWght} !important;
+    color: #0a0a0a !important;
+    line-height: ${jpLh} !important;
+    margin: 0 !important;
+  }
+  .fv-html-poster-root .fv-body-h .vocab-ex-ko,
+  .fv-html-poster-root .fv-body-h .vocab-ex-ko *,
+  .fv-html-poster-root .fv-body-h .grammar-ex-ko,
+  .fv-html-poster-root .fv-body-h .grammar-ex-ko * {
+    font-family: ${KO_FONT_FAMILY} !important;
+    font-size: ${jpFs}px !important;
+    font-weight: ${koWght} !important;
     color: #0a0a0a !important;
     line-height: ${jpLh} !important;
     margin: 0 !important;
@@ -370,8 +403,10 @@ export function buildFuriganaPosterInnerCss(
     white-space: normal;
   }
   .fv-html-poster-root .fv-body-h .vocab-ex-ja,
+  .fv-html-poster-root .fv-body-h .vocab-ex-ko,
   .fv-html-poster-root .fv-body-h .vocab-ex-zh,
   .fv-html-poster-root .fv-body-h .grammar-ex-ja,
+  .fv-html-poster-root .fv-body-h .grammar-ex-ko,
   .fv-html-poster-root .fv-body-h .grammar-ex-zh {
     max-width: 100%;
     overflow-wrap: break-word;
@@ -395,12 +430,15 @@ export function buildFuriganaPosterInnerCss(
     font-weight: ${jpWght} !important;
     color: #64748b !important;
     line-height: 1.1 !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
   }
   .fv-html-poster-root .fv-body-h ruby {
     font-family: ${KOZUKA_MINCHO_EL_FAMILY};
     ruby-position: over;
     -webkit-ruby-position: before;
     ruby-align: start;
+    overflow: hidden;
   }
   .fv-html-poster-root .fv-body-h ruby rt {
     font-family: ${KOZUKA_MINCHO_EL_FAMILY};
@@ -410,6 +448,9 @@ export function buildFuriganaPosterInnerCss(
     line-height: 1.1;
     letter-spacing: normal;
     font-feature-settings: "palt" 0;
+    overflow: hidden;
+    text-overflow: clip;
+    max-width: 100%;
   }
   .fv-html-poster-root .fv-body-h h2.lyrics-section-title {
     font-family: ${ZH_FONT_FAMILY};
@@ -461,12 +502,75 @@ export function buildFuriganaPosterInnerCss(
     font-weight: ${jpWght};
     color: #64748b;
     line-height: 1.1;
+    overflow: hidden;
+    text-overflow: clip;
+    max-width: 100%;
   }
   .fv-html-poster-root .fv-body-h .vocab-line1 .vocab-meaning,
   .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-zh,
   .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-zh * {
     font-family: ${ZH_FONT_FAMILY} !important;
     font-weight: ${zhAuxWght} !important;
+  }
+
+  /* ===== 杂志文章排版 (.magazine-*) ===== */
+  .fv-html-poster-root .fv-body-h .magazine-body {
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .fv-html-poster-root .fv-body-h .magazine-section {
+    margin-bottom: ${scaleEm(isM ? 1.6 : 1.4)};
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    overflow: hidden;
+  }
+  .fv-html-poster-root .fv-body-h > .magazine-body > .magazine-section:last-child {
+    margin-bottom: 0;
+  }
+  .fv-html-poster-root .fv-body-h .magazine-jp,
+  .fv-html-poster-root .fv-body-h .magazine-jp *:not(rt):not(rp) {
+    font-family: ${KOZUKA_MINCHO_EL_FAMILY} !important;
+    font-size: ${jpFs}px !important;
+    font-weight: ${jpWght} !important;
+    color: #0a0a0a !important;
+    line-height: ${jpLh} !important;
+    margin: 0 !important;
+    letter-spacing: normal;
+    font-kerning: normal;
+    font-feature-settings: "palt" 0;
+    text-align: left;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+    max-width: 100%;
+  }
+  .fv-html-poster-root .fv-body-h .magazine-zh,
+  .fv-html-poster-root .fv-body-h .magazine-zh * {
+    font-family: ${ZH_FONT_FAMILY} !important;
+    font-size: ${zhLyricsPx}px !important;
+    font-weight: ${zhAuxWght} !important;
+    color: #0a0a0a !important;
+    line-height: ${zhLyricsLh} !important;
+    margin: ${scaleEm(isM ? 0.45 : 0.35)} 0 0 0 !important;
+    text-align: left;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+    max-width: 100%;
+  }
+  /* 杂志列标签：淡灰色弱化，仅作溯源 */
+  .fv-html-poster-root .fv-body-h .magazine-column-label {
+    display: inline-block;
+    font-family: ${ZH_FONT_FAMILY} !important;
+    font-size: ${Math.round(zhLyricsPx * 0.72)}px !important;
+    font-weight: 300 !important;
+    color: #cbd5e1 !important;
+    margin-right: 0.5em;
+    user-select: none;
+    letter-spacing: 0.05em;
   }
 `;
 }
@@ -485,7 +589,10 @@ export function buildFuriganaPosterRootStyle(
     background: '#fff',
     overflow: 'hidden',
     textAlign: 'left',
-    display: 'block',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
     position: 'relative',
   };
 }

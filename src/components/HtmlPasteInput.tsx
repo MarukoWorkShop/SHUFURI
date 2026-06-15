@@ -1,152 +1,98 @@
 import { useCallback, useEffect, useState } from 'react';
 import { buildExternalAiPrompt } from '../services/externalPromptTemplate';
-import {
-  extractMetaFromPaste,
-  isPasteReadyForLayout,
-  preparePasteForLayout,
-  resolveLayoutArtist,
-  resolveLayoutTitle,
-} from '../services/lyricsHtml';
-import { readClipboardText, writeClipboardText } from '../utils/clipboard';
-import { cleanDoubaoPaste } from '../utils/cleanDoubaoPaste';
-import EraserIcon from './icons/EraserIcon';
+import { postClipboardWrite } from '../utils/nativeBridge';
+import ArrowRightIcon from './icons/ArrowRightIcon';
+import AiAppActionSheet from './AiAppActionSheet';
 
 type Props = {
   /** 设置中的「附词解与语法品读」总开关 */
   includeVocabAndGrammar: boolean;
-  onLayout: (
-    bodyHtml: string,
-    title: string,
-    rawPaste: string,
-    artist?: string,
-  ) => void | Promise<void>;
+  /** 歌词语言模式：jp（日语，默认）或 ko（韩语） */
+  language?: 'jp' | 'ko';
+  /** 语言切换回调 */
+  onLanguageChange?: (lang: 'jp' | 'ko') => void;
+  /** 截屏 OCR 预填歌名（可选） */
+  initialTitle?: string;
+  /** 截屏 OCR 预填歌手（可选） */
+  initialArtist?: string;
+  /** 截屏 OCR 检测到的语言，自动路由 JP/KO 管线 */
+  ocrDetectedLanguage?: import('../services/ocrTypes').OcrDetectedLanguage;
+  /** 截屏 OCR 完整上下文（专辑/制作/原始文本），注入搜索 Prompt 以提升准确率 */
+  ocrContext?: {
+    songTitle?: string;
+    artist?: string;
+    album?: string;
+    production?: string;
+    firstLyricLine?: string;
+    rawTexts?: string[];
+  };
 };
 
-function pasteValidationError(text: string): string {
-  if (!text.trim()) {
-    return '';
-  }
-  return isPasteReadyForLayout(text)
-    ? ''
-    : '内容需为 Shufu 结构化文本（===LYRICS===）或 HTML 片段';
-}
-
-export default function HtmlPasteInput({ includeVocabAndGrammar, onLayout }: Props) {
-  const [songTitle, setSongTitle] = useState('');
-  const [artist, setArtist] = useState('');
-  const [pasteBack, setPasteBack] = useState('');
-  const [error, setError] = useState('');
+export default function HtmlPasteInput({ includeVocabAndGrammar, language, onLanguageChange, initialTitle, initialArtist, ocrDetectedLanguage, ocrContext }: Props) {
+  const [songTitle, setSongTitle] = useState(initialTitle || '');
+  const [artist, setArtist] = useState(initialArtist || '');
   const [copyHint, setCopyHint] = useState('');
+  const [actionSheetVisible, setActionSheetVisible] = useState(false);
+  const [copiedPrompt, setCopiedPrompt] = useState('');
 
-  const canLayout = isPasteReadyForLayout(pasteBack);
-  const canCopyPrompt = Boolean(songTitle.trim());
-  const canClear = Boolean(pasteBack.trim());
+  // 同步外部 props 到内部 state（QQ音乐链接检测触发后 initialTitle/initialArtist 更新）
+  useEffect(() => {
+    if (initialTitle) setSongTitle(initialTitle);
+  }, [initialTitle]);
 
   useEffect(() => {
-    if (!songTitle.trim()) {
-      setCopyHint('');
-    }
-  }, [songTitle]);
+    if (initialArtist) setArtist(initialArtist);
+  }, [initialArtist]);
 
-  const applyPastedText = useCallback((text: string) => {
-    const cleaned = cleanDoubaoPaste(text);
-    setPasteBack(cleaned);
-    const meta = extractMetaFromPaste(cleaned);
-    if (meta.title) {
-      setSongTitle((prev) => (prev.trim() ? prev : meta.title!));
-    }
-    if (meta.artist) {
-      setArtist((prev) => (prev.trim() ? prev : meta.artist!));
-    }
-    setError(pasteValidationError(cleaned));
-  }, []);
-
-  const handlePasteBackChange = useCallback((text: string) => {
-    setPasteBack(text);
-    setError(pasteValidationError(text));
-  }, []);
-
-  const handleCopyPrompt = useCallback(async () => {
+  // ---- 一键生成口令：复制 Prompt 到剪贴板 + 弹出 AI App 选择 ----
+  const handleCopyPrompt = useCallback(() => {
     const title = songTitle.trim();
-    if (!title) {
-      setError('请填写歌名');
-      setCopyHint('');
-      return;
-    }
-    setError('');
+    if (!title) return;
+
     const promptArtist = artist.trim() || '佚名';
-    const prompt = buildExternalAiPrompt(promptArtist, title, { includeVocabAndGrammar });
-    try {
-      await writeClipboardText(prompt);
-      setCopyHint(
-        includeVocabAndGrammar
-          ? '好了，去粘贴到外部AI（含词解与语法）'
-          : '好了，去粘贴到外部AI（仅歌词）',
-      );
-    } catch {
-      setCopyHint('');
-      setError('无法写入剪贴板，请允许浏览器权限');
-    }
-  }, [artist, songTitle, includeVocabAndGrammar]);
 
-  const handlePasteFromClipboard = useCallback(async () => {
-    try {
-      const text = await readClipboardText();
-      if (!text.trim()) {
-        setError('剪贴板为空');
-        return;
-      }
-      applyPastedText(text);
-    } catch {
-      setError('无法读取剪贴板，请允许浏览器访问剪贴板权限');
-    }
-  }, [applyPastedText]);
+    // OCR 检测到韩文 → 自动路由到 KO 管线
+    const effectiveLanguage = ocrDetectedLanguage === 'ko'
+      ? 'ko'
+      : ocrDetectedLanguage === 'jp'
+        ? 'jp'
+        : language;
 
-  const handleClear = useCallback(() => {
-    if (!canClear) {
-      return;
-    }
-    setPasteBack('');
-    setError('');
-  }, [canClear]);
+    // 注入完整 OCR 上下文（歌名/歌手/专辑/制作/原始文本），显著提升 AI 搜索准确率
+    const prompt = buildExternalAiPrompt(promptArtist, title, {
+      includeVocabAndGrammar,
+      language: effectiveLanguage,
+      ocrContext: ocrContext
+        ? {
+            songTitle: ocrContext.songTitle,
+            artist: ocrContext.artist,
+            album: ocrContext.album,
+            production: ocrContext.production,
+            firstLyricLine: ocrContext.firstLyricLine,
+            rawTexts: ocrContext.rawTexts,
+            detectedLanguage: ocrDetectedLanguage,
+          }
+        : ocrDetectedLanguage
+          ? { detectedLanguage: ocrDetectedLanguage }
+          : undefined,
+    });
 
-  const handleLayout = useCallback(async () => {
-    if (!canLayout) {
-      return;
-    }
-    const raw = pasteBack.trim();
-    try {
-      const prepared = preparePasteForLayout(raw);
-      const meta = extractMetaFromPaste(raw);
-      const title = resolveLayoutTitle(songTitle, prepared.title, meta.title);
-      const resolvedArtist = resolveLayoutArtist(
-        artist,
-        prepared.artist,
-        meta.artist,
-      );
-      setError('');
-      await onLayout(prepared.bodyHtml, title, raw, resolvedArtist);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '无法进入排版预览');
-    }
-  }, [onLayout, pasteBack, songTitle, artist, canLayout]);
+    // 使用 Capacitor 原生剪贴板（优先）或 Web API
+    const writeClipboard = postClipboardWrite
+      ? postClipboardWrite(prompt).catch(() => navigator.clipboard.writeText(prompt))
+      : navigator.clipboard.writeText(prompt);
 
-  const handleTextareaPaste = useCallback(
-    (e: { preventDefault(): void; clipboardData: DataTransfer; currentTarget: HTMLTextAreaElement }) => {
-      const pasted = e.clipboardData.getData('text/plain');
-      if (!pasted) {
-        return;
-      }
-      e.preventDefault();
-      const el = e.currentTarget;
-      const start = el.selectionStart ?? pasteBack.length;
-      const end = el.selectionEnd ?? pasteBack.length;
-      applyPastedText(pasteBack.slice(0, start) + pasted + pasteBack.slice(end));
-    },
-    [applyPastedText, pasteBack],
-  );
-
-  const pasteActionsClass = 'ext-pipeline__paste-actions';
+    writeClipboard
+      .then(() => {
+        setCopiedPrompt(prompt);
+        setActionSheetVisible(true);
+        setCopyHint('✓ 指令已复制到剪贴板');
+        setTimeout(() => setCopyHint(''), 3000);
+      })
+      .catch(() => {
+        // 静默失败，按钮本身已有视觉反馈
+      });
+  }, [songTitle, artist, includeVocabAndGrammar, language, ocrDetectedLanguage, ocrContext]);
 
   return (
     <div className="html-paste ext-pipeline">
@@ -179,57 +125,62 @@ export default function HtmlPasteInput({ includeVocabAndGrammar, onLayout }: Pro
             />
           </label>
         </div>
+
+        {onLanguageChange && (
+          <div className="ext-pipeline__lang-row">
+            <div className="ext-pipeline__lang-icons">
+              <button
+                type="button"
+                className={`ext-pipeline__lang-icon${language === 'jp' ? ' is-active' : ''}${ocrDetectedLanguage === 'jp' ? ' is-detected' : ''}`}
+                onClick={() => onLanguageChange('jp')}
+                title="日文模式"
+                aria-label="切换日文"
+              >
+                <span className="ext-pipeline__lang-flag">🇯🇵</span>
+                {ocrDetectedLanguage === 'jp' && <span className="ext-pipeline__lang-auto">auto</span>}
+              </button>
+              <button
+                type="button"
+                className={`ext-pipeline__lang-icon${language === 'ko' ? ' is-active' : ''}${ocrDetectedLanguage === 'ko' ? ' is-detected' : ''}`}
+                onClick={() => onLanguageChange('ko')}
+                title="韩文模式"
+                aria-label="切换韩文"
+              >
+                <span className="ext-pipeline__lang-flag">🇰🇷</span>
+                {ocrDetectedLanguage === 'ko' && <span className="ext-pipeline__lang-auto">auto</span>}
+              </button>
+            </div>
+            {ocrDetectedLanguage && (
+              <span className="ext-pipeline__lang-detected">
+                {ocrDetectedLanguage === 'jp' ? '检测到日文' :
+                 ocrDetectedLanguage === 'ko' ? '检测到韩文' :
+                 '已检测'}
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="ext-pipeline__prompt-row">
-          {copyHint ? <span className="ext-pipeline__hint">{copyHint}</span> : null}
+          {copyHint && (
+            <span className="ext-pipeline__hint">{copyHint}</span>
+          )}
           <button
             type="button"
-            className="btn-filled ext-pipeline__prompt-btn"
-            onClick={() => void handleCopyPrompt()}
-            disabled={!canCopyPrompt}
+            className="btn-filled ext-pipeline__gen-btn"
+            onClick={handleCopyPrompt}
+            disabled={!songTitle.trim()}
           >
-            一键生成指令
+            <ArrowRightIcon size={16} />
+            <span>一键生成口令</span>
           </button>
         </div>
       </div>
 
-      <div className="ext-pipeline__paste html-paste__body">
-        <textarea
-          className="ext-pipeline__textarea"
-          placeholder="请在此粘贴 AI 生成的完整歌词..."
-          value={pasteBack}
-          onChange={(e) => handlePasteBackChange(e.target.value)}
-          onPaste={handleTextareaPaste}
-        />
-        <div className={pasteActionsClass}>
-          <button
-            type="button"
-            className={`btn-tonal${canClear ? '' : ' is-dormant'}`}
-            onClick={handleClear}
-            disabled={!canClear}
-            aria-label="一键清除"
-          >
-            <EraserIcon size={14} />
-            <span>一键清除</span>
-          </button>
-          <button
-            type="button"
-            className="btn-filled"
-            onClick={() => void handlePasteFromClipboard()}
-          >
-            一键粘贴
-          </button>
-          <button
-            type="button"
-            className="btn-tonal ext-pipeline__layout-btn"
-            onClick={() => void handleLayout()}
-            disabled={!canLayout}
-          >
-            排版预览
-          </button>
-        </div>
-      </div>
-
-      {error && <p className="error-msg">{error}</p>}
+      <AiAppActionSheet
+        visible={actionSheetVisible}
+        onClose={() => setActionSheetVisible(false)}
+        copiedText={copiedPrompt}
+      />
     </div>
   );
 }

@@ -11,6 +11,8 @@ import FuriganaEditCanvas from './components/FuriganaEditCanvas';
 import ExportPreviewPanel from './components/ExportPreviewPanel';
 import SavedLyricsLibrary from './components/SavedLyricsLibrary';
 import HtmlPasteInput from './components/HtmlPasteInput';
+import ClipboardDetectCard from './components/ClipboardDetectCard';
+import ErrorBoundary from './components/ErrorBoundary';
 import OfflineBanner from './components/OfflineBanner';
 import { usePosterPreviewFitScale } from './hooks/usePosterPreviewFitScale';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
@@ -33,6 +35,15 @@ import {
   postToNative,
   type BridgeCommand,
 } from './bridge/nativeBridge';
+import {
+  onAppBecameActive,
+  isNativeWebView,
+  postClipboardRead,
+  isStructuredLyricsText,
+  extractTitleFromStructuredText,
+  isQQMusicShare,
+  parseQQMusicShare,
+} from './utils/nativeBridge';
 
 type Mode = 'input' | 'edit' | 'export';
 
@@ -72,7 +83,21 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [appSettings, setAppSettings] = useState<AppSettings>(() => getAppSettings());
 
+  // ---- 剪贴板检测卡片（AI App 返回结构化歌词时弹出） ----
+  const [clipboardCardVisible, setClipboardCardVisible] = useState(false);
+  const [clipboardDetectedSong, setClipboardDetectedSong] = useState('');
+  const [clipboardDetectedArtist, setClipboardDetectedArtist] = useState('');
+  const prevClipboardHashRef = useRef('');
+  // ---- 剪贴板/链接解析结果（预填歌名+歌手） ----
+  const [shareOcrData, setShareOcrData] = useState<{
+    title: string;
+    artist: string;
+    detectedLanguage?: 'jp' | 'ko' | 'zh' | 'mixed' | 'unknown';
+  } | null>(null);
+
   const network = useNetworkStatus();
+
+  // ---- 首页 ----
 
   useGlobalButtonFeedback();
 
@@ -250,6 +275,75 @@ export default function App() {
     }
   }, [handleBridgeCommand]);
 
+  // ---- 剪贴板检测：App 回到前台时读取剪贴板 ----
+  useEffect(() => {
+    if (!isNativeWebView()) return;
+
+    const removeListener = onAppBecameActive(() => {
+      // 延迟 500ms 确保 UIPasteboard 同步完成
+      setTimeout(async () => {
+        try {
+          const text = await postClipboardRead();
+          if (!text) return;
+
+          const trimmed = text.trim();
+          // 简易 hash 防重
+          const hash = trimmed.slice(0, 40);
+          if (hash === prevClipboardHashRef.current) return;
+          prevClipboardHashRef.current = hash;
+
+          // ---- QQ 音乐分享链接：直接提取歌名/歌手，预填输入框 ----
+          if (isQQMusicShare(trimmed)) {
+            const parsed = parseQQMusicShare(trimmed);
+            if (parsed.title) {
+              console.log('[App] 检测到 QQ 音乐分享链接:', parsed.title, parsed.artist);
+              setShareOcrData((prev) => ({
+                ...prev,
+                title: parsed.title || '',
+                artist: parsed.artist || '',
+                detectedLanguage: (() => {
+                  const hasKana = /[\u3040-\u309f\u30a0-\u30ff]/.test(parsed.title || '');
+                  const hasHangul = /[\uAC00-\uD7AF]/.test(parsed.title || '');
+                  if (hasKana) return 'jp' as const;
+                  if (hasHangul) return 'ko' as const;
+                  return undefined;
+                })(),
+              }));
+              hapticSuccess();
+              return;
+            }
+          }
+
+          if (!isStructuredLyricsText(trimmed)) return;
+
+          const detectedTitle = extractTitleFromStructuredText(trimmed);
+          if (!detectedTitle) {
+            setClipboardDetectedSong('未知歌曲');
+          } else {
+            setClipboardDetectedSong(detectedTitle);
+          }
+
+          // 从结构化歌词头部提取歌手名: 歌手《歌名》
+          {
+            const headerPart = trimmed.split(/===LYRICS===/i)[0] ?? '';
+            const artistMatch = headerPart.match(/^(.+?)《[^》]+》/m);
+            if (artistMatch) {
+              setClipboardDetectedArtist(artistMatch[1].trim());
+            } else {
+              setClipboardDetectedArtist('');
+            }
+          }
+          setClipboardCardVisible(true);
+          hapticSuccess();
+        } catch {
+          // 剪贴板读取失败，静默忽略（可能在 web 环境）
+        }
+      }, 500);
+    });
+
+    return removeListener;
+  }, []);
+
   const editScale = usePosterPreviewFitScale(
     EDIT_LAYOUT,
     editCanvasRef,
@@ -347,6 +441,8 @@ export default function App() {
     setInkEditTarget(null);
     setInkPopoverClosing(false);
   }, []);
+
+  // ---- 截屏识别流程已移除 ----
 
   const handleReset = useCallback(() => {
     setMode('input');
@@ -494,6 +590,7 @@ export default function App() {
     inkEditTarget && inkEditTarget.kind !== 'title' ? inkEditTarget.groupIndex : null;
 
   return (
+    <ErrorBoundary>
     <div
       className={`app app-screen${mode === 'input' ? ' app--home' : ''}${mode === 'edit' ? ' app--edit' : ''}${mode === 'export' ? ' app--export app--preview' : ''}`}
     >
@@ -509,14 +606,16 @@ export default function App() {
               <p className="app-brand-tagline">优雅简洁的日语释音与排版助手</p>
             </div>
             {mode === 'input' && (
-              <button
-                type="button"
-                className="app-settings-btn"
-                aria-label="设置"
-                onClick={() => setSettingsOpen(true)}
-              >
-                <SettingsMenuIcon />
-              </button>
+              <div className="app-header-buttons">
+                <button
+                  type="button"
+                  className="app-settings-btn"
+                  aria-label="设置"
+                  onClick={() => setSettingsOpen(true)}
+                >
+                  <SettingsMenuIcon />
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -532,12 +631,18 @@ export default function App() {
         <main className={`app-main${isWorkspaceMode ? ' app-main--preview' : ''}`}>
           {mode === 'input' && (
             <div className="home-body">
-              <HtmlPasteInput
-                key={inputResetKey}
-                includeVocabAndGrammar={appSettings.defaultIncludeVocabAndGrammar}
-                onLayout={handleLayoutFromHtml}
-              />
-              <SavedLyricsLibrary onOpen={openProject} refreshKey={libraryRefreshKey} />
+                  <HtmlPasteInput
+                    key={inputResetKey}
+                    includeVocabAndGrammar={appSettings.defaultIncludeVocabAndGrammar}
+                    language={appSettings.lyricsLanguage}
+                    onLanguageChange={(lang) => {
+                      handleSettingsChange({ ...appSettings, lyricsLanguage: lang });
+                    }}
+                    initialTitle={shareOcrData?.title}
+                    initialArtist={shareOcrData?.artist}
+                    ocrDetectedLanguage={shareOcrData?.detectedLanguage}
+                  />
+                  <SavedLyricsLibrary onOpen={openProject} refreshKey={libraryRefreshKey} />
             </div>
           )}
 
@@ -621,8 +726,39 @@ export default function App() {
               }}
             />
           )}
+
         </main>
       </div>
+      {/* 剪贴板检测：从 AI App 返回时检测结构化歌词 */}
+      <ClipboardDetectCard
+        songTitle={clipboardDetectedSong}
+        artist={clipboardDetectedArtist}
+        visible={clipboardCardVisible}
+        onRenderLayout={() => {
+          setClipboardCardVisible(false);
+          // 从剪贴板读取全文并进入排版预览
+          void (async () => {
+            try {
+              const text = await postClipboardRead();
+              if (text && isStructuredLyricsText(text)) {
+                const { preparePasteForLayout } = await import('./services/lyricsHtml');
+                const prepared = preparePasteForLayout(text);
+                await handleLayoutFromHtml(
+                  prepared.bodyHtml,
+                  prepared.title || '',
+                  text,
+                  prepared.artist,
+                );
+              }
+            } catch {
+              // 静默失败
+            }
+          })();
+        }}
+        onDismiss={() => setClipboardCardVisible(false)}
+      />
+
     </div>
+    </ErrorBoundary>
   );
 }

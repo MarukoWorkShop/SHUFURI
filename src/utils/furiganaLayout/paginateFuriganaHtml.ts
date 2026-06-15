@@ -8,7 +8,7 @@ import {
 import { applyPosterTitleElement, resolveDisplayArtist, resolveDisplayTitle } from './posterTitle';
 import type { PosterLayoutProfile, PosterPageSlice } from './types';
 
-type PosterMeasurer = {
+export type PosterMeasurer = {
   contentFits: (nodes: HTMLElement[], showTitle: boolean) => boolean;
   pageOverflows: (nodes: HTMLElement[], showTitle: boolean) => boolean;
   pageHtmlOverflows: (html: string, showTitle: boolean) => boolean;
@@ -21,7 +21,7 @@ const MIN_ORPHAN_SPACING_SCALE = 0.9;
 const ORPHAN_SPACING_STEPS = [1.0, 0.97, 0.94, 0.91, 0.9] as const;
 
 const PAGE_LINE_SELECTORS =
-  '.jp-line,.zh-line,.vocab-line1,.vocab-ex-ja,.vocab-ex-zh,h3.grammar-point-title,.grammar-detail,.grammar-ex-ja,.grammar-ex-zh,h2.lyrics-section-title';
+  '.jp-line,.ko-line,.zh-line,.vocab-line1,.vocab-ex-ja,.vocab-ex-ko,.vocab-ex-zh,h3.grammar-point-title,.grammar-detail,.grammar-ex-ja,.grammar-ex-ko,.grammar-ex-zh,h2.lyrics-section-title';
 
 type PagePack = {
   blocks: HTMLElement[];
@@ -50,7 +50,7 @@ function bodyContentOverflows(body: HTMLElement, profile: PosterLayoutProfile): 
   return measurePosterBodyNaturalHeightPx(body) > maxH + slack;
 }
 
-function createPosterMeasurer(
+export function createPosterMeasurer(
   doc: Document,
   profile: PosterLayoutProfile,
   title: string,
@@ -199,7 +199,8 @@ function ensureLyricPairsInBodyRoot(root: HTMLElement): void {
         last instanceof HTMLElement &&
         last.classList.contains('lyrics-group') &&
         last.querySelector('.zh-line') &&
-        !last.querySelector('.jp-line')
+        !last.querySelector('.jp-line') &&
+        !last.querySelector('.ko-line')
       ) {
         last.insertBefore(pendingJp, last.firstChild);
       } else {
@@ -212,10 +213,12 @@ function ensureLyricPairsInBodyRoot(root: HTMLElement): void {
     }
     if (pendingZh) {
       const last = rebuilt[rebuilt.length - 1];
+      const hasOrig = (el: Element) =>
+        el.querySelector('.jp-line') || el.querySelector('.ko-line');
       if (
         last instanceof HTMLElement &&
         last.classList.contains('lyrics-group') &&
-        last.querySelector('.jp-line') &&
+        hasOrig(last) &&
         !last.querySelector('.zh-line')
       ) {
         last.appendChild(pendingZh);
@@ -244,7 +247,9 @@ function ensureLyricPairsInBodyRoot(root: HTMLElement): void {
       continue;
     }
 
-    if (node.classList.contains('jp-line')) {
+    const isOrigLine = node.classList.contains('jp-line') || node.classList.contains('ko-line');
+
+    if (isOrigLine) {
       if (pendingZh) {
         const group = document.createElement('div');
         group.className = 'lyrics-group';
@@ -323,9 +328,9 @@ function repairLyricsGroupAtoms(atoms: HTMLElement[]): HTMLElement[] {
       continue;
     }
 
-    const jp = atom.querySelector('.jp-line');
+    const orig = atom.querySelector('.jp-line') || atom.querySelector('.ko-line');
     const zh = atom.querySelector('.zh-line');
-    if (jp && zh) {
+    if (orig && zh) {
       repaired.push(atom);
       i += 1;
       continue;
@@ -333,29 +338,29 @@ function repairLyricsGroupAtoms(atoms: HTMLElement[]): HTMLElement[] {
 
     const last = repaired[repaired.length - 1];
     if (last instanceof HTMLElement && last.classList.contains('lyrics-group')) {
-      const lastJp = last.querySelector('.jp-line');
+      const lastOrig = last.querySelector('.jp-line') || last.querySelector('.ko-line');
       const lastZh = last.querySelector('.zh-line');
-      if (jp && !lastJp && lastZh) {
-        last.insertBefore(jp.cloneNode(true), last.firstChild);
+      if (orig && !lastOrig && lastZh) {
+        last.insertBefore(orig.cloneNode(true), last.firstChild);
         i += 1;
         continue;
       }
-      if (zh && !lastZh && lastJp) {
+      if (zh && !lastZh && lastOrig) {
         last.appendChild(zh.cloneNode(true));
         i += 1;
         continue;
       }
     }
 
-    if (jp && !zh && i + 1 < atoms.length) {
+    if (orig && !zh && i + 1 < atoms.length) {
       const next = atoms[i + 1]!;
       if (next.classList.contains('lyrics-group')) {
         const nextZh = next.querySelector('.zh-line');
-        const nextJp = next.querySelector('.jp-line');
-        if (nextZh && !nextJp) {
+        const nextOrig = next.querySelector('.jp-line') || next.querySelector('.ko-line');
+        if (nextZh && !nextOrig) {
           const group = document.createElement('div');
           group.className = 'lyrics-group';
-          group.appendChild(jp.cloneNode(true));
+          group.appendChild(orig.cloneNode(true));
           group.appendChild(nextZh.cloneNode(true));
           repaired.push(group);
           i += 2;
@@ -364,7 +369,7 @@ function repairLyricsGroupAtoms(atoms: HTMLElement[]): HTMLElement[] {
       }
     }
 
-    if (jp || zh) {
+    if (orig || zh) {
       repaired.push(atom);
     }
     i += 1;
@@ -434,7 +439,7 @@ function isSkippableAtom(atom: HTMLElement): boolean {
 function isCompleteLyricsGroup(atom: HTMLElement): boolean {
   return (
     atom.classList.contains('lyrics-group') &&
-    !!atom.querySelector('.jp-line') &&
+    !!(atom.querySelector('.jp-line') || atom.querySelector('.ko-line')) &&
     !!atom.querySelector('.zh-line')
   );
 }

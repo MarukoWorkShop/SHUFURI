@@ -39,7 +39,7 @@ export type ShareImagePayload = {
   type: 'SHARE_IMAGE';
   requestId: string;
   dataBase64: string;
-  mimeType: 'image/jpeg' | 'image/png';
+  mimeType: 'image/jpeg' | 'image/png' | 'image/svg+xml';
   filename: string;
 };
 
@@ -118,7 +118,9 @@ async function base64ToTempFile(
   mimeType: string,
   filename: string,
 ): Promise<string> {
-  const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+  const ext = mimeType === 'image/jpeg' ? 'jpg'
+    : mimeType === 'image/svg+xml' ? 'svg'
+    : 'png';
   const safeName = sanitizeFilename(filename);
 
   // 去掉可能的 data: URL 前缀
@@ -216,6 +218,105 @@ export async function requestGalleryPermission(): Promise<GalleryPermissionStatu
   } catch {
     return 'unknown';
   }
+}
+
+// ---- AI App Deep Link -----------------------------------------------------
+
+import DeepLink from '../bridge/deepLinkPlugin';
+import type { AiAppInfo } from '../bridge/deepLinkPlugin';
+
+/** 检测已安装的 AI App（仅在原生环境有效） */
+export async function checkInstalledAiApps(): Promise<AiAppInfo[]> {
+  if (!isNativeWebView()) return [];
+  try {
+    const result = await DeepLink.checkInstalledApps();
+    return result.apps;
+  } catch (e) {
+    console.error('[native-bridge] checkInstalledAiApps error:', e);
+    return [];
+  }
+}
+
+/** 通过 URL Scheme 唤起指定 AI App */
+export async function openAiApp(scheme: string): Promise<boolean> {
+  if (!isNativeWebView()) return false;
+  try {
+    const result = await DeepLink.openApp({ scheme });
+    return result.opened;
+  } catch (e) {
+    console.error('[native-bridge] openAiApp error:', e);
+    return false;
+  }
+}
+
+// ---- 剪贴板检测辅助（判断是否为结构化歌词） --------------------------------
+
+/**
+ * 判断文本是否为 Shufu 结构化歌词格式
+ * 匹配 ===BEGIN=== / ===LYRICS=== / ---PAIR--- / ==TITLE== 等标记
+ */
+export function isStructuredLyricsText(text: string): boolean {
+  if (!text || text.length < 50) return false;
+  const trimmed = text.trim();
+  return (
+    trimmed.includes('===BEGIN===') &&
+    (trimmed.includes('===LYRICS===') || trimmed.includes('---PAIR---'))
+  );
+}
+
+/**
+ * 从结构化歌词文本中提取歌名
+ * 匹配多种格式:
+ *   - # 歌手名《歌名》     (带 # 前缀)
+ *   - 歌手名《歌名》       (无 # 前缀，AI 返回格式)
+ *   - 《歌名》             (仅书名号)
+ */
+export function extractTitleFromStructuredText(text: string): string {
+  // Pass 1: # 歌手名《歌名》
+  const hashMatch = text.match(/#\s*(?:[^《\n]+)?《([^》]+)》/);
+  if (hashMatch) return hashMatch[1].trim();
+
+  // Pass 2: 取 ===BEGIN=== 与 ===LYRICS=== 之间的头部，匹配 歌手名《歌名》
+  const headerPart = text.split(/===LYRICS===/i)[0] ?? '';
+  const bracketMatch = headerPart.match(/(?:.|\n)*?《([^》\n]+)》/);
+  if (bracketMatch) return bracketMatch[1].trim();
+
+  return '';
+}
+
+// ---- QQ 音乐分享链接识别 ------------------------------------------------
+
+/** QQ 音乐分享链接特征 */
+const QQ_MUSIC_SHARE_RE = /(?:https?:\/\/[a-z]\d\.y\.qq\.com\/[^\s]+)[\s]*@QQ音乐/i;
+
+/**
+ * 检测剪贴板文本是否为 QQ 音乐分享
+ * 格式: 歌手名《歌名》 https://c6.y.qq.com/... @QQ音乐
+ */
+export function isQQMusicShare(text: string): boolean {
+  return QQ_MUSIC_SHARE_RE.test(text);
+}
+
+/**
+ * 从 QQ 音乐分享文本中提取歌手和歌名
+ * 格式: JUJU (ジュジュ)《やさしさで溢れるように》 https://... @QQ音乐
+ *      MACO (まこ)《告白》 https://... @QQ音乐
+ *
+ * @returns { artist?: string; title?: string }
+ */
+export function parseQQMusicShare(text: string): { artist?: string; title?: string } {
+  // 提取《歌名》之前的部分作为歌手名
+  // 去掉 https:// 开始的部分
+  const cleanText = text.replace(/https?:\/\/[^\s]+/g, '').replace(/@QQ音乐/g, '').trim();
+
+  // 匹配: 歌手名《歌名》
+  const match = cleanText.match(/^(.+?)《([^》]+)》/);
+  if (!match) return {};
+
+  const rawArtist = match[1].trim();
+  const title = match[2].trim();
+
+  return { artist: rawArtist, title };
 }
 
 // ---- 矢量 PDF 导出 --------------------------------------------------------

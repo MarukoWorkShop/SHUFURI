@@ -1,5 +1,4 @@
 import { useMemo, useRef, useLayoutEffect, useState, useCallback, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import type { Ref, CSSProperties } from 'react';
 import {
   applyPosterBodyMaxHeight,
@@ -9,7 +8,7 @@ import {
   getFuriganaPosterCanvasDimensions,
 } from '../utils/furiganaLayout/furiganaPosterShared';
 import { rasterizePageHtmlToBlob } from '../utils/pdfExport';
-import { isNativeWebView, postSaveImageToLibrary, postShareImage } from '../utils/nativeBridge';
+import { isNativeWebView, postSaveImageToLibrary } from '../utils/nativeBridge';
 import type { SaveImageResult } from '../utils/nativeBridge';
 import {
   getPosterTitleArtistClass,
@@ -38,17 +37,6 @@ function formatPosterPageNo(current: number, total: number): string {
   const a = String(current).padStart(2, '0');
   const b = String(total).padStart(2, '0');
   return `— ${a} / ${b} —`;
-}
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error ?? new Error('无法读取图片'));
-    reader.readAsDataURL(blob);
-  });
-  const comma = dataUrl.indexOf(',');
-  return comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
 }
 
 function pageImageFilename(title: string, pageIndex: number): string {
@@ -142,8 +130,6 @@ function FuriganaPosterSinglePage({
   const [saving, setSaving] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
   const saveToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [modalBlobUrl, setModalBlobUrl] = useState<string | null>(null);
-  const [modalDownloadExt, setModalDownloadExt] = useState('jpg');
 
   const LONG_PRESS_MS = 600;
   const LONG_PRESS_MOVE_TOL = 12;
@@ -154,23 +140,6 @@ function FuriganaPosterSinglePage({
       longPressTimerRef.current = null;
     }
   }, []);
-
-  const closeModal = useCallback(() => {
-    setModalBlobUrl((prev) => {
-      if (prev) {
-        URL.revokeObjectURL(prev);
-      }
-      return null;
-    });
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (modalBlobUrl) {
-        URL.revokeObjectURL(modalBlobUrl);
-      }
-    };
-  }, [modalBlobUrl]);
 
   const showToast = useCallback((message: string, durationMs = 2400) => {
     if (saveToastTimerRef.current) {
@@ -191,16 +160,23 @@ function FuriganaPosterSinglePage({
   }, []);
 
   const handleRasterize = useCallback(async () => {
-    if (rasterizingRef.current || saving || modalBlobUrl) {
+    if (rasterizingRef.current || saving) {
       return;
     }
     rasterizingRef.current = true;
     setSaving(true);
     try {
+      // 等待布局稳定 + 字体加载
       await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => resolve());
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       });
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+
       const native = isNativeWebView();
+
+      // 使用现有成熟管线：离屏挂载 → html2canvas 栅格化 → PNG/JPEG Blob
       const { blob, mimeType } = await rasterizePageHtmlToBlob(
         bodyFragmentHtml,
         title,
@@ -210,21 +186,30 @@ function FuriganaPosterSinglePage({
         pageCount,
         layoutProfile,
         spacingScale,
-        native
-          ? { format: 'jpeg', jpegQuality: 0.82, maxScale: 1, prepareVisible: false }
-          : undefined,
+        {
+          format: native ? 'jpeg' : 'png',
+          jpegQuality: 0.92,
+          prepareVisible: false,
+        },
       );
-      const filename = pageImageFilename(title, pageIndex);
 
       if (native) {
-        await new Promise<void>((resolve) => {
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        // iOS 原生：直写系统图库
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const result = reader.result as string;
+            const comma = result.indexOf(',');
+            resolve(comma >= 0 ? result.slice(comma + 1) : result);
+          };
+          reader.onerror = () => reject(reader.error ?? new Error('无法读取图片'));
+          reader.readAsDataURL(blob);
         });
 
         const result: SaveImageResult = await postSaveImageToLibrary({
-          dataBase64: await blobToBase64(blob),
-          mimeType,
-          filename,
+          dataBase64: base64,
+          mimeType: mimeType as 'image/jpeg' | 'image/png',
+          filename: pageImageFilename(title, pageIndex),
         });
 
         if (result.success) {
@@ -232,47 +217,32 @@ function FuriganaPosterSinglePage({
           return;
         }
 
-        // 权限被拒绝 / 保存失败：回退到系统分享菜单
+        // 保存失败 → 根据不同错误码给提示
         switch (result.code) {
-          case 'PERMISSION_DENIED': {
-            const goSettings = window.confirm(
-              '需要照片库访问权限才能保存图片到相册。\n\n点击「确定」前往「设置」中开启权限。',
-            );
-            if (goSettings) {
-              // iOS 无直接跳转设置页的能力，提示用户手动操作
-              alert('请前往「设置」→「隐私与安全性」→「照片」→ 找到 SHUFURI 并开启权限。');
-            }
-            // 权限被拒绝后，回退到分享菜单
-            await postShareImage({
-              dataBase64: await blobToBase64(blob),
-              mimeType,
-              filename,
-            });
+          case 'PERMISSION_DENIED':
+            showToast('请在设置中允许 SHUFURI 访问照片库', 4000);
             break;
-          }
           case 'PERMISSION_RESTRICTED':
             showToast('照片库访问受限（家长控制或企业策略）', 4000);
             break;
-          case 'DECODE_FAILED':
-          case 'SAVE_FAILED':
-          case 'UNKNOWN':
           default:
             showToast(`保存失败：${result.message}`, 3000);
-            // 回退到分享菜单
-            await postShareImage({
-              dataBase64: await blobToBase64(blob),
-              mimeType,
-              filename,
-            });
-            break;
         }
         return;
       }
 
-      // 浏览器环境：弹出模态窗显示图片
-      const ext = mimeType === 'image/png' ? 'png' : 'jpg';
-      setModalDownloadExt(ext);
-      setModalBlobUrl(URL.createObjectURL(blob));
+      // 浏览器环境：触发下载
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+      a.download = `${pageImageFilename(title, pageIndex)}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast('图片已保存');
     } catch (e) {
       console.error('[save-page]', e);
       showToast(e instanceof Error ? e.message : '生成图片失败，请稍后重试', 3500);
@@ -282,7 +252,6 @@ function FuriganaPosterSinglePage({
     }
   }, [
     saving,
-    modalBlobUrl,
     showToast,
     bodyFragmentHtml,
     title,
@@ -412,44 +381,6 @@ function FuriganaPosterSinglePage({
           </div>
         </div>
       </div>
-      {/* 浏览器：图片模态弹窗 — 长按 img 保存；App 内长按直接写入相册 */}
-      {modalBlobUrl &&
-        createPortal(
-          <div className="fv-poster-image-modal" onClick={closeModal}>
-            <div
-              className="fv-poster-image-modal-box"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="fv-poster-image-modal-close"
-                onClick={closeModal}
-                aria-label="关闭"
-              >
-                ✕
-              </button>
-              <img
-                className="fv-poster-image-modal-img"
-                src={modalBlobUrl}
-                alt={`第 ${pageIndex + 1} 页海报`}
-              />
-              <div className="fv-poster-image-modal-hint">
-                长按图片即可保存到相册
-              </div>
-              <button
-                className="fv-poster-image-modal-download"
-                onClick={() => {
-                  const a = document.createElement('a');
-                  a.href = modalBlobUrl;
-                  a.download = `${pageImageFilename(title, pageIndex)}.${modalDownloadExt}`;
-                  a.click();
-                }}
-              >
-                下载图片
-              </button>
-            </div>
-          </div>,
-          document.body,
-        )}
     </div>
   );
 }

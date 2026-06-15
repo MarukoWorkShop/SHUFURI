@@ -20,9 +20,9 @@ export function isStructuredMarkerLine(line: string): boolean {
     return true;
   }
   return (
-    /^===(?:BEGIN|LYRICS|VOCAB|GRAMMAR|END)===$/i.test(s) ||
-    /^---(?:PAIR|WORD|POINT|END)(?:---|===)?$/i.test(s) ||
-    /^(?:JP|ZH|TERM|MEANING|EX_JP|EX_ZH|TITLE|DETAIL):\s/i.test(s)
+    /^===(?:BEGIN|LYRICS|VOCAB|GRAMMAR|MAGAZINE|END)===$/i.test(s) ||
+    /^---(?:PAIR|WORD|POINT|SECTION|END)(?:---|===)?$/i.test(s) ||
+    /^(?:JP|ZH|KO|TERM|MEANING|EX_JP|EX_KO|EX_ZH|TITLE|DETAIL):\s/i.test(s)
   );
 }
 
@@ -104,54 +104,29 @@ export function extractStructuredHeader(raw: string): { artist?: string; title?:
 function taggedLine(className: string, innerHtml: string): string {
   return `<p class="${className}">${innerHtml}</p>`;
 }
-
-/** 语法点标题：日文用明朝 + 振假名，括号内中文用 PingFang SC */
-function formatGrammarPointTitleHtml(rawTitle: string): string {
-  // 兼容全角 / 半角括号混用
-  const re = /[（(][^）)]*[）)]/g;
-  const parts: string[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-  const jaSpan = (text: string) =>
-    text ? `<span class="grammar-title-ja">${applyRubyMarkup(text.trim())}</span>` : '';
-  const zhSpan = (text: string) =>
-    text
-      ? `<span class="grammar-title-zh" lang="zh-Hans">${escapeHtml(text)}</span>`
-      : '';
-
-  while ((match = re.exec(rawTitle)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(jaSpan(rawTitle.slice(lastIndex, match.index)));
-    }
-    parts.push(zhSpan(match[0]));
-    lastIndex = match.index + match[0].length;
-  }
-  if (lastIndex < rawTitle.length) {
-    parts.push(jaSpan(rawTitle.slice(lastIndex)));
-  }
-  if (parts.length === 0) {
-    return jaSpan(rawTitle.trim()) || '';
-  }
-  return parts.join(' ');
-}
-
 function buildLyricsGroups(section: string): string[] {
   return splitDelimitedBlocks(section, '---PAIR---')
     .map((block) => {
       const fields = parseFieldBlock(block);
       const jp = fields.JP;
+      const ko = fields.KO;
       const zh = fields.ZH;
-      if (!jp && !zh) {
+      if (!jp && !ko && !zh) {
         return '';
       }
-      const jpHtml = jp ? taggedLine('jp-line', applyRubyMarkup(jp)) : '';
+      // 韩文优先（KO: 标签存在），否则日语模式
+      const origLang = ko ? 'ko' : 'jp';
+      const origText = ko || jp;
+      const origHtml = origText
+        ? taggedLine(`${origLang}-line`, origLang === 'ko' ? escapeHtml(origText) : applyRubyMarkup(origText))
+        : '';
       const zhHtml = zh ? taggedLine('zh-line', escapeHtml(zh)) : '';
-      return `<div class="lyrics-group">${jpHtml}${zhHtml}</div>`;
+      return `<div class="lyrics-group">${origHtml}${zhHtml}</div>`;
     })
     .filter(Boolean);
 }
 
-function buildVocabulary(section: string): string {
+function buildVocabulary(section: string, isKorean: boolean): string {
   const blocks = splitDelimitedBlocks(section, '---WORD---');
   if (!blocks.length) {
     return '';
@@ -167,13 +142,24 @@ function buildVocabulary(section: string): string {
       const meaning = fields.MEANING
         ? ` <span class="vocab-meaning">${escapeHtml(fields.MEANING)}</span>`
         : '';
-      const exJp = fields.EX_JP
-        ? taggedLine('vocab-ex-ja', applyRubyMarkup(fields.EX_JP))
+
+      // 韩文例句（EX_KO）或日文例句（EX_JP），韩文无 ruby 注音
+      const exOrigText = isKorean ? fields.EX_KO : fields.EX_JP;
+      const exOrigClass = isKorean ? 'vocab-ex-ko' : 'vocab-ex-ja';
+      const exOrig = exOrigText
+        ? taggedLine(exOrigClass, isKorean ? escapeHtml(exOrigText) : applyRubyMarkup(exOrigText))
         : '';
+
       const exZh = fields.EX_ZH
         ? taggedLine('vocab-ex-zh', escapeHtml(fields.EX_ZH))
         : '';
-      return `<div class="lyrics-vocab-item"><p class="vocab-line1"><span class="vocab-word">${applyRubyMarkup(term)}</span>${meaning}</p>${exJp}${exZh}</div>`;
+
+      // TERM 本身：韩文是纯 Hangul 不需要注音，日文需要
+      const termHtml = isKorean
+        ? `<span class="vocab-word">${escapeHtml(term)}</span>`
+        : `<span class="vocab-word">${applyRubyMarkup(term)}</span>`;
+
+      return `<div class="lyrics-vocab-item"><p class="vocab-line1">${termHtml}${meaning}</p>${exOrig}${exZh}</div>`;
     })
     .filter(Boolean)
     .join('');
@@ -185,7 +171,7 @@ function buildVocabulary(section: string): string {
   return `<div class="lyrics-vocabulary" data-lyrics-force-next-page="1"><h2 class="lyrics-section-title">重点词汇</h2>${items}</div>`;
 }
 
-function buildGrammar(section: string): string {
+function buildGrammar(section: string, isKorean: boolean): string {
   const blocks = splitDelimitedBlocks(section, '---POINT---');
   if (!blocks.length) {
     return '';
@@ -201,13 +187,19 @@ function buildGrammar(section: string): string {
       const detail = fields.DETAIL
         ? `<p class="grammar-detail">${escapeHtml(fields.DETAIL)}</p>`
         : '';
-      const exJp = fields.EX_JP
-        ? taggedLine('grammar-ex-ja', applyRubyMarkup(fields.EX_JP))
+
+      // 韩文例句或日文例句
+      const exOrigText = isKorean ? fields.EX_KO : fields.EX_JP;
+      const exOrigClass = isKorean ? 'grammar-ex-ko' : 'grammar-ex-ja';
+      const exOrig = exOrigText
+        ? taggedLine(exOrigClass, isKorean ? escapeHtml(exOrigText) : applyRubyMarkup(exOrigText))
         : '';
+
       const exZh = fields.EX_ZH
         ? taggedLine('grammar-ex-zh', escapeHtml(fields.EX_ZH))
         : '';
-      return `<div class="lyrics-grammar-item"><h3 class="grammar-point-title">${formatGrammarPointTitleHtml(title)}</h3>${detail}${exJp}${exZh}</div>`;
+
+      return `<div class="lyrics-grammar-item"><h3 class="grammar-point-title">${escapeHtml(title)}</h3>${detail}${exOrig}${exZh}</div>`;
     })
     .filter(Boolean)
     .join('');
@@ -231,8 +223,11 @@ export function parseStructuredLyricsText(raw: string): ParsedStructuredLyrics {
     throw new Error('未找到歌词对（需含 ===LYRICS=== 与 ---PAIR---）');
   }
 
-  const vocab = buildVocabulary(extractSection(text, 'VOCAB'));
-  const grammar = buildGrammar(extractSection(text, 'GRAMMAR'));
+  // 自动检测语言模式：歌词中存在 KO: 标签 → 韩文
+  const isKorean = /^KO:/im.test(lyricsSection);
+
+  const vocab = buildVocabulary(extractSection(text, 'VOCAB'), isKorean);
+  const grammar = buildGrammar(extractSection(text, 'GRAMMAR'), isKorean);
   const header = parseHeader(text);
   const inner = [...groups, vocab, grammar].filter(Boolean).join('');
   const bodyHtml = `<div class="clip-body lyrics-notes-body">${inner}</div>`;

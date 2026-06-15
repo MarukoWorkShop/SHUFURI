@@ -1,5 +1,8 @@
 import type { PosterLayoutProfile } from '../utils/furiganaLayout/types';
 
+/** 歌词语言模式：日语（默认）或韩语 */
+export type LyricsLanguage = 'jp' | 'ko';
+
 /** 全局换肤：mono 墨 | blue 绀 | red 赤 */
 export type ColorTheme = 'mono' | 'blue' | 'red';
 
@@ -10,6 +13,8 @@ export type AppSettings = {
   defaultExportLayout: PosterLayoutProfile;
   /** 首页「一键生成指令」默认是否附带词解与语法 */
   defaultIncludeVocabAndGrammar: boolean;
+  /** 歌词语言模式：日语（jp）或韩语（ko） */
+  lyricsLanguage: LyricsLanguage;
   /** 抽屉、铅笔等交互音效 */
   interactionSoundsEnabled: boolean;
 };
@@ -20,6 +25,7 @@ const DEFAULTS: AppSettings = {
   colorTheme: 'mono',
   defaultExportLayout: 'clipPosterPrint',
   defaultIncludeVocabAndGrammar: true,
+  lyricsLanguage: 'jp',
   interactionSoundsEnabled: true,
 };
 
@@ -42,6 +48,10 @@ function isLayoutProfile(v: unknown): v is PosterLayoutProfile {
   return v === 'clipPosterPrint' || v === 'mobilePoster';
 }
 
+function isLyricsLanguage(v: unknown): v is LyricsLanguage {
+  return v === 'jp' || v === 'ko';
+}
+
 export function getAppSettings(): AppSettings {
   const stored = readStored();
   if (!stored) return { ...DEFAULTS };
@@ -60,6 +70,9 @@ export function getAppSettings(): AppSettings {
       ? stored.defaultExportLayout
       : DEFAULTS.defaultExportLayout,
     defaultIncludeVocabAndGrammar: includeVocabAndGrammar,
+    lyricsLanguage: isLyricsLanguage(stored.lyricsLanguage)
+      ? stored.lyricsLanguage
+      : DEFAULTS.lyricsLanguage,
     interactionSoundsEnabled:
       typeof stored.interactionSoundsEnabled === 'boolean'
         ? stored.interactionSoundsEnabled

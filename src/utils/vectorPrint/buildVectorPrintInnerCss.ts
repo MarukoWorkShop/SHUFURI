@@ -1,7 +1,7 @@
 import type { PosterLayoutProfile } from '../furiganaLayout/types';
 import { dimForFuriganaPoster } from '../furiganaLayout/furiganaPosterShared';
 import { POSTER_ELASTIC_FONT_BASE_PX } from '../furiganaLayout/dimensions';
-import { KOZUKA_MINCHO_EL_FAMILY, ZH_FONT_FAMILY } from '../furiganaLayout/fonts';
+import { KOZUKA_MINCHO_EL_FAMILY, KO_FONT_FAMILY, ZH_FONT_FAMILY } from '../furiganaLayout/fonts';
 import { mm, pxToMm, type PrintPageSpec } from './printPageSpec';
 
 export type VectorPrintCssOptions = {
@@ -40,6 +40,8 @@ export function buildVectorPrintInnerCss(
   const jpWght = 200;
   const jpEmphasisWght = 700;
   const zhAuxWght = 300;
+  const koWght = 350;
+  const koLh = jpLh;
 
   const jpFs = mm(pxToMm(jpFsPx, spec));
   const titleFs = mm(pxToMm(titleFsPx, spec));
@@ -89,6 +91,9 @@ export function buildVectorPrintInnerCss(
     break-after: page;
     display: flex;
     flex-direction: column;
+    text-align: left;
+    justify-content: flex-start;
+    align-items: stretch;
   }
   .print-page:last-child {
     page-break-after: auto;
@@ -99,6 +104,8 @@ export function buildVectorPrintInnerCss(
     height: 100%;
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
     position: relative;
     text-align: left;
   }
@@ -131,11 +138,15 @@ export function buildVectorPrintInnerCss(
     min-height: 0;
     overflow: hidden;
     padding-bottom: ${bodyBottomPad};
+    text-align: left;
   }
   .fv-body-h .lyrics-group {
     margin-bottom: ${groupMb};
     break-inside: avoid;
     page-break-inside: avoid;
+    overflow: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   .fv-body-h > .lyrics-group:last-child {
     margin-bottom: 0;
@@ -161,13 +172,15 @@ export function buildVectorPrintInnerCss(
     word-break: break-word;
   }
   .fv-body-h .lyrics-group .jp-line,
+  .fv-body-h .lyrics-group .ko-line,
   .fv-body-h .lyrics-group .zh-line {
-    width: fit-content;
+    width: 100%;
     max-width: 100%;
-    margin-left: auto;
-    margin-right: auto;
     text-align: left;
-    overflow: visible;
+    overflow: hidden;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
   }
   .fv-body-h .jp-line,
   .fv-body-h .jp-line *:not(rt):not(rp) {
@@ -176,6 +189,15 @@ export function buildVectorPrintInnerCss(
     font-weight: ${jpWght};
     color: #0a0a0a;
     line-height: ${jpLh};
+    letter-spacing: normal;
+  }
+  .fv-body-h .ko-line,
+  .fv-body-h .ko-line * {
+    font-family: ${KO_FONT_FAMILY};
+    font-size: ${jpFs};
+    font-weight: ${koWght};
+    color: #0a0a0a;
+    line-height: ${koLh};
     letter-spacing: normal;
   }
   .fv-body-h .lyrics-group .zh-line,
@@ -194,6 +216,17 @@ export function buildVectorPrintInnerCss(
     font-family: ${KOZUKA_MINCHO_EL_FAMILY};
     font-size: ${jpFs};
     font-weight: ${jpWght};
+    color: #0a0a0a;
+    line-height: ${jpLh};
+    margin: 0;
+  }
+  .fv-body-h .vocab-ex-ko,
+  .fv-body-h .vocab-ex-ko *,
+  .fv-body-h .grammar-ex-ko,
+  .fv-body-h .grammar-ex-ko * {
+    font-family: ${KO_FONT_FAMILY};
+    font-size: ${jpFs};
+    font-weight: ${koWght};
     color: #0a0a0a;
     line-height: ${jpLh};
     margin: 0;
@@ -239,7 +272,9 @@ export function buildVectorPrintInnerCss(
     white-space: normal;
   }
   .fv-body-h .vocab-ex-ja,
+  .fv-body-h .vocab-ex-ko,
   .fv-body-h .vocab-ex-zh,
+  .fv-body-h .grammar-ex-ko,
   .fv-body-h .grammar-ex-zh {
     max-width: 100%;
     overflow-wrap: break-word;
@@ -259,6 +294,7 @@ export function buildVectorPrintInnerCss(
     ruby-position: over;
     -webkit-ruby-position: before;
     ruby-align: start;
+    overflow: hidden;
   }
   .fv-body-h ruby rt {
     font-family: ${KOZUKA_MINCHO_EL_FAMILY};
@@ -266,6 +302,9 @@ export function buildVectorPrintInnerCss(
     font-weight: ${jpWght};
     color: #64748b;
     line-height: 1.1;
+    overflow: hidden;
+    text-overflow: clip;
+    max-width: 100%;
   }
   .fv-body-h h2.lyrics-section-title {
     font-family: ${ZH_FONT_FAMILY};
@@ -317,6 +356,9 @@ export function buildVectorPrintInnerCss(
     font-weight: ${jpWght};
     color: #64748b;
     line-height: 1.1;
+    overflow: hidden;
+    text-overflow: clip;
+    max-width: 100%;
   }
   .fv-body-h .vocab-line1 .vocab-meaning,
   .fv-body-h h3.grammar-point-title .grammar-title-zh,

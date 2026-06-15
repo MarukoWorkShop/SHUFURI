@@ -3,14 +3,12 @@
 import { cleanDoubaoPaste } from '../utils/cleanDoubaoPaste';
 import {
   isStructuredLyricsText,
-  isStructuredMarkerLine,
   parseStructuredLyricsText,
   extractStructuredHeader,
 } from '../utils/structuredLyricsParser';
 import {
   DEFAULT_ARTIST,
   normalizeArtistName,
-  PLACEHOLDER_TITLE,
 } from '../utils/furiganaLayout/posterTitle';
 
 export type PreparedPasteForLayout = {
@@ -35,101 +33,6 @@ export function preparePasteForLayout(raw: string): PreparedPasteForLayout {
   }
 
   throw new Error('内容需为 Shufu 结构化文本（===LYRICS===）或 HTML 片段');
-}
-
-/** 从粘贴内容提取歌名与歌手（优先结构化头部行，再回退《》解析） */
-export function extractMetaFromPaste(raw: string): { title?: string; artist?: string } {
-  const trimmed = cleanDoubaoPaste(raw.trim());
-  if (isStructuredLyricsText(trimmed)) {
-    const header = extractStructuredHeader(trimmed);
-    if (header.title || header.artist) {
-      return {
-        ...(header.title ? { title: header.title } : {}),
-        ...(header.artist ? { artist: header.artist } : {}),
-      };
-    }
-  }
-  const title = extractSongTitleFromLyricsRaw(trimmed);
-  const artist = extractArtistFromLyricsRaw(trimmed);
-  return {
-    ...(title ? { title } : {}),
-    ...(artist ? { artist } : {}),
-  };
-}
-
-/** 粘贴内容是否可进入排版（有结构化歌词即可，歌名可后续占位） */
-export function isPasteReadyForLayout(raw: string, _manualTitle?: string): boolean {
-  const trimmed = cleanDoubaoPaste(raw.trim());
-  if (!trimmed) {
-    return false;
-  }
-  return isStructuredLyricsText(trimmed) || isValidLyricsHtml(trimmed);
-}
-
-/** 从用户粘贴的歌词中识别《》书名号或 # / 头部行的歌曲标题 */
-export function extractSongTitleFromLyricsRaw(raw: string): string | null {
-  const normalized = cleanDoubaoPaste(raw.replace(/\r\n/g, '\n'));
-  const header = extractStructuredHeader(normalized);
-  if (header.title) {
-    return header.title;
-  }
-
-  const m = normalized.match(/《([^》\n]+)》/);
-  const t1 = m?.[1]?.trim();
-  if (t1 && t1.length > 0) {
-    return t1;
-  }
-
-  const lines = normalized.split('\n');
-  for (const line of lines) {
-    const s = line.trim();
-    if (!s || isStructuredMarkerLine(s)) {
-      continue;
-    }
-    // 仅认 # 开头的标题行，避免把 ===BEGIN=== 等误判为歌名
-    if (!/^#\s+/.test(s)) {
-      continue;
-    }
-    const hash = s.replace(/^#+\s*/, '').trim();
-    if (!hash || isStructuredMarkerLine(hash)) {
-      continue;
-    }
-    const beforeParen = hash.split(/[（(《]/)[0]?.trim();
-    if (beforeParen && beforeParen.length > 0 && beforeParen.length <= 80) {
-      return beforeParen;
-    }
-  }
-  return null;
-}
-
-/** 排版用歌名：均可缺省，由预览区占位显示 */
-export function resolveLayoutTitle(
-  manualTitle: string,
-  parsedTitle?: string,
-  metaTitle?: string,
-): string {
-  for (const candidate of [manualTitle, parsedTitle, metaTitle]) {
-    const t = candidate?.trim();
-    if (t && !isStructuredMarkerLine(t) && t !== PLACEHOLDER_TITLE) {
-      return t;
-    }
-  }
-  return '';
-}
-
-/** 排版用歌手：可缺省，预览区以「佚名」占位显示 */
-export function resolveLayoutArtist(
-  manualArtist: string,
-  parsedArtist?: string,
-  metaArtist?: string,
-): string {
-  for (const candidate of [manualArtist, parsedArtist, metaArtist]) {
-    const a = normalizeArtistName(candidate);
-    if (a && a !== DEFAULT_ARTIST) {
-      return a;
-    }
-  }
-  return '';
 }
 
 /** 从结构化粘贴文本的 # 歌手《歌名》 或 歌手《歌名》 行提取歌手 */
@@ -191,7 +94,7 @@ export function sanitizePastedHtml(html: string): string {
 }
 
 const LYRICS_HTML_MARKERS =
-  /(?:class\s*=\s*["'][^"']*\b(?:jp-line|lyrics-group|lyrics-vocabulary|lyrics-grammar|clip-body)\b|<ruby\b)/i;
+  /(?:class\s*=\s*["'][^"']*\b(?:jp-line|ko-line|lyrics-group|lyrics-vocabulary|lyrics-grammar|clip-body)\b|<ruby\b)/i;
 
 /** 轻量校验：非空 HTML 且含歌词相关标记 */
 export function isValidLyricsHtml(html: string): boolean {

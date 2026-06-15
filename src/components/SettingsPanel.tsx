@@ -142,6 +142,27 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
           </section>
 
           <section className="app-settings__section">
+            <p className="app-settings__label">歌词语言</p>
+            <div className="app-settings__segmented">
+              <button
+                type="button"
+                className={`app-settings__segment${settings.lyricsLanguage === 'jp' ? ' is-active' : ''}`}
+                onClick={() => patch({ lyricsLanguage: 'jp' })}
+              >
+                日语
+              </button>
+              <button
+                type="button"
+                className={`app-settings__segment${settings.lyricsLanguage === 'ko' ? ' is-active' : ''}`}
+                onClick={() => patch({ lyricsLanguage: 'ko' })}
+              >
+                韩语
+              </button>
+            </div>
+            <p className="app-settings__hint">选择歌词语言模式，「一键生成指令」将生成对应语言的 Prompt（韩语模式无注音规则）</p>
+          </section>
+
+          <section className="app-settings__section">
             <label className="app-settings__row">
               <span className="app-settings__row-text">交互音效</span>
               <input

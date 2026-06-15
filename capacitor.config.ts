@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.shufu.lyrics',
+  appId: 'com.shufuri',
   appName: 'Japanese Kana',
   webDir: 'dist',
   server: {

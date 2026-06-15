@@ -6,6 +6,10 @@ export const KOZUKA_MINCHO_EL_FAMILY =
 export const ZH_FONT_FAMILY =
   '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif';
 
+/** 韩文排版字体（Apple SD Gothic Neo，iOS 内置，无需 @font-face 加载） */
+export const KO_FONT_FAMILY =
+  '"Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif';
+
 const FONT_LOAD_TIMEOUT_MS = 8000;
 
 /** 与 Vite base:'./' 及 Expo 离线 bundle 一致，避免 file:// 下 /assets 失效 */
