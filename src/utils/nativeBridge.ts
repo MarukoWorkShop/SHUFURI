@@ -75,24 +75,51 @@ export function isNativeWebView(): boolean {
 
 const appForegroundListeners = new Set<() => void>();
 
-/** 注册 App 回到前台时的回调，返回取消注册函数 */
+/** 防抖：防止同一生命周期事件在极短时间内重复触发 */
+function createForegroundDebounce(listener: () => void): () => void {
+  let lastCall = 0;
+  const MIN_INTERVAL_MS = 800;
+  return () => {
+    const now = Date.now();
+    if (now - lastCall < MIN_INTERVAL_MS) return;
+    lastCall = now;
+    listener();
+  };
+}
+
+/**
+ * 注册 App 回到前台时的回调，返回取消注册函数。
+ *
+ * 双通道监听确保覆盖所有场景：
+ * 1. Capacitor appStateChange（原生层推送，精确但依赖 Capacitor 运行时）
+ * 2. document.visibilitychange（Web 标准，在 Capacitor 事件丢失时兜底）
+ *
+ * 内置 800ms 防抖，避免 Capacitor 和 Web 事件同时触发导致重复调用。
+ */
 export function onAppBecameActive(listener: () => void): () => void {
+  const debounced = createForegroundDebounce(listener);
   appForegroundListeners.add(listener);
 
-  let removeHandle: (() => void) | null = null;
-
-  // Capacitor App 状态监听（返回 Promise<PluginListenerHandle>）
+  // 通道 1：Capacitor App 状态监听
+  let capHandle: (() => void) | null = null;
   App.addListener('appStateChange', ({ isActive }) => {
-    if (isActive) {
-      listener();
-    }
+    if (isActive) debounced();
   }).then((handle) => {
-    removeHandle = () => handle.remove();
+    capHandle = () => handle.remove();
   });
+
+  // 通道 2：Web visibilitychange（兜底，Cover 非 Capacitor 环境或 Capacitor 事件异常）
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      debounced();
+    }
+  };
+  document.addEventListener('visibilitychange', onVisibilityChange);
 
   return () => {
     appForegroundListeners.delete(listener);
-    removeHandle?.();
+    capHandle?.();
+    document.removeEventListener('visibilitychange', onVisibilityChange);
   };
 }
 
@@ -249,41 +276,6 @@ export async function openAiApp(scheme: string): Promise<boolean> {
   }
 }
 
-// ---- 剪贴板检测辅助（判断是否为结构化歌词） --------------------------------
-
-/**
- * 判断文本是否为 Shufu 结构化歌词格式
- * 匹配 ===BEGIN=== / ===LYRICS=== / ---PAIR--- / ==TITLE== 等标记
- */
-export function isStructuredLyricsText(text: string): boolean {
-  if (!text || text.length < 50) return false;
-  const trimmed = text.trim();
-  return (
-    trimmed.includes('===BEGIN===') &&
-    (trimmed.includes('===LYRICS===') || trimmed.includes('---PAIR---'))
-  );
-}
-
-/**
- * 从结构化歌词文本中提取歌名
- * 匹配多种格式:
- *   - # 歌手名《歌名》     (带 # 前缀)
- *   - 歌手名《歌名》       (无 # 前缀，AI 返回格式)
- *   - 《歌名》             (仅书名号)
- */
-export function extractTitleFromStructuredText(text: string): string {
-  // Pass 1: # 歌手名《歌名》
-  const hashMatch = text.match(/#\s*(?:[^《\n]+)?《([^》]+)》/);
-  if (hashMatch) return hashMatch[1].trim();
-
-  // Pass 2: 取 ===BEGIN=== 与 ===LYRICS=== 之间的头部，匹配 歌手名《歌名》
-  const headerPart = text.split(/===LYRICS===/i)[0] ?? '';
-  const bracketMatch = headerPart.match(/(?:.|\n)*?《([^》\n]+)》/);
-  if (bracketMatch) return bracketMatch[1].trim();
-
-  return '';
-}
-
 // ---- QQ 音乐分享链接识别 ------------------------------------------------
 
 /** QQ 音乐分享链接特征 */
@@ -317,6 +309,52 @@ export function parseQQMusicShare(text: string): { artist?: string; title?: stri
   const title = match[2].trim();
 
   return { artist: rawArtist, title };
+}
+
+// ---- 网易云音乐分享链接识别 ---------------------------------------------
+
+/** 网易云音乐分享链接特征（短链 + 标准链 + @网易云音乐 后缀） */
+const NETEASE_MUSIC_SHARE_RE = /https?:\/\/(?:163cn\.tv|music\.163\.com)\/[^\s]+[\s\S]*@网易云音乐/i;
+
+/**
+ * 检测剪贴板文本是否为网易云音乐分享
+ * 格式: 分享{歌手}的{单曲|专辑|歌单|歌曲}《歌名》 https://163cn.tv/xxx (@网易云音乐)
+ *       {歌手}的{单曲|专辑|歌单|歌曲}《歌名》 https://163cn.tv/xxx (@网易云音乐) （无「分享」前缀）
+ */
+export function isNetEaseMusicShare(text: string): boolean {
+  return NETEASE_MUSIC_SHARE_RE.test(text);
+}
+
+/**
+ * 从网易云音乐分享文本中提取歌手和歌名
+ * 格式:
+ *   分享EXO的单曲《약속 (EXO 2014)》https://163cn.tv/825wHix (@网易云音乐)
+ *   分享RADWIMPS的单曲《スパークル》https://music.163.com/song?id=xxx (@网易云音乐)
+ *
+ * @returns { artist?: string; title?: string }
+ */
+export function parseNetEaseMusicShare(text: string): { artist?: string; title?: string } {
+  // 去掉 URL 和 @网易云音乐 后缀
+  const cleanText = text
+    .replace(/https?:\/\/[^\s]+/g, '')
+    .replace(/\(?@网易云音乐\)?/g, '')
+    .replace(/分享\s*/g, '')
+    .trim();
+
+  // 匹配: 歌手名的单曲《歌名》 或 歌手名的专辑《歌名》 等
+  // 歌名中可能包含英文/数字（如 "약속 (EXO 2014)"）
+  const match = cleanText.match(/^(.+?)的(?:单曲|专辑|歌单|歌曲)\s*《([^》]+)》/);
+  if (match) {
+    return { artist: match[1].trim(), title: match[2].trim() };
+  }
+
+  // 兜底: 匹配任意 歌手名《歌名》 格式
+  const fallback = cleanText.match(/^(.+?)《([^》]+)》/);
+  if (fallback) {
+    return { artist: fallback[1].trim(), title: fallback[2].trim() };
+  }
+
+  return {};
 }
 
 // ---- 矢量 PDF 导出 --------------------------------------------------------

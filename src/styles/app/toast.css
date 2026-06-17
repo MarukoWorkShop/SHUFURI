@@ -1,0 +1,76 @@
+/* ---- 全局 Toast 轻提示 ---- */
+.app-toast {
+  z-index: 401;
+  padding: var(--toast-padding-y) var(--toast-padding-x);
+  border-radius: var(--toast-radius);
+  background: var(--toast-bg);
+  color: var(--toast-fg);
+  font-family: var(--ui-font-sans);
+  font-size: var(--toast-font-size);
+  font-weight: var(--toast-font-weight);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: var(--toast-shadow);
+  animation: app-toast-in 0.3s ease;
+}
+
+.app-toast--fixed {
+  position: fixed;
+  bottom: var(--toast-fixed-bottom);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.app-toast--anchored {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+}
+
+@keyframes app-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ---- ErrorBoundary 错误页 ---- */
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--ui-space-3);
+  text-align: center;
+  font-family: var(--ui-font-sans);
+  color: var(--ui-fg);
+  background: var(--ui-bg);
+}
+
+.error-boundary__title {
+  margin: 0 0 var(--ui-space-2);
+  font-size: var(--text-lg);
+  font-weight: var(--ui-weight-medium);
+  color: var(--ui-fg);
+}
+
+.error-boundary__message {
+  margin: 0 0 var(--ui-space-3);
+  max-width: 320px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--ui-fg-secondary);
+}
+
+.error-boundary__retry {
+  min-height: var(--btn-filled-height);
+  padding: 0 var(--btn-filled-padding-x);
+}

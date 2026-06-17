@@ -1,0 +1,120 @@
+/* ---- 墨迹原位微调（预览页） ---- */
+.ink-fine-tune-root--focus .fv-body-h .lyrics-group {
+  opacity: 0.3;
+  transition: opacity 0.35s ease;
+}
+
+.ink-fine-tune-root--focus .fv-body-h .lyrics-group.ink-focus-line {
+  opacity: 1;
+}
+
+.ink-fine-tune-root .fv-body-h .zh-line,
+.ink-fine-tune-root .fv-body-h ruby[data-ink-r] {
+  cursor: text;
+}
+
+.ink-fine-tune-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: transparent;
+}
+
+.ink-fine-tune-popover {
+  position: fixed;
+  z-index: 401;
+  padding: var(--ui-space-2);
+  border-radius: 4px;
+  background: var(--color-ink-popover);
+  box-shadow: var(--shadow-popover);
+  animation: ink-popover-in 0.28s ease;
+}
+
+.ink-fine-tune-popover--closing {
+  animation: ink-popover-out 0.22s ease forwards;
+}
+
+@keyframes ink-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ink-popover-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.ink-fine-tune-popover__field {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: var(--ui-space-2);
+}
+
+.ink-fine-tune-popover__field--wide {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.ink-fine-tune-popover__label {
+  flex-shrink: 0;
+  font-family: var(--ui-font-sans);
+  font-size: 11px;
+  color: var(--ui-fg-muted);
+  letter-spacing: 0.06em;
+}
+
+.ink-fine-tune-popover__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-bottom: 1px solid var(--color-border-input);
+  border-radius: 0;
+  background: transparent;
+  padding: 4px 0 6px;
+  font-family: var(--ui-font-sans);
+  font-size: 13px;
+  color: var(--ui-fg);
+  outline: none;
+}
+
+.ink-fine-tune-popover__input:focus {
+  border-bottom-color: var(--ui-fg-secondary);
+}
+
+.ink-fine-tune-popover__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ui-space-2);
+  margin-top: var(--ui-space-1);
+}
+
+.ink-fine-tune-popover__link {
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  font-family: var(--ui-font-sans);
+  font-size: 12px;
+  font-weight: var(--ui-weight-medium);
+  letter-spacing: 0.06em;
+  color: var(--ui-fg);
+  cursor: pointer;
+  transition: color var(--ui-transition);
+}
+
+.ink-fine-tune-popover__link:hover {
+  color: var(--ui-fg-secondary);
+}

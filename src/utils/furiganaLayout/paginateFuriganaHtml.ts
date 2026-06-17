@@ -7,6 +7,7 @@ import {
 } from './furiganaPosterShared';
 import { applyPosterTitleElement, resolveDisplayArtist, resolveDisplayTitle } from './posterTitle';
 import type { PosterLayoutProfile, PosterPageSlice } from './types';
+import type { LyricsLanguage, LangCode } from '../../services/appSettings';
 
 export type PosterMeasurer = {
   contentFits: (nodes: HTMLElement[], showTitle: boolean) => boolean;
@@ -56,6 +57,8 @@ export function createPosterMeasurer(
   title: string,
   artist?: string,
   spacingScale = 1,
+  language: LyricsLanguage = 'jp',
+  lang?: LangCode,
 ): PosterMeasurer {
   const { width: canvasW, height: canvasH } = getFuriganaPosterCanvasDimensions(profile);
 
@@ -79,7 +82,7 @@ export function createPosterMeasurer(
   shell.style.position = 'relative';
 
   const styleEl = doc.createElement('style');
-  styleEl.textContent = buildFuriganaPosterInnerCss(profile, { spacingScale });
+  styleEl.textContent = buildFuriganaPosterInnerCss(profile, { spacingScale, language, lang });
   const titleEl = doc.createElement('h1');
   titleEl.className = 'fv-title-h';
   const body = doc.createElement('div');
@@ -690,8 +693,9 @@ function createMeasurerAtScale(
   title: string,
   artist: string | undefined,
   scale: number,
+  lang?: LangCode,
 ): PosterMeasurer {
-  return createPosterMeasurer(doc, profile, title, artist, scale);
+  return createPosterMeasurer(doc, profile, title, artist, scale, undefined, lang);
 }
 
 /** 末页 ≤2 行时尝试收紧行距并并回上一页；行距不低于 0.9，否则保留孤页 */
@@ -701,6 +705,7 @@ function preventOrphanPages(
   profile: PosterLayoutProfile,
   title: string,
   artist?: string,
+  lang?: LangCode,
 ): PagePack[] {
   let packs: PagePack[] = pages.map((blocks) => ({ blocks, spacingScale: 1 }));
 
@@ -730,7 +735,7 @@ function preventOrphanPages(
         continue;
       }
 
-      const probeMeasurer = createMeasurerAtScale(doc, profile, title, artist, scale);
+      const probeMeasurer = createMeasurerAtScale(doc, profile, title, artist, scale, lang);
       try {
         const html = joinPageBlocks(combined, new Set<string>());
         if (!probeMeasurer.pageHtmlOverflows(html, showTitle)) {
@@ -758,6 +763,8 @@ export function paginateFuriganaBodyHtml(
   profile: PosterLayoutProfile = 'clipPosterPrint',
   doc: Document = document,
   artist?: string,
+  language: LyricsLanguage = 'jp',
+  lang?: LangCode,
 ): PosterPageSlice[] {
   const trimmed = safeBodyHtml.trim();
   if (!trimmed) {
@@ -773,12 +780,12 @@ export function paginateFuriganaBodyHtml(
   atoms = repairLyricsGroupAtoms(atoms);
   atoms = preparePaginationAtoms(atoms);
 
-  const measurer = createPosterMeasurer(doc, profile, title, artist);
+  const measurer = createPosterMeasurer(doc, profile, title, artist, 1, language, lang);
 
   try {
     const rawPages = flowAtomsIntoPages(atoms, measurer);
     const pages = verifyAndRepairPages(rawPages, measurer);
-    const pagePacks = preventOrphanPages(pages, doc, profile, title, artist);
+    const pagePacks = preventOrphanPages(pages, doc, profile, title, artist, lang);
 
     if (pagePacks.length === 0) {
       return [{ html: trimmed, spacingScale: 1 }];

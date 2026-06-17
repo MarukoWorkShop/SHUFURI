@@ -1,11 +1,14 @@
 import type { PosterLayoutProfile } from '../furiganaLayout/types';
 import { dimForFuriganaPoster } from '../furiganaLayout/furiganaPosterShared';
 import { POSTER_ELASTIC_FONT_BASE_PX } from '../furiganaLayout/dimensions';
-import { KOZUKA_MINCHO_EL_FAMILY, KO_FONT_FAMILY, ZH_FONT_FAMILY } from '../furiganaLayout/fonts';
+import { EN_FONT_FAMILY, KOZUKA_MINCHO_EL_FAMILY, KO_FONT_FAMILY, UI_FONT_FAMILY, ZH_FONT_FAMILY } from '../furiganaLayout/fonts';
 import { mm, pxToMm, type PrintPageSpec } from './printPageSpec';
+import type { LyricsLanguage } from '../../services/appSettings';
 
 export type VectorPrintCssOptions = {
   spacingScale?: number;
+  /** 歌词语言：日语默认，英语/韩语使用紧凑行距 */
+  language?: LyricsLanguage;
 };
 
 function itemEntryGapMm(jpLh: number, jpFsPx: number, spec: PrintPageSpec): string {
@@ -21,11 +24,19 @@ export function buildVectorPrintInnerCss(
   options: VectorPrintCssOptions = {},
 ): string {
   const spacingScale = options.spacingScale ?? 1;
+  const language = options.language ?? 'jp';
   const scale = (n: number) => n * spacingScale;
   const d = dimForFuriganaPoster(profile);
   const isM = profile === 'mobilePoster';
   const base = POSTER_ELASTIC_FONT_BASE_PX;
   const scaleBody = d.elasticFontBase / base;
+  const isCompact = language === 'en' || language === 'ko';
+  const isEnglish = language === 'en';
+  const jpWght = 200;
+  const primaryFont = isEnglish ? EN_FONT_FAMILY : KOZUKA_MINCHO_EL_FAMILY;
+  const primaryWght = isEnglish ? 300 : jpWght;
+  const titleFont = isEnglish ? UI_FONT_FAMILY : ZH_FONT_FAMILY;
+  const sectionTitleFont = isEnglish ? UI_FONT_FAMILY : ZH_FONT_FAMILY;
 
   const jpFsPx = Math.round(26 * scaleBody);
   const titleFsPx = isM ? Math.round(jpFsPx * 1.22) : Math.round(jpFsPx * 1.25);
@@ -33,15 +44,19 @@ export function buildVectorPrintInnerCss(
   const zhLyricsPx = Math.round(18 * scaleBody);
   const h2FsPx = Math.round(18 * scaleBody);
 
-  const jpLhBase = isM ? d.elasticLhBase : 1.75;
-  const zhLyricsLhBase = isM ? 1.3 : 1.35;
+  // 根据语言选择行距：英语/韩语使用紧凑行距，日语使用默认行距（含注音需求）
+  const jpLhBase = isCompact
+    ? (d.compactLineHeightBase ?? (isM ? 1.25 : 1.45))
+    : (isM ? d.elasticLhBase : (d.jpLineHeightBase ?? 1.75));
+  const zhLyricsLhBase = isCompact
+    ? (d.compactZhLineHeightBase ?? (isM ? 1.15 : 1.2))
+    : (isM ? 1.3 : (d.zhLineHeightBase ?? 1.35));
   const jpLh = scale(jpLhBase);
   const zhLyricsLh = scale(zhLyricsLhBase);
-  const jpWght = 200;
-  const jpEmphasisWght = 700;
   const zhAuxWght = 300;
-  const koWght = 350;
+  const koWght = 400;  // 必须与 @font-face 的 font-weight 一致，否则浏览器不匹配 HCR Batang
   const koLh = jpLh;
+  const vocabEmphasisColor = '#1e3a5f';  // 深绀色，替代粗体用于词汇/语法重点标识
 
   const jpFs = mm(pxToMm(jpFsPx, spec));
   const titleFs = mm(pxToMm(titleFsPx, spec));
@@ -110,7 +125,7 @@ export function buildVectorPrintInnerCss(
     text-align: left;
   }
   .fv-title-h {
-    font-family: ${ZH_FONT_FAMILY};
+    font-family: ${titleFont};
     font-size: ${titleFs};
     font-weight: ${zhAuxWght};
     color: #111827;
@@ -181,12 +196,13 @@ export function buildVectorPrintInnerCss(
     overflow-wrap: break-word;
     word-break: break-word;
     white-space: normal;
+    margin: 0;
   }
   .fv-body-h .jp-line,
   .fv-body-h .jp-line *:not(rt):not(rp) {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY};
+    font-family: ${primaryFont};
     font-size: ${jpFs};
-    font-weight: ${jpWght};
+    font-weight: ${primaryWght};
     color: #0a0a0a;
     line-height: ${jpLh};
     letter-spacing: normal;
@@ -213,9 +229,9 @@ export function buildVectorPrintInnerCss(
   .fv-body-h .vocab-ex-ja *:not(rt):not(rp),
   .fv-body-h .grammar-ex-ja,
   .fv-body-h .grammar-ex-ja *:not(rt):not(rp) {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY};
+    font-family: ${primaryFont};
     font-size: ${jpFs};
-    font-weight: ${jpWght};
+    font-weight: ${primaryWght};
     color: #0a0a0a;
     line-height: ${jpLh};
     margin: 0;
@@ -281,33 +297,40 @@ export function buildVectorPrintInnerCss(
     word-break: break-word;
     white-space: normal;
   }
+  /* 日文词汇单词（去粗体，改用强调色标识） */
   .fv-body-h .vocab-line1 .vocab-word,
   .fv-body-h .vocab-line1 .vocab-word *:not(rt):not(rp) {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY};
+    font-family: ${primaryFont};
     font-size: ${jpFs};
-    font-weight: ${jpEmphasisWght};
-    color: #0a0a0a;
+    font-weight: ${primaryWght};
+    color: ${vocabEmphasisColor};
     line-height: ${jpLh};
   }
+  /* 韩文词汇单词（去粗体，专用韩文字体 + 强调色） */
+  .fv-body-h .vocab-line1 .vocab-word-ko,
+  .fv-body-h .vocab-line1 .vocab-word-ko * {
+    font-family: ${KO_FONT_FAMILY};
+    font-size: ${jpFs};
+    font-weight: ${koWght};
+    color: ${vocabEmphasisColor};
+    line-height: ${koLh};
+  }
   .fv-body-h ruby {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY};
+    font-family: ${primaryFont};
     ruby-position: over;
     -webkit-ruby-position: before;
     ruby-align: start;
-    overflow: hidden;
   }
   .fv-body-h ruby rt {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY};
+    font-family: ${primaryFont};
     font-size: ${isM ? '0.54em' : '0.58em'};
-    font-weight: ${jpWght};
+    font-weight: ${primaryWght};
     color: #64748b;
     line-height: 1.1;
-    overflow: hidden;
-    text-overflow: clip;
     max-width: 100%;
   }
   .fv-body-h h2.lyrics-section-title {
-    font-family: ${ZH_FONT_FAMILY};
+    font-family: ${sectionTitleFont};
     font-size: ${h2Fs};
     font-weight: ${zhAuxWght};
     color: #1e293b;
@@ -322,7 +345,7 @@ export function buildVectorPrintInnerCss(
     padding-top: 0;
   }
   .fv-body-h h3.grammar-point-title {
-    font-family: ${ZH_FONT_FAMILY};
+    font-family: ${sectionTitleFont};
     font-size: ${zhLyricsFs};
     font-weight: ${zhAuxWght};
     color: #0a0a0a;
@@ -336,11 +359,19 @@ export function buildVectorPrintInnerCss(
   }
   .fv-body-h h3.grammar-point-title .grammar-title-ja,
   .fv-body-h h3.grammar-point-title .grammar-title-ja *:not(rt):not(rp) {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY};
+    font-family: ${primaryFont};
     font-size: ${jpFs};
-    font-weight: ${jpEmphasisWght};
+    font-weight: ${primaryWght};
     line-height: ${jpLh};
-    color: #0a0a0a;
+    color: ${vocabEmphasisColor};
+  }
+  .fv-body-h h3.grammar-point-title .grammar-title-ko,
+  .fv-body-h h3.grammar-point-title .grammar-title-ko * {
+    font-family: ${KO_FONT_FAMILY};
+    font-size: ${jpFs};
+    font-weight: ${koWght};
+    line-height: ${koLh};
+    color: ${vocabEmphasisColor};
   }
   .fv-body-h h3.grammar-point-title .grammar-title-zh,
   .fv-body-h h3.grammar-point-title .grammar-title-zh * {
@@ -351,13 +382,11 @@ export function buildVectorPrintInnerCss(
     color: #0a0a0a;
   }
   .fv-body-h h3.grammar-point-title ruby rt {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY};
+    font-family: ${primaryFont};
     font-size: ${isM ? '0.54em' : '0.58em'};
-    font-weight: ${jpWght};
+    font-weight: ${primaryWght};
     color: #64748b;
     line-height: 1.1;
-    overflow: hidden;
-    text-overflow: clip;
     max-width: 100%;
   }
   .fv-body-h .vocab-line1 .vocab-meaning,
@@ -375,7 +404,7 @@ export function buildVectorPrintInnerCss(
     bottom: ${pageNoBottom};
     font-size: ${pageNoFs};
     color: #94a3b8;
-    font-family: ${ZH_FONT_FAMILY};
+    font-family: ${titleFont};
     font-weight: 400;
     letter-spacing: 0.04em;
   }

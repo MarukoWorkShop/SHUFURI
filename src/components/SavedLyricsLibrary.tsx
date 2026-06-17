@@ -142,9 +142,6 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
         <header className="saved-library-drawer__header">
           <span className="saved-library-title">我的歌词本</span>
           <div className="saved-library-drawer__header-aside">
-            {!loading && (
-              <span className="saved-library-count">已收藏{items.length}首</span>
-            )}
             <button type="button" className="saved-library-drawer__close" onClick={closeDrawer}>
               帰 / 收起
             </button>
@@ -222,12 +219,14 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
           aria-expanded={drawerOpen}
           aria-controls="saved-library-drawer"
         >
-          <span className="saved-library-title">我的歌词本</span>
+          <span className="saved-library-title">Archive</span>
           <span className="saved-library-toggle__aside">
             {!loading && (
-              <span className="saved-library-count">已收藏{items.length}首</span>
+              <span className="saved-library-count">
+                <span className="saved-library-count__num">{items.length}</span>
+                <span className="saved-library-count__unit">篇</span>
+              </span>
             )}
-            <span className="saved-library-chevron" aria-hidden />
           </span>
         </button>
       </section>

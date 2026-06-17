@@ -22,4 +22,10 @@ export interface FuriganaEngineDim {
   titleFontSize: number;
   titleLineHeightRatio: number;
   titleToBodyGap: number;
+  // 日语默认行距（含注音需求）
+  jpLineHeightBase?: number;
+  zhLineHeightBase?: number;
+  // 无注音语言紧凑行距（ENG/KOR）
+  compactLineHeightBase?: number;
+  compactZhLineHeightBase?: number;
 }

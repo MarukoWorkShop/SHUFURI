@@ -34,36 +34,15 @@ export default class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) return this.props.fallback;
 
       return (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          padding: '24px',
-          fontFamily: 'system-ui, sans-serif',
-          textAlign: 'center',
-          color: 'var(--ui-fg, #333)',
-          background: 'var(--ui-bg, #fff)',
-        }}>
-          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>
-            应用出现异常
-          </h2>
-          <p style={{ fontSize: 14, color: 'var(--ui-fg-secondary, #666)', marginBottom: 20, maxWidth: 320 }}>
+        <div className="error-boundary">
+          <h2 className="error-boundary__title">应用出现异常</h2>
+          <p className="error-boundary__message">
             {this.state.error?.message || '未知错误，请尝试重启应用'}
           </p>
           <button
+            type="button"
+            className="btn-filled error-boundary__retry"
             onClick={this.handleReset}
-            style={{
-              padding: '10px 28px',
-              border: 'none',
-              borderRadius: 8,
-              background: 'var(--ui-fg-primary, #1a1a1a)',
-              color: '#fff',
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
           >
             重试
           </button>

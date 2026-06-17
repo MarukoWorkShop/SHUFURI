@@ -64,7 +64,12 @@ const TRACE_SENTENCES = [
 ];
 
 function isPythonTrace(line: string): boolean {
-  return PYTHON_TRACE_PATTERNS.some((re) => re.test(line));
+  const stripped = line.trim();
+  // Shufu 标准头部行以 # 开头，不可当作 Python 注释剔除
+  if (TITLE_LINE_RE.test(stripped)) {
+    return false;
+  }
+  return PYTHON_TRACE_PATTERNS.some((re) => re.test(stripped));
 }
 
 function isTraceSentence(line: string): boolean {
@@ -128,7 +133,11 @@ export function cleanDoubaoPaste(raw: string): string {
     if (STANDALONE_BEGIN_RE.test(firstLine)) {
       text = lines.slice(startIdx).join('\n');
     } else if (STANDALONE_LYRICS_RE.test(firstLine)) {
-      text = [BEGIN_MARKER, ...lines.slice(startIdx)].join('\n');
+      const headerLines = lines
+        .slice(0, startIdx)
+        .map((l) => l.trim())
+        .filter((l) => l && TITLE_LINE_RE.test(l));
+      text = [BEGIN_MARKER, ...headerLines, ...lines.slice(startIdx)].join('\n');
     }
   }
 

@@ -19,8 +19,8 @@ body,
   /* 核心一：禁止滚动、禁止溢出 */
   overflow: hidden;
 
-  /* 核心二：禁止用户双指放大或缩放页面，保持 1:1 的手账本硬挺质感 */
-  touch-action: none;
+  /* 核心二：禁止缩放由 meta viewport user-scalable=no 控制 */
+  /* 不在此设置 touch-action:none，否则会阻止子元素（如波轮）的触控手势 */
 
   /* 核心三：全面禁止系统级长按文字弹出拷贝气泡、禁止长按图片弹出保存菜单 */
   -webkit-user-select: none;
@@ -104,8 +104,8 @@ label {
   gap: 8px;
   padding: 12px 16px;
   padding-top: calc(12px + env(safe-area-inset-top, 0px));
-  background: #f59e0b;
-  color: #1c1917;
+  background: var(--color-banner-warn-bg);
+  color: var(--color-banner-warn-fg);
   font-family: var(--ui-font-sans);
   font-size: 12px;
   font-weight: var(--ui-weight-medium);
@@ -114,7 +114,8 @@ label {
 }
 
 .offline-banner--restored {
-  background: #10b981;
+  background: var(--color-banner-ok-bg);
+  color: var(--color-banner-ok-fg);
 }
 
 .offline-banner--exit {

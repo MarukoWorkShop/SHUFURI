@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import './App.css';
 import { normalizeLyricsBodyHtml } from './services/lyricsHtml';
 import { resolveExportTitle } from './utils/furiganaLayout/posterTitle';
@@ -28,7 +28,9 @@ import { playPencilScratchSound } from './utils/inkFineTune/pencilScratchSound';
 import type { PosterLayoutProfile, PosterPageSlice } from './utils/furiganaLayout/types';
 import SettingsPanel from './components/SettingsPanel';
 import SettingsMenuIcon from './components/icons/SettingsMenuIcon';
-import { getAppSettings, type AppSettings } from './services/appSettings';
+import LinkChainIcon from './components/icons/LinkChainIcon';
+import { getAppSettings, saveAppSettings, type AppSettings, type LangCode, type LyricsLanguage } from './services/appSettings';
+import type { OcrDetectedLanguage } from './services/ocrTypes';
 import { applyColorTheme } from './utils/applyColorTheme';
 import {
   initNativeBridge,
@@ -39,11 +41,22 @@ import {
   onAppBecameActive,
   isNativeWebView,
   postClipboardRead,
-  isStructuredLyricsText,
-  extractTitleFromStructuredText,
   isQQMusicShare,
   parseQQMusicShare,
+  isNetEaseMusicShare,
+  parseNetEaseMusicShare,
 } from './utils/nativeBridge';
+import { readClipboardText } from './utils/clipboard';
+import {
+  clipboardContentHash,
+  getStructuredLyricsCardMeta,
+  isStructuredLyricsClipboardText,
+  type StructuredLyricsCardFallbacks,
+} from './utils/clipboardStructuredLyrics';
+import { useClipboardStructuredLyrics } from './hooks/useClipboardHasContent';
+import { useTimedMessage } from './hooks/useTimedMessage';
+import { AppToastContext } from './context/AppToastContext';
+import AppToast from './components/AppToast';
 
 type Mode = 'input' | 'edit' | 'export';
 
@@ -63,6 +76,49 @@ async function prepareBridgedRawText(rawText: string): Promise<string> {
   return annotateInkEditTargets(normalizeLyricsBodyHtml(parsed.bodyHtml));
 }
 
+function ocrLangToLyricsLanguage(lang: OcrDetectedLanguage): LyricsLanguage | undefined {
+  if (lang === 'jp') return 'jp';
+  if (lang === 'ko') return 'ko';
+  if (lang === 'zh' || lang === 'mixed') return 'auto';
+  return undefined;
+}
+
+const CHAIN_TOOLTIP_MAX_W = 260;
+const CHAIN_TOOLTIP_SCREEN_PAD = 16;
+
+function ChainLinkTooltip({ anchorRect }: { anchorRect: DOMRect }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const btnCenterX = anchorRect.left + anchorRect.width / 2;
+    let tooltipLeft = btnCenterX - CHAIN_TOOLTIP_MAX_W / 2;
+    if (tooltipLeft < CHAIN_TOOLTIP_SCREEN_PAD) {
+      tooltipLeft = CHAIN_TOOLTIP_SCREEN_PAD;
+    }
+    const rightEdge = tooltipLeft + CHAIN_TOOLTIP_MAX_W;
+    if (rightEdge > window.innerWidth - CHAIN_TOOLTIP_SCREEN_PAD) {
+      tooltipLeft = window.innerWidth - CHAIN_TOOLTIP_SCREEN_PAD - CHAIN_TOOLTIP_MAX_W;
+    }
+    const arrowOffset = btnCenterX - tooltipLeft;
+
+    el.style.setProperty('--tooltip-top', `${anchorRect.bottom + 10}px`);
+    el.style.setProperty('--tooltip-left', `${tooltipLeft}px`);
+    el.style.setProperty('--tooltip-max-width', `${CHAIN_TOOLTIP_MAX_W}px`);
+    el.style.setProperty('--tooltip-arrow-left', `${arrowOffset}px`);
+  }, [anchorRect]);
+
+  return (
+    <div ref={ref} className="app-chain-tooltip">
+      <span className="app-chain-tooltip__text">
+        暂无音乐链接，去音乐软件复制分享链接，或手动填入歌曲信息生成搜索口令
+      </span>
+    </div>
+  );
+}
+
 export default function App() {
   // ---- State 声明（必须在 hooks 使用之前） ----
   const [mode, setMode] = useState<Mode>('input');
@@ -76,30 +132,102 @@ export default function App() {
   );
   const [exporting, setExporting] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveNotice, setSaveNotice] = useState('');
   const [savedProjectId, setSavedProjectId] = useState<string | null>(null);
   const [libraryRefreshKey, setLibraryRefreshKey] = useState(0);
   const [inputResetKey, setInputResetKey] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [appSettings, setAppSettings] = useState<AppSettings>(() => getAppSettings());
+  const lyricsLanguage = appSettings.lyricsLanguage;
+  /** 排版管线语言（大模型声明 / 自动检测，与波轮解耦） */
+  const [lang, setLang] = useState<LangCode | undefined>(undefined);
+  /** 链条 icon tooltip 显示 */
+  const [chainTipVisible, setChainTipVisible] = useState(false);
+  /** 链条按钮 ref，用于计算 tooltip position */
+  const chainBtnRef = useRef<HTMLButtonElement>(null);
+
+  // 链条 tooltip：点击外部关闭
+  useEffect(() => {
+    if (!chainTipVisible) return;
+    const handleClick = () => {
+      // 延迟关闭，让 click 事件先触发按钮的 toggle
+      setTimeout(() => setChainTipVisible(false), 10);
+    };
+    document.addEventListener('click', handleClick, { capture: true });
+    // 5 秒自动消失
+    const timer = setTimeout(() => setChainTipVisible(false), 5000);
+    return () => {
+      document.removeEventListener('click', handleClick, { capture: true });
+      clearTimeout(timer);
+    };
+  }, [chainTipVisible]);
 
   // ---- 剪贴板检测卡片（AI App 返回结构化歌词时弹出） ----
   const [clipboardCardVisible, setClipboardCardVisible] = useState(false);
   const [clipboardDetectedSong, setClipboardDetectedSong] = useState('');
   const [clipboardDetectedArtist, setClipboardDetectedArtist] = useState('');
+  const [clipboardDetectedLang, setClipboardDetectedLang] = useState<LangCode | undefined>(undefined);
+  const pasteLayoutReady = useClipboardStructuredLyrics();
+  const appToast = useTimedMessage(3000);
+  /** 已消费的剪贴板内容哈希集合（用户点过「取消」后不再重复弹窗） */
+  const consumedClipboardRef = useRef<Set<string>>(new Set());
   const prevClipboardHashRef = useRef('');
+  const homeFormMetaRef = useRef({ title: '', artist: '' });
   // ---- 剪贴板/链接解析结果（预填歌名+歌手） ----
   const [shareOcrData, setShareOcrData] = useState<{
     title: string;
     artist: string;
     detectedLanguage?: 'jp' | 'ko' | 'zh' | 'mixed' | 'unknown';
   } | null>(null);
+  /** 剪贴板中是否有音乐链接（QQ/网易云检测到的分享链接） */
+  const hasMusicLink = shareOcrData !== null && (shareOcrData.title !== '' || shareOcrData.artist !== '');
+  /** 存储最近一次成功检测的原始剪贴板文本 + 解析结果，用于恢复粘贴 */
+  const lastDetectedShareRef = useRef<{ title: string; artist: string; detectedLanguage?: 'jp' | 'ko' | 'zh' | 'mixed' | 'unknown' } | null>(null);
 
   const network = useNetworkStatus();
 
   // ---- 首页 ----
 
   useGlobalButtonFeedback();
+
+  const activateClipboardDetectCardFromText = useCallback((
+    text: string,
+    formMeta?: StructuredLyricsCardFallbacks,
+  ): boolean => {
+    const meta = getStructuredLyricsCardMeta(text, {
+      title: formMeta?.title || shareOcrData?.title || homeFormMetaRef.current.title,
+      artist: formMeta?.artist || shareOcrData?.artist || homeFormMetaRef.current.artist,
+    });
+    if (!meta) {
+      return false;
+    }
+    setClipboardDetectedSong(meta.title);
+    setClipboardDetectedArtist(meta.artist);
+    setClipboardDetectedLang(meta.lang);
+    setClipboardCardVisible(true);
+    hapticSuccess();
+    return true;
+  }, [shareOcrData]);
+
+  const handleActivatePasteLayout = useCallback(async (formMeta?: StructuredLyricsCardFallbacks) => {
+    try {
+      const text = await readClipboardText();
+      const trimmed = text.trim();
+      if (!trimmed) {
+        appToast.show('剪贴板为空');
+        return;
+      }
+      if (activateClipboardDetectCardFromText(trimmed, formMeta)) {
+        prevClipboardHashRef.current = clipboardContentHash(trimmed);
+        return;
+      }
+      appToast.show('未检测到结构化歌词');
+    } catch {
+      appToast.show('无法读取剪贴板');
+    }
+  }, [activateClipboardDetectCardFromText, appToast.show]);
+
+  const activateCardRef = useRef(activateClipboardDetectCardFromText);
+  activateCardRef.current = activateClipboardDetectCardFromText;
 
   const handleSettingsChange = useCallback((next: AppSettings) => {
     setAppSettings(next);
@@ -158,6 +286,8 @@ export default function App() {
         currentTitle,
         currentProfile,
         currentArtist,
+        lyricsLanguage,
+        lang,
       );
       pagesRef.current = currentPages;
       setPages(currentPages);
@@ -176,6 +306,8 @@ export default function App() {
           currentProfile,
           baseFilename,
           currentArtist,
+          lyricsLanguage,
+          lang,
         );
       } else {
         await exportPosterPngFromPageHtmls(
@@ -184,6 +316,8 @@ export default function App() {
           currentProfile,
           baseFilename,
           currentArtist,
+          lyricsLanguage,
+          lang,
         );
       }
 
@@ -279,66 +413,123 @@ export default function App() {
   useEffect(() => {
     if (!isNativeWebView()) return;
 
-    const removeListener = onAppBecameActive(() => {
-      // 延迟 500ms 确保 UIPasteboard 同步完成
-      setTimeout(async () => {
-        try {
-          const text = await postClipboardRead();
-          if (!text) return;
+    /**
+     * 生成内容的完整哈希（前 200 字符），用于去重。
+     * 覆盖歌词头部 + 第一对 PAIR 块，足够辨别不同歌曲。
+     */
+    const contentHash = clipboardContentHash;
 
-          const trimmed = text.trim();
-          // 简易 hash 防重
-          const hash = trimmed.slice(0, 40);
-          if (hash === prevClipboardHashRef.current) return;
-          prevClipboardHashRef.current = hash;
-
-          // ---- QQ 音乐分享链接：直接提取歌名/歌手，预填输入框 ----
-          if (isQQMusicShare(trimmed)) {
-            const parsed = parseQQMusicShare(trimmed);
-            if (parsed.title) {
-              console.log('[App] 检测到 QQ 音乐分享链接:', parsed.title, parsed.artist);
-              setShareOcrData((prev) => ({
-                ...prev,
-                title: parsed.title || '',
-                artist: parsed.artist || '',
-                detectedLanguage: (() => {
-                  const hasKana = /[\u3040-\u309f\u30a0-\u30ff]/.test(parsed.title || '');
-                  const hasHangul = /[\uAC00-\uD7AF]/.test(parsed.title || '');
-                  if (hasKana) return 'jp' as const;
-                  if (hasHangul) return 'ko' as const;
-                  return undefined;
-                })(),
-              }));
-              hapticSuccess();
-              return;
-            }
+    /**
+     * 阶段式读取剪贴板（应对 UIPasteboard 同步延迟）。
+     *
+     * 延迟策略：
+     * - 0ms:   立即读取（快设备上通常已就绪）
+     * - 600ms: 第一次重试（常规 iOS 剪贴板同步窗口）
+     * - 1400ms:第二次重试（慢设备 / 后台任务阻塞兜底）
+     *
+     * 任一阶段检测到有效内容 → 停止后续重试。
+     * 内容与上次相同（基于完整哈希）→ 跳过。
+     * 内容已被「取消」消费过 → 跳过。
+     */
+    const tryReadClipboard = async (attempt: number): Promise<void> => {
+      try {
+        const text = await postClipboardRead();
+        if (!text) {
+          if (attempt < 2) {
+            const delays = [600, 1400];
+            setTimeout(() => { void tryReadClipboard(attempt + 1); }, delays[attempt]!);
           }
-
-          if (!isStructuredLyricsText(trimmed)) return;
-
-          const detectedTitle = extractTitleFromStructuredText(trimmed);
-          if (!detectedTitle) {
-            setClipboardDetectedSong('未知歌曲');
-          } else {
-            setClipboardDetectedSong(detectedTitle);
-          }
-
-          // 从结构化歌词头部提取歌手名: 歌手《歌名》
-          {
-            const headerPart = trimmed.split(/===LYRICS===/i)[0] ?? '';
-            const artistMatch = headerPart.match(/^(.+?)《[^》]+》/m);
-            if (artistMatch) {
-              setClipboardDetectedArtist(artistMatch[1].trim());
-            } else {
-              setClipboardDetectedArtist('');
-            }
-          }
-          setClipboardCardVisible(true);
-          hapticSuccess();
-        } catch {
-          // 剪贴板读取失败，静默忽略（可能在 web 环境）
+          return;
         }
-      }, 500);
+
+        const trimmed = text.trim();
+        const hash = contentHash(trimmed);
+
+        // 去重：与上次成功检测的哈希比较
+        if (hash === prevClipboardHashRef.current) return;
+
+        // 排除已消费内容（用户点过「取消」且剪贴板未变化）
+        if (consumedClipboardRef.current.has(hash)) return;
+
+        // ---- QQ 音乐分享链接：直接提取歌名/歌手，预填输入框 ----
+        if (isQQMusicShare(trimmed)) {
+          const parsed = parseQQMusicShare(trimmed);
+          if (parsed.title) {
+            console.log('[Clipboard] 检测到 QQ 音乐分享链接:', parsed.title, parsed.artist);
+            prevClipboardHashRef.current = hash;
+            const detectedLang = (() => {
+              const hasKana = /[\u3040-\u309f\u30a0-\u30ff]/.test(parsed.title || '');
+              const hasHangul = /[\uAC00-\uD7AF]/.test(parsed.title || '');
+              if (hasKana) return 'jp' as const;
+              if (hasHangul) return 'ko' as const;
+              return undefined;
+            })();
+            const shareData = {
+              title: parsed.title || '',
+              artist: parsed.artist || '',
+              detectedLanguage: detectedLang,
+            };
+            lastDetectedShareRef.current = shareData;
+            setShareOcrData((prev) => ({ ...prev, ...shareData }));
+            // 自动同步语言到波轮（直接 setState + 持久化，避免 handleSettingsChange 的 applyColorTheme 干扰）
+            if (detectedLang) {
+              setAppSettings((prev) => ({ ...prev, lyricsLanguage: detectedLang }));
+              saveAppSettings({ lyricsLanguage: detectedLang });
+            }
+            hapticSuccess();
+            return;
+          }
+        }
+
+        // ---- 网易云音乐分享链接：直接提取歌名/歌手，预填输入框 ----
+        if (isNetEaseMusicShare(trimmed)) {
+          const parsed = parseNetEaseMusicShare(trimmed);
+          if (parsed.title) {
+            console.log('[Clipboard] 检测到网易云音乐分享链接:', parsed.title, parsed.artist);
+            prevClipboardHashRef.current = hash;
+            const detectedLang = (() => {
+              const hasKana = /[\u3040-\u309f\u30a0-\u30ff]/.test(parsed.title || '');
+              const hasHangul = /[\uAC00-\uD7AF]/.test(parsed.title || '');
+              if (hasKana) return 'jp' as const;
+              if (hasHangul) return 'ko' as const;
+              return undefined;
+            })();
+            const shareData = {
+              title: parsed.title || '',
+              artist: parsed.artist || '',
+              detectedLanguage: detectedLang,
+            };
+            lastDetectedShareRef.current = shareData;
+            setShareOcrData((prev) => ({ ...prev, ...shareData }));
+            // 自动同步语言到波轮
+            if (detectedLang) {
+              setAppSettings((prev) => ({ ...prev, lyricsLanguage: detectedLang }));
+              saveAppSettings({ lyricsLanguage: detectedLang });
+            }
+            hapticSuccess();
+            return;
+          }
+        }
+
+        if (!isStructuredLyricsClipboardText(trimmed)) return;
+
+        prevClipboardHashRef.current = hash;
+
+        if (activateCardRef.current(trimmed)) {
+          console.log('[Clipboard] 弹窗已触发 (attempt:', attempt, ')');
+        }
+      } catch (err) {
+        console.warn('[Clipboard] 读取失败 (attempt:', attempt, '):', err);
+        // 读取失败也重试（权限弹窗关闭后可能恢复）
+        if (attempt < 2) {
+          const delays = [600, 1400];
+          setTimeout(() => { void tryReadClipboard(attempt + 1); }, delays[attempt]!);
+        }
+      }
+    };
+
+    const removeListener = onAppBecameActive(() => {
+      void tryReadClipboard(0);
     });
 
     return removeListener;
@@ -366,6 +557,7 @@ export default function App() {
       exportProfile: PosterLayoutProfile,
       projectId: string | null,
       nextArtist?: string,
+      nextLang?: LangCode,
     ) => {
       await ensurePosterFontsLoaded();
       const normalized = prepareBodyHtmlForPreview(nextBodyHtml);
@@ -377,6 +569,7 @@ export default function App() {
       setPages([]);
       setMode('edit');
       setSavedProjectId(projectId);
+      setLang(nextLang);
       resetPosterPageRefs(pageRefs, 0);
     },
     [],
@@ -387,11 +580,11 @@ export default function App() {
       return;
     }
     await ensurePosterFontsLoaded();
-    const pageHtmls = buildPosterPagesFromBody(bodyHtml, title, layoutProfile, artist);
+    const pageHtmls = buildPosterPagesFromBody(bodyHtml, title, layoutProfile, artist, lyricsLanguage, lang);
     setPages(pageHtmls);
     setMode('export');
     resetPosterPageRefs(pageRefs, pageHtmls.length);
-  }, [bodyHtml, title, layoutProfile, artist]);
+  }, [bodyHtml, title, layoutProfile, artist, lyricsLanguage, lang]);
 
   const openProject = useCallback(
     async (project: SavedLyricsProject) => {
@@ -403,13 +596,14 @@ export default function App() {
         profile,
         project.id,
         project.artist,
+        project.lang,
       );
     },
     [enterEditWithLayout],
   );
 
   const handleLayoutFromHtml = useCallback(
-    async (nextBodyHtml: string, nextTitle: string, rawPaste: string, nextArtist?: string) => {
+    async (nextBodyHtml: string, nextTitle: string, rawPaste: string, nextArtist?: string, nextLang?: LangCode) => {
       await enterEditWithLayout(
         nextBodyHtml,
         nextTitle,
@@ -417,6 +611,7 @@ export default function App() {
         appSettings.defaultExportLayout,
         null,
         nextArtist,
+        nextLang,
       );
     },
     [enterEditWithLayout, appSettings.defaultExportLayout],
@@ -428,12 +623,12 @@ export default function App() {
         return;
       }
       await ensurePosterFontsLoaded();
-      const pageHtmls = buildPosterPagesFromBody(bodyHtml, title, profile, artist);
+      const pageHtmls = buildPosterPagesFromBody(bodyHtml, title, profile, artist, lyricsLanguage, lang);
       setLayoutProfile(profile);
       setPages(pageHtmls);
       resetPosterPageRefs(pageRefs, pageHtmls.length);
     },
-    [layoutProfile, bodyHtml, title, artist],
+    [layoutProfile, bodyHtml, title, artist, lyricsLanguage, lang],
   );
 
   const handleBackToEdit = useCallback(() => {
@@ -456,6 +651,7 @@ export default function App() {
     setInputResetKey((k) => k + 1);
     setInkEditTarget(null);
     setInkPopoverClosing(false);
+    setLang(undefined);
     resetPosterPageRefs(pageRefs, 0);
   }, []);
 
@@ -539,7 +735,7 @@ export default function App() {
 
     try {
       await Promise.race([
-        exportPosterPdf(pages, resolveExportTitle(title), layoutProfile, artist),
+        exportPosterPdf(pages, resolveExportTitle(title), layoutProfile, artist, lyricsLanguage, lang),
         deadline,
       ]);
     } catch (e) {
@@ -556,13 +752,12 @@ export default function App() {
       return;
     }
     setSaving(true);
-    setSaveNotice('');
     try {
       await ensurePosterFontsLoaded();
       const pageHtmls =
         pages.length > 0
           ? posterPageHtmls(pages)
-          : posterPageHtmls(buildPosterPagesFromBody(bodyHtml, title, layoutProfile, artist));
+          : posterPageHtmls(buildPosterPagesFromBody(bodyHtml, title, layoutProfile, artist, lyricsLanguage, lang));
       const saved = await saveLyricsProject({
         id: savedProjectId ?? undefined,
         title: resolveExportTitle(title),
@@ -571,19 +766,19 @@ export default function App() {
         bodyHtml,
         pageHtmls,
         layoutProfile,
+        lang,
       });
       setSavedProjectId(saved.id);
       setLibraryRefreshKey((k) => k + 1);
-      setSaveNotice('已保存到我的歌词库');
+      appToast.show('已保存到我的歌词库', 2400);
       hapticSuccess();
-      window.setTimeout(() => setSaveNotice(''), 2400);
     } catch (e) {
       hapticError();
       alert(e instanceof Error ? e.message : '保存失败');
     } finally {
       setSaving(false);
     }
-  }, [bodyHtml, pages, savedProjectId, title, artist, lyrics, layoutProfile, saving]);
+  }, [bodyHtml, pages, savedProjectId, title, artist, lyrics, layoutProfile, saving, appToast.show]);
 
   const isWorkspaceMode = mode === 'edit' || mode === 'export';
   const inkFocusGroupIndex =
@@ -591,6 +786,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+    <AppToastContext.Provider value={appToast.show}>
     <div
       className={`app app-screen${mode === 'input' ? ' app--home' : ''}${mode === 'edit' ? ' app--edit' : ''}${mode === 'export' ? ' app--export app--preview' : ''}`}
     >
@@ -601,6 +797,46 @@ export default function App() {
       >
         <div className="app-brand-bar__inner">
           <div className="app-brand-bar__top">
+            {mode === 'input' && (
+              <div className="app-chain-btn-wrapper">
+                <button
+                  ref={chainBtnRef}
+                  type="button"
+                  className={`app-chain-btn${hasMusicLink ? ' has-link' : ''}`}
+                  aria-label={hasMusicLink ? '已检测到音乐链接' : '暂无音乐链接'}
+                  onClick={async () => {
+                    if (!hasMusicLink) {
+                      setChainTipVisible((prev) => !prev);
+                    } else {
+                      // 有链接：重新粘贴最近一次检测到的歌曲信息
+                      // 安全校验：当前剪贴板若是 AI 结构化歌词，禁止粘贴到输入字段
+                      try {
+                        const currentClipText = await postClipboardRead();
+                        if (currentClipText && isStructuredLyricsClipboardText(currentClipText)) {
+                          // 剪贴板已是 AI 歌词 → 不污染字段
+                          console.log('[LinkChain] 剪贴板为结构化歌词，拒绝恢复');
+                          return;
+                        }
+                      } catch { /* 读取失败则允许恢复 */ }
+                      // 恢复历史数据
+                      if (lastDetectedShareRef.current) {
+                        const d = lastDetectedShareRef.current;
+                        setShareOcrData((prev) => ({ ...prev, ...d }));
+                        if (d.detectedLanguage) {
+                          const mappedLang = ocrLangToLyricsLanguage(d.detectedLanguage);
+                          if (mappedLang) {
+                            setAppSettings((prev) => ({ ...prev, lyricsLanguage: mappedLang }));
+                            saveAppSettings({ lyricsLanguage: mappedLang });
+                          }
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <LinkChainIcon />
+                </button>
+              </div>
+            )}
             <div className="app-brand-stack">
               <p className="app-brand">SHUFURI</p>
               <p className="app-brand-tagline">优雅简洁的日语释音与排版助手</p>
@@ -620,6 +856,11 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* 链条 tooltip：position:fixed + 边界检测，避免被屏幕边缘截断 */}
+      {chainTipVisible && mode === 'input' && chainBtnRef.current && (
+        <ChainLinkTooltip anchorRect={chainBtnRef.current.getBoundingClientRect()} />
+      )}
 
       <SettingsPanel
         open={settingsOpen}
@@ -641,6 +882,11 @@ export default function App() {
                     initialTitle={shareOcrData?.title}
                     initialArtist={shareOcrData?.artist}
                     ocrDetectedLanguage={shareOcrData?.detectedLanguage}
+                    pasteLayoutReady={pasteLayoutReady}
+                    onActivatePasteLayout={(formMeta) => void handleActivatePasteLayout(formMeta)}
+                    onFormMetaChange={(meta) => {
+                      homeFormMetaRef.current = meta;
+                    }}
                   />
                   <SavedLyricsLibrary onOpen={openProject} refreshKey={libraryRefreshKey} />
             </div>
@@ -653,7 +899,6 @@ export default function App() {
                   ← 重新输入
                 </button>
                 <div className="toolbar-actions">
-                  {saveNotice && <span className="toolbar-save-notice">{saveNotice}</span>}
                   <button
                     type="button"
                     className="btn-export btn-export-save"
@@ -718,9 +963,10 @@ export default function App() {
               previewPagesRef={exportPagesRef}
               onBackToEdit={handleBackToEdit}
               onLayoutChange={(profile) => void handleLayoutChange(profile)}
-              saveNotice={saveNotice}
               onSave={() => void handleSave()}
               onExportPdf={() => void handleExportPdf()}
+              language={lyricsLanguage}
+              lang={lang}
               captureRef={(index) => (el) => {
                 pageRefs.current[index] = el;
               }}
@@ -733,6 +979,7 @@ export default function App() {
       <ClipboardDetectCard
         songTitle={clipboardDetectedSong}
         artist={clipboardDetectedArtist}
+        language={clipboardDetectedLang}
         visible={clipboardCardVisible}
         onRenderLayout={() => {
           setClipboardCardVisible(false);
@@ -740,7 +987,7 @@ export default function App() {
           void (async () => {
             try {
               const text = await postClipboardRead();
-              if (text && isStructuredLyricsText(text)) {
+              if (text && isStructuredLyricsClipboardText(text)) {
                 const { preparePasteForLayout } = await import('./services/lyricsHtml');
                 const prepared = preparePasteForLayout(text);
                 await handleLayoutFromHtml(
@@ -748,6 +995,7 @@ export default function App() {
                   prepared.title || '',
                   text,
                   prepared.artist,
+                  prepared.lang,
                 );
               }
             } catch {
@@ -755,10 +1003,18 @@ export default function App() {
             }
           })();
         }}
-        onDismiss={() => setClipboardCardVisible(false)}
+        onDismiss={() => {
+          // 标记当前内容为「已消费」，防止下次回到前台时重复弹窗
+          if (prevClipboardHashRef.current) {
+            consumedClipboardRef.current.add(prevClipboardHashRef.current);
+          }
+          setClipboardCardVisible(false);
+        }}
       />
 
+      <AppToast message={appToast.message} placement="fixed" />
     </div>
+    </AppToastContext.Provider>
     </ErrorBoundary>
   );
 }

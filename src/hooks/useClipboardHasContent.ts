@@ -1,23 +1,65 @@
-import { useCallback, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { readClipboardText } from '../utils/clipboard';
+import { isStructuredLyricsClipboardText } from '../utils/clipboardStructuredLyrics';
+import { onAppBecameActive } from '../utils/nativeBridge';
 
-/**
- * 检查剪贴板是否有可粘贴内容（按需，不自动轮询）。
- * 避免 iOS 持续弹出"从 xxx 粘贴"的系统提示。
- */
-export function useClipboardHasContent() {
-  const lastResultRef = useRef(false);
+const POLL_MS = 1500;
 
-  const check = useCallback(async (): Promise<boolean> => {
-    try {
-      const has = (await readClipboardText()).trim().length > 0;
-      lastResultRef.current = has;
-      return has;
-    } catch {
-      lastResultRef.current = false;
-      return false;
-    }
+async function clipboardHasStructuredLyrics(): Promise<boolean> {
+  try {
+    const text = await readClipboardText();
+    return isStructuredLyricsClipboardText(text);
+  } catch {
+    return false;
+  }
+}
+
+/** 监听剪贴板是否含可排版的结构化歌词 */
+export function useClipboardStructuredLyrics(): boolean {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const check = () => {
+      void (async () => {
+        if (cancelled) {
+          return;
+        }
+        const has = await clipboardHasStructuredLyrics();
+        if (!cancelled) {
+          setReady(has);
+        }
+      })();
+    };
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        check();
+      }
+    };
+
+    window.addEventListener('focus', check);
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', check);
+    const unsubscribeForeground = onAppBecameActive(check);
+    const pollTimer = window.setInterval(check, POLL_MS);
+    check();
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', check);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', check);
+      unsubscribeForeground();
+      window.clearInterval(pollTimer);
+    };
   }, []);
 
-  return { check, lastResult: lastResultRef };
+  return ready;
+}
+
+/** @deprecated 使用 useClipboardStructuredLyrics */
+export function useClipboardHasContent(): boolean {
+  return useClipboardStructuredLyrics();
 }

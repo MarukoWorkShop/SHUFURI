@@ -491,6 +491,8 @@ export async function exportPosterPdfFromPageHtmls(
   layoutProfile: PosterLayoutProfile,
   filename: string,
   artist?: string,
+  language: import('../services/appSettings').LyricsLanguage = 'jp',
+  lang?: import('../services/appSettings').LangCode,
 ): Promise<void> {
   if (pageSlices.length === 0) {
     throw new Error('没有可导出的页面');
@@ -506,7 +508,7 @@ export async function exportPosterPdfFromPageHtmls(
   }
 
   await ensurePosterFontsLoaded();
-  const mounts = mountPosterExportPages(document, pageSlices, title, layoutProfile, artist);
+  const mounts = mountPosterExportPages(document, pageSlices, title, layoutProfile, artist, language, lang);
   const { width, height } = getPosterExportCanvasSize(layoutProfile);
 
   // 【闪烁修复】在栅格化前才将所有页面的 backdrop 移入可见区域
@@ -566,6 +568,8 @@ export async function rasterizePageHtmlToBlob(
   layoutProfile: PosterLayoutProfile,
   spacingScale = 1,
   options: QuickSaveImageOptions = {},
+  language: import('../services/appSettings').LyricsLanguage = 'jp',
+  lang?: import('../services/appSettings').LangCode,
 ): Promise<{ blob: Blob; mimeType: 'image/jpeg' | 'image/png' }> {
   const format = options.format ?? 'jpeg';
   const jpegQuality = options.jpegQuality ?? QUICK_SAVE_JPEG_QUALITY;
@@ -583,6 +587,8 @@ export async function rasterizePageHtmlToBlob(
     pageCount,
     layoutProfile,
     spacingScale,
+    language,
+    lang,
   });
   mount.prepare({ visible: prepareVisible });
   try {
@@ -669,6 +675,8 @@ export async function exportPosterPngFromPageHtmls(
   layoutProfile: PosterLayoutProfile,
   baseFilename: string,
   artist?: string,
+  language: import('../services/appSettings').LyricsLanguage = 'jp',
+  lang?: import('../services/appSettings').LangCode,
 ): Promise<number> {
   if (pageSlices.length === 0) {
     throw new Error('没有可导出的页面');
@@ -694,6 +702,8 @@ export async function exportPosterPngFromPageHtmls(
         format: native ? 'jpeg' : 'png',
         prepareVisible: false,
       },
+      language,
+      lang,
     );
 
     const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';

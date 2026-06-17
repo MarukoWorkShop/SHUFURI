@@ -2,6 +2,7 @@ import type { RefObject } from 'react';
 import FuriganaHtmlPosterPreview from './FuriganaPosterPreview';
 import PosterLayoutToggle from './PosterLayoutToggle';
 import type { PosterLayoutProfile, PosterPageSlice } from '../utils/furiganaLayout/types';
+import type { LyricsLanguage, LangCode } from '../services/appSettings';
 
 type Props = {
   pages: PosterPageSlice[];
@@ -11,13 +12,14 @@ type Props = {
   displayScale: number;
   exporting: boolean;
   saving: boolean;
-  saveNotice?: string;
   previewPagesRef: RefObject<HTMLDivElement | null>;
   onBackToEdit: () => void;
   onLayoutChange: (profile: PosterLayoutProfile) => void;
   onSave: () => void;
   onExportPdf: () => void;
   captureRef: (index: number) => (el: HTMLDivElement | null) => void;
+  language?: LyricsLanguage;
+  lang?: LangCode;
 };
 
 export default function ExportPreviewPanel({
@@ -28,13 +30,14 @@ export default function ExportPreviewPanel({
   displayScale,
   exporting,
   saving,
-  saveNotice = '',
   previewPagesRef,
   onBackToEdit,
   onLayoutChange,
   onSave,
   onExportPdf,
   captureRef,
+  language = 'jp',
+  lang,
 }: Props) {
   return (
     <div className="preview-area export-area">
@@ -56,7 +59,6 @@ export default function ExportPreviewPanel({
           <span className="page-count">共 {pages.length} 页</span>
           <span className="export-gallery-hint">长按页面保存到图库</span>
           <div className="export-buttons">
-            {saveNotice && <span className="toolbar-save-notice">{saveNotice}</span>}
             <button
               type="button"
               className="btn-export btn-export-save"
@@ -84,6 +86,8 @@ export default function ExportPreviewPanel({
           pageSlices={pages}
           layoutProfile={layoutProfile}
           displayScale={displayScale}
+          language={language}
+          lang={lang}
           captureRef={captureRef}
         />
       </div>

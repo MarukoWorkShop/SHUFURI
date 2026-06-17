@@ -1,4 +1,4 @@
-import { useMemo, useRef, useLayoutEffect, useState, useCallback, useEffect } from 'react';
+import { useMemo, useRef, useLayoutEffect, useState, useCallback } from 'react';
 import type { Ref, CSSProperties } from 'react';
 import {
   applyPosterBodyMaxHeight,
@@ -19,6 +19,9 @@ import {
 import { ZH_FONT_FAMILY } from '../utils/furiganaLayout/fonts';
 import { PAGE_GAP_PX } from '../hooks/usePosterPreviewFitScale';
 import type { PosterLayoutProfile, PosterPageSlice } from '../utils/furiganaLayout/types';
+import type { LyricsLanguage, LangCode } from '../services/appSettings';
+import { useTimedMessage } from '../hooks/useTimedMessage';
+import AppToast from './AppToast';
 
 /** 页码字体常量 */
 const PAGE_NUMBER_FONT_PX = 13;
@@ -53,6 +56,8 @@ type FuriganaPosterSinglePageProps = {
   layoutProfile: PosterLayoutProfile;
   displayScale: number;
   spacingScale?: number;
+  language?: LyricsLanguage;
+  lang?: LangCode;
   captureRef?: Ref<HTMLDivElement>;
 };
 
@@ -67,6 +72,8 @@ function FuriganaPosterSinglePage({
   layoutProfile,
   displayScale,
   spacingScale = 1,
+  language = 'jp',
+  lang,
   captureRef,
 }: FuriganaPosterSinglePageProps) {
   const safeFragment = useMemo(
@@ -76,8 +83,8 @@ function FuriganaPosterSinglePage({
   const { width: w, height: h } = getFuriganaPosterCanvasDimensions(layoutProfile);
   const pad = getFuriganaCanvasInsets(layoutProfile);
   const innerCss = useMemo(
-    () => buildFuriganaPosterInnerCss(layoutProfile, { spacingScale }),
-    [layoutProfile, spacingScale],
+    () => buildFuriganaPosterInnerCss(layoutProfile, { spacingScale, language, lang }),
+    [layoutProfile, spacingScale, language, lang],
   );
   const rootStyle = useMemo(
     () => buildFuriganaPosterRootStyle(layoutProfile),
@@ -126,10 +133,8 @@ function FuriganaPosterSinglePage({
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const rasterizingRef = useRef(false);
-
   const [saving, setSaving] = useState(false);
-  const [saveToast, setSaveToast] = useState<string | null>(null);
-  const saveToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { message: saveToast, show: showToast } = useTimedMessage(2400);
 
   const LONG_PRESS_MS = 600;
   const LONG_PRESS_MOVE_TOL = 12;
@@ -139,24 +144,6 @@ function FuriganaPosterSinglePage({
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
-  }, []);
-
-  const showToast = useCallback((message: string, durationMs = 2400) => {
-    if (saveToastTimerRef.current) {
-      clearTimeout(saveToastTimerRef.current);
-    }
-    setSaveToast(message);
-    saveToastTimerRef.current = setTimeout(() => {
-      setSaveToast(null);
-    }, durationMs);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (saveToastTimerRef.current) {
-        clearTimeout(saveToastTimerRef.current);
-      }
-    };
   }, []);
 
   const handleRasterize = useCallback(async () => {
@@ -191,6 +178,8 @@ function FuriganaPosterSinglePage({
           jpegQuality: 0.92,
           prepareVisible: false,
         },
+        language,
+        lang,
       );
 
       if (native) {
@@ -337,11 +326,7 @@ function FuriganaPosterSinglePage({
           <span>正在生成图片…</span>
         </div>
       )}
-      {saveToast && (
-        <div className="fv-poster-save-toast">
-          {saveToast}
-        </div>
-      )}
+      {saveToast && <AppToast message={saveToast} placement="anchored" />}
       <div style={scaleWrapperStyle}>
         <div
           ref={captureRef}
@@ -392,6 +377,8 @@ export type FuriganaHtmlPosterPreviewProps = {
   layoutProfile?: PosterLayoutProfile;
   displayScale?: number;
   pageGapPx?: number;
+  language?: LyricsLanguage;
+  lang?: LangCode;
   captureRef?: (pageIndex: number) => (el: HTMLDivElement | null) => void;
 };
 
@@ -403,6 +390,8 @@ export default function FuriganaHtmlPosterPreview({
   layoutProfile = 'clipPosterPrint',
   displayScale = 1,
   pageGapPx = PAGE_GAP_PX,
+  language,
+  lang,
   captureRef,
 }: FuriganaHtmlPosterPreviewProps) {
   const pages = pageSlices.length > 0 ? pageSlices : [{ html: '', spacingScale: 1 }];
@@ -422,6 +411,8 @@ export default function FuriganaHtmlPosterPreview({
           pageCount={n}
           layoutProfile={layoutProfile}
           displayScale={displayScale}
+          language={language}
+          lang={lang}
           captureRef={captureRef?.(i)}
         />
       ))}

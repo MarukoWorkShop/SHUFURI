@@ -12,7 +12,8 @@ import {
   getFuriganaPosterCanvasDimensions,
 } from './furiganaLayout/furiganaPosterShared';
 import { applyPosterTitleElement } from './furiganaLayout/posterTitle';
-import { getPosterJapaneseFontFaceCss, ZH_FONT_FAMILY } from './furiganaLayout/fonts';
+import { getPosterJapaneseFontFaceCss, getPosterKoreanFontFaceCss, ZH_FONT_FAMILY } from './furiganaLayout/fonts';
+import type { LyricsLanguage } from '../services/appSettings';
 
 /** 将 JS 样式对象转为内联 style 属性字符串 */
 function styleObjToAttr(style: Record<string, string | number>): string {
@@ -42,6 +43,7 @@ export interface GeneratePageSvgOptions {
   pageCount: number;
   layoutProfile: PosterLayoutProfile;
   spacingScale?: number;
+  language?: LyricsLanguage;
 }
 
 /**
@@ -57,15 +59,17 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
     pageCount,
     layoutProfile,
     spacingScale = 1,
+    language = 'jp',
   } = opts;
 
   const { width: w, height: h } = getFuriganaPosterCanvasDimensions(layoutProfile);
   const pad = getFuriganaCanvasInsets(layoutProfile);
   const rootStyle = buildFuriganaPosterRootStyle(layoutProfile);
-  const innerCss = buildFuriganaPosterInnerCss(layoutProfile, { spacingScale });
+  const innerCss = buildFuriganaPosterInnerCss(layoutProfile, { spacingScale, language });
 
-  // 嵌入日文字体（base64）
+  // 嵌入日文字体 + 韩文字体
   const jpFontCss = getPosterJapaneseFontFaceCss();
+  const koFontCss = getPosterKoreanFontFaceCss();
 
   // 页码
   const pageNoText = `— ${String(pageIndex + 1).padStart(2, '0')} / ${String(pageCount).padStart(2, '0')} —`;
@@ -99,6 +103,7 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
   <defs>
     <style>
       ${xmlEscape(jpFontCss)}
+      ${xmlEscape(koFontCss)}
       ${xmlEscape(innerCss)}
       .fv-poster-page-no {
         position: absolute;

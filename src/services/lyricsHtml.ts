@@ -11,10 +11,13 @@ import {
   normalizeArtistName,
 } from '../utils/furiganaLayout/posterTitle';
 
+import type { LangCode } from './appSettings';
+
 export type PreparedPasteForLayout = {
   bodyHtml: string;
   title?: string;
   artist?: string;
+  lang?: LangCode;
 };
 
 /** 将粘贴内容（结构化文本或 HTML）转为可排版 bodyHtml */

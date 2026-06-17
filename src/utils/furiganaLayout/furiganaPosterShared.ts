@@ -1,11 +1,16 @@
 import type { PosterLayoutProfile, FuriganaEngineDim } from './types';
 import { B5_DIM, MOBILE_DIM, POSTER_ELASTIC_FONT_BASE_PX } from './dimensions';
 import {
+  EN_FONT_FAMILY,
   KOZUKA_MINCHO_EL_FAMILY,
   KO_FONT_FAMILY,
-  getPosterJapaneseFontFaceCss,
+  UI_FONT_FAMILY,
   ZH_FONT_FAMILY,
+  getPosterJapaneseFontFaceCss,
+  getPosterKoreanFontFaceCss,
+  getPosterEnglishFontFaceCss,
 } from './fonts';
+import type { LyricsLanguage, LangCode } from '../../services/appSettings';
 
 /** 根据 profile 返回排版参数 */
 export function dimForFuriganaPoster(profile: PosterLayoutProfile): FuriganaEngineDim {
@@ -57,9 +62,9 @@ export function computePosterBodyMaxHeightPx(
   profile: PosterLayoutProfile,
   options: { showTitle: boolean; titleEl: HTMLElement | null },
 ): number {
-  const { height: canvasH } = getFuriganaPosterCanvasDimensions(profile);
+  const { width: _w, height: h } = getFuriganaPosterCanvasDimensions(profile);
   const insets = getFuriganaCanvasInsets(profile);
-  const shellInnerH = canvasH - insets.top - insets.bottom;
+  const shellInnerH = h - insets.top - insets.bottom;
 
   let titleH = 0;
   let titleMB = 0;
@@ -71,6 +76,20 @@ export function computePosterBodyMaxHeightPx(
 
   const margin = getPosterBodySafetyMarginPx(profile);
   return Math.max(0, shellInnerH - titleH - titleMB - margin);
+}
+
+/**
+ * 计算并应用 fv-body-h 的 max-height（导出/测量挂载时调用）。
+ * 封装 computePosterBodyMaxHeightPx + applyPosterBodyMaxHeightToPx，
+ * 供 paginateFuriganaHtml / posterExportMount 统一调用。
+ */
+export function applyPosterBodyMaxHeight(
+  body: HTMLElement,
+  profile: PosterLayoutProfile,
+  options: { showTitle: boolean; titleEl: HTMLElement | null },
+): void {
+  const maxPx = computePosterBodyMaxHeightPx(profile, options);
+  applyPosterBodyMaxHeightToPx(body, maxPx);
 }
 
 /**
@@ -90,11 +109,6 @@ export function measurePosterBodyNaturalHeightPx(body: HTMLElement): number {
   body.style.overflow = prevOverflow;
   void body.offsetHeight;
   return natural;
-}
-
-/** @deprecated 使用 measurePosterBodyNaturalHeightPx */
-export function measurePosterBodyContentHeightPx(body: HTMLElement): number {
-  return measurePosterBodyNaturalHeightPx(body);
 }
 
 /**
@@ -118,19 +132,8 @@ function applyPosterBodyMaxHeightToPx(body: HTMLElement, maxPx: number): void {
 }
 
 /**
- * 与 createPosterMeasurer 一致的 fv-body-h max-height。
- * 预览/导出必须与分页测量使用同一 max-height，否则 iOS 会出现切页错位。
+ * 与 paginateFuriganaHtml 一致的 body 溢出判定（受约束 clientHeight + scrollHeight）
  */
-export function applyPosterBodyMaxHeight(
-  body: HTMLElement,
-  profile: PosterLayoutProfile,
-  options: { showTitle: boolean; titleEl: HTMLElement | null },
-): void {
-  const maxPx = computePosterBodyMaxHeightPx(profile, options);
-  applyPosterBodyMaxHeightToPx(body, maxPx);
-}
-
-/** 与 paginateFuriganaHtml 一致的 body 溢出判定（受约束 clientHeight + scrollHeight） */
 export function detectFuriganaPosterBodyOverflow(
   body: HTMLElement,
   profile: PosterLayoutProfile = 'clipPosterPrint',
@@ -152,6 +155,10 @@ function itemEntryGapPx(jpLineHeight: number, jpFontSizePx: number): number {
 export type FuriganaPosterCssOptions = {
   /** 防孤行页级行距缩放，1 为默认；测量与渲染一致 */
   spacingScale?: number;
+  /** 歌词语言（波轮选择，旧参数；lang 存在时被覆盖） */
+  language?: LyricsLanguage;
+  /** 排版管线语言（大模型声明或自动检测；优先级高于 language） */
+  lang?: LangCode;
 };
 
 /**
@@ -163,12 +170,18 @@ export function buildFuriganaPosterInnerCss(
   options: FuriganaPosterCssOptions = {},
 ): string {
   const spacingScale = options.spacingScale ?? 1;
+  const effectiveLang = options.lang;
+  const language = options.language ?? 'jp';
   const scale = (n: number) => n * spacingScale;
   const scaleEm = (n: number) => `${scale(n)}em`;
   const d = dimForFuriganaPoster(profile);
   const isM = profile === 'mobilePoster';
   const base = POSTER_ELASTIC_FONT_BASE_PX;
   const scaleBody = d.elasticFontBase / base;
+  // lang 优先（大模型声明 / 自动检测），否则回退旧逻辑（向后兼容）
+  // lang='jp' → isCompact=false → JP 管线完全保持不变
+  // lang='ko'|'en'|'zh' → isCompact=true → KOR/LATIN 管线
+  const isCompact = effectiveLang ? (effectiveLang !== 'jp') : (language === 'en' || language === 'ko');
 
   const jpFs = Math.round(26 * scaleBody);
   const titleFs = isM
@@ -180,20 +193,30 @@ export function buildFuriganaPosterInnerCss(
 
   const h2Fs = Math.round(18 * scaleBody);
 
-  const jpLhBase = isM ? d.elasticLhBase : 1.75;
-  const zhLyricsLhBase = isM ? 1.3 : 1.35;
+  // 根据语言选择行距：英语/韩语使用紧凑行距，日语使用默认行距（含注音需求）
+  const jpLhBase = isCompact
+    ? (d.compactLineHeightBase ?? (isM ? 1.25 : 1.45))
+    : (isM ? d.elasticLhBase : (d.jpLineHeightBase ?? 1.75));
+  const zhLyricsLhBase = isCompact
+    ? (d.compactZhLineHeightBase ?? (isM ? 1.15 : 1.2))
+    : (isM ? 1.3 : (d.zhLineHeightBase ?? 1.35));
   const jpLh = scale(jpLhBase);
   const zhLyricsLh = scale(zhLyricsLhBase);
   const jpWght = 200;
-  const jpEmphasisWght = 700;
   const zhAuxWght = 300;
-  const koWght = isM ? 400 : 350;  // 韩文 sans-serif 需要稍重字重
+  const koWght = 400;  // 必须与 @font-face 的 font-weight 一致，否则浏览器不匹配 HCR Batang
   const koLh = jpLh;               // 韩文行高复用日文行高
+  const isEnglish = effectiveLang === 'en' || (!effectiveLang && language === 'en');
+  const primaryFont = isEnglish ? EN_FONT_FAMILY : KOZUKA_MINCHO_EL_FAMILY;
+  const primaryWght = isEnglish ? 300 : jpWght;
+  const titleFont = isEnglish ? UI_FONT_FAMILY : ZH_FONT_FAMILY;
+  const sectionTitleFont = isEnglish ? UI_FONT_FAMILY : ZH_FONT_FAMILY;
+  const vocabEmphasisColor = '#1e3a5f';  // 深绀色，替代粗体用于词汇/语法重点标识
   const groupMbNum = isM ? 1.5 : 1.35;
   const groupMb = scaleEm(groupMbNum);
   const lyricsJpZhGap = scaleEm(isM ? 0.06 : 0.04);
   const auxJpZhGap = scaleEm(isM ? 0.05 : 0.03);
-  const itemEntryMb = `${Math.round(scale(itemEntryGapPx(jpLhBase, jpFs)))}px`;
+  const itemEntryMb = `${Math.round(itemEntryGapPx(jpLhBase, jpFs))}px`;
   const grammarDetailMb = scaleEm(isM ? 0.7 : 0.55);
   const grammarExMt = scaleEm(isM ? 0.65 : 0.5);
   const grammarTitleMt = scaleEm(isM ? 1.15 : 1.35);
@@ -204,8 +227,10 @@ export function buildFuriganaPosterInnerCss(
 
   return `
   ${getPosterJapaneseFontFaceCss()}
+  ${getPosterKoreanFontFaceCss()}
+  ${getPosterEnglishFontFaceCss()}
   .fv-html-poster-root .fv-title-h {
-    font-family: ${ZH_FONT_FAMILY};
+    font-family: ${titleFont};
     font-size: ${titleFs}px;
     font-weight: ${zhAuxWght};
     color: #111827;
@@ -275,6 +300,7 @@ export function buildFuriganaPosterInnerCss(
   }
   /* 防止 ruby 注音和中文翻译从右侧溢出：overflow:hidden + 换行约束 */
   .fv-html-poster-root .fv-body-h .lyrics-group .jp-line,
+  .fv-html-poster-root .fv-body-h .lyrics-group .ko-line,
   .fv-html-poster-root .fv-body-h .lyrics-group .zh-line {
     overflow: hidden;
     overflow-wrap: break-word;
@@ -296,29 +322,20 @@ export function buildFuriganaPosterInnerCss(
     white-space: normal;
   }
   .fv-html-poster-root .fv-body-h .lyrics-group .jp-line,
-  .fv-html-poster-root .fv-body-h .lyrics-group .zh-line {
-    width: 100%;
-    max-width: 100%;
-    text-align: left;
-  }
-  .fv-html-poster-root .fv-body-h .lyrics-vocabulary,
-  .fv-html-poster-root .fv-body-h .lyrics-grammar,
-  .fv-html-poster-root .fv-body-h .lyrics-grammar-spacer,
-  .fv-html-poster-root .fv-body-h .lyrics-vocab-item,
-  .fv-html-poster-root .fv-body-h .lyrics-grammar-item {
-    text-align: left;
-  }
-  .fv-html-poster-root .fv-body-h .lyrics-group .jp-line,
   .fv-html-poster-root .fv-body-h .lyrics-group .jp-line *:not(rt):not(rp) {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY} !important;
+    font-family: ${primaryFont} !important;
     font-size: ${jpFs}px !important;
-    font-weight: ${jpWght} !important;
+    font-weight: ${primaryWght} !important;
     color: #0a0a0a !important;
     line-height: ${jpLh} !important;
     margin: 0 !important;
     letter-spacing: normal;
     font-kerning: normal;
     font-feature-settings: "palt" 0;
+  }
+  .fv-html-poster-root .fv-body-h .lyrics-group .ko-line,
+  .fv-html-poster-root .fv-body-h .lyrics-group .ko-line * {
+    margin: 0 !important;
   }
   .fv-html-poster-root .fv-body-h .lyrics-group .zh-line,
   .fv-html-poster-root .fv-body-h .lyrics-group .zh-line * {
@@ -331,9 +348,9 @@ export function buildFuriganaPosterInnerCss(
   }
   .fv-html-poster-root .fv-body-h .jp-line,
   .fv-html-poster-root .fv-body-h .jp-line *:not(rt):not(rp) {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY} !important;
+    font-family: ${primaryFont} !important;
     font-size: ${jpFs}px !important;
-    font-weight: ${jpWght} !important;
+    font-weight: ${primaryWght} !important;
     color: #0a0a0a !important;
     line-height: ${jpLh} !important;
     letter-spacing: normal;
@@ -353,9 +370,9 @@ export function buildFuriganaPosterInnerCss(
   .fv-html-poster-root .fv-body-h .vocab-ex-ja *:not(rt):not(rp),
   .fv-html-poster-root .fv-body-h .grammar-ex-ja,
   .fv-html-poster-root .fv-body-h .grammar-ex-ja *:not(rt):not(rp) {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY} !important;
+    font-family: ${primaryFont} !important;
     font-size: ${jpFs}px !important;
-    font-weight: ${jpWght} !important;
+    font-weight: ${primaryWght} !important;
     color: #0a0a0a !important;
     line-height: ${jpLh} !important;
     margin: 0 !important;
@@ -416,44 +433,49 @@ export function buildFuriganaPosterInnerCss(
   .fv-html-poster-root .fv-body-h .grammar-ex-ja {
     margin-top: ${grammarExMt} !important;
   }
+  /* 日文词汇单词（去粗体，改用强调色标识） */
   .fv-html-poster-root .fv-body-h .vocab-line1 .vocab-word,
   .fv-html-poster-root .fv-body-h .vocab-line1 .vocab-word *:not(rt):not(rp) {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY} !important;
+    font-family: ${primaryFont} !important;
     font-size: ${jpFs}px !important;
-    font-weight: ${jpEmphasisWght} !important;
-    color: #0a0a0a !important;
+    font-weight: ${primaryWght} !important;
+    color: ${vocabEmphasisColor} !important;
     line-height: ${jpLh} !important;
   }
+  /* 韩文词汇单词（去粗体，专用韩文字体 + 强调色） */
+  .fv-html-poster-root .fv-body-h .vocab-line1 .vocab-word-ko,
+  .fv-html-poster-root .fv-body-h .vocab-line1 .vocab-word-ko * {
+    font-family: ${KO_FONT_FAMILY} !important;
+    font-size: ${jpFs}px !important;
+    font-weight: ${koWght} !important;
+    color: ${vocabEmphasisColor} !important;
+    line-height: ${koLh} !important;
+  }
   .fv-html-poster-root .fv-body-h .vocab-line1 .vocab-word ruby rt {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY} !important;
+    font-family: ${primaryFont} !important;
     font-size: ${isM ? '0.54em' : '0.58em'} !important;
     font-weight: ${jpWght} !important;
     color: #64748b !important;
     line-height: 1.1 !important;
-    overflow: hidden !important;
-    text-overflow: clip !important;
   }
   .fv-html-poster-root .fv-body-h ruby {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY};
+    font-family: ${primaryFont};
     ruby-position: over;
     -webkit-ruby-position: before;
     ruby-align: start;
-    overflow: hidden;
   }
   .fv-html-poster-root .fv-body-h ruby rt {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY};
+    font-family: ${primaryFont};
     font-size: ${isM ? '0.54em' : '0.58em'};
     font-weight: ${jpWght};
     color: #64748b;
     line-height: 1.1;
     letter-spacing: normal;
     font-feature-settings: "palt" 0;
-    overflow: hidden;
-    text-overflow: clip;
     max-width: 100%;
   }
   .fv-html-poster-root .fv-body-h h2.lyrics-section-title {
-    font-family: ${ZH_FONT_FAMILY};
+    font-family: ${sectionTitleFont};
     font-size: ${h2Fs}px;
     font-weight: ${zhAuxWght};
     color: #1e293b;
@@ -467,7 +489,7 @@ export function buildFuriganaPosterInnerCss(
     margin-top: ${grammarTitleFirstMt};
   }
   .fv-html-poster-root .fv-body-h h3.grammar-point-title {
-    font-family: ${ZH_FONT_FAMILY} !important;
+    font-family: ${sectionTitleFont} !important;
     font-size: ${zhLyricsPx}px !important;
     font-weight: ${zhAuxWght} !important;
     color: #0a0a0a !important;
@@ -481,11 +503,19 @@ export function buildFuriganaPosterInnerCss(
   }
   .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-ja,
   .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-ja *:not(rt):not(rp) {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY} !important;
+    font-family: ${primaryFont} !important;
     font-size: ${jpFs}px !important;
-    font-weight: ${jpEmphasisWght} !important;
+    font-weight: ${primaryWght} !important;
     line-height: ${jpLh} !important;
-    color: #0a0a0a !important;
+    color: ${vocabEmphasisColor} !important;
+  }
+  .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-ko,
+  .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-ko * {
+    font-family: ${KO_FONT_FAMILY} !important;
+    font-size: ${jpFs}px !important;
+    font-weight: ${koWght} !important;
+    line-height: ${koLh} !important;
+    color: ${vocabEmphasisColor} !important;
   }
   .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-zh,
   .fv-html-poster-root .fv-body-h h3.grammar-point-title .grammar-title-zh * {
@@ -502,8 +532,6 @@ export function buildFuriganaPosterInnerCss(
     font-weight: ${jpWght};
     color: #64748b;
     line-height: 1.1;
-    overflow: hidden;
-    text-overflow: clip;
     max-width: 100%;
   }
   .fv-html-poster-root .fv-body-h .vocab-line1 .vocab-meaning,
@@ -532,9 +560,9 @@ export function buildFuriganaPosterInnerCss(
   }
   .fv-html-poster-root .fv-body-h .magazine-jp,
   .fv-html-poster-root .fv-body-h .magazine-jp *:not(rt):not(rp) {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY} !important;
+    font-family: ${primaryFont} !important;
     font-size: ${jpFs}px !important;
-    font-weight: ${jpWght} !important;
+    font-weight: ${primaryWght} !important;
     color: #0a0a0a !important;
     line-height: ${jpLh} !important;
     margin: 0 !important;
@@ -597,26 +625,6 @@ export function buildFuriganaPosterRootStyle(
   };
 }
 
-/** 编辑层连续文档根节点：固定画布宽、高度随内容伸展 */
-export function buildFuriganaEditDocumentRootStyle(
-  profile: PosterLayoutProfile,
-): Record<string, string | number> {
-  const { width: w } = getFuriganaPosterCanvasDimensions(profile);
-  const pad = getFuriganaCanvasInsets(profile);
-  return {
-    width: `${w}px`,
-    height: 'auto',
-    minHeight: 'unset',
-    boxSizing: 'border-box',
-    padding: `${pad.top}px ${pad.right}px ${pad.bottom}px ${pad.left}px`,
-    background: '#fff',
-    overflow: 'visible',
-    textAlign: 'left',
-    display: 'block',
-    position: 'relative',
-  };
-}
-
 /** 编辑层 modifier：取消正文 max-height 与裁切 */
 export function buildFuriganaEditDocumentCssOverrides(): string {
   return `
@@ -631,4 +639,30 @@ export function buildFuriganaEditDocumentCssOverrides(): string {
     height: auto !important;
     flex: none !important;
   }`;
+}
+
+/**
+ * 编辑文档根节点样式（不裁切溢出，允许查看完整内容）
+ * 供 FuriganaEditCanvas 在编辑模式下使用。
+ */
+export function buildFuriganaEditDocumentRootStyle(
+  profile: PosterLayoutProfile,
+): Record<string, string | number> {
+  const { width: w, height: h } = getFuriganaPosterCanvasDimensions(profile);
+  const pad = getFuriganaCanvasInsets(profile);
+  return {
+    width: `${w}px`,
+    height: 'auto',
+    minHeight: `${h}px`,
+    boxSizing: 'border-box',
+    padding: `${pad.top}px ${pad.right}px ${pad.bottom}px ${pad.left}px`,
+    background: '#fff',
+    overflow: 'visible',
+    textAlign: 'left',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
+    position: 'relative',
+  };
 }

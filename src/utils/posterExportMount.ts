@@ -7,6 +7,7 @@ import {
 } from './furiganaLayout/furiganaPosterShared';
 import { ZH_FONT_FAMILY } from './furiganaLayout/fonts';
 import type { PosterLayoutProfile } from './furiganaLayout/types';
+import type { LyricsLanguage, LangCode } from '../services/appSettings';
 import { applyPosterTitleElement } from './furiganaLayout/posterTitle';
 
 const PAGE_NUMBER_FONT_PX = 13;
@@ -54,6 +55,8 @@ export function mountPosterExportPage(
     pageCount: number;
     layoutProfile: PosterLayoutProfile;
     spacingScale?: number;
+    language?: LyricsLanguage;
+    lang?: LangCode;
   },
 ): PosterExportPageMount {
   const {
@@ -65,6 +68,8 @@ export function mountPosterExportPage(
     pageCount,
     layoutProfile,
     spacingScale = 1,
+    language = 'jp',
+    lang,
   } = opts;
   const { width: canvasW, height: canvasH } = getFuriganaPosterCanvasDimensions(layoutProfile);
   const pad = getFuriganaCanvasInsets(layoutProfile);
@@ -109,7 +114,7 @@ export function mountPosterExportPage(
   const styleEl = doc.createElement('style');
   // 叠加 html2canvas 渲染补偿因子，确保 PDF 栅格化不溢出
   const exportScale = spacingScale * EXPORT_HTML2CANVAS_SCALE_FUDGE;
-  styleEl.textContent = buildFuriganaPosterInnerCss(layoutProfile, { spacingScale: exportScale });
+  styleEl.textContent = buildFuriganaPosterInnerCss(layoutProfile, { spacingScale: exportScale, language, lang });
   shell.appendChild(styleEl);
 
   if (showTitle) {
@@ -186,6 +191,8 @@ export function mountPosterExportPages(
   title: string,
   layoutProfile: PosterLayoutProfile,
   artist?: string,
+  language: import('../services/appSettings').LyricsLanguage = 'jp',
+  lang?: LangCode,
 ): PosterExportPageMount[] {
   const n = pageSlices.length;
   return pageSlices.map((slice, i) =>
@@ -198,6 +205,8 @@ export function mountPosterExportPages(
       pageCount: n,
       layoutProfile,
       spacingScale: slice.spacingScale ?? 1,
+      language,
+      lang,
     }),
   );
 }

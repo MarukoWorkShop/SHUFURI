@@ -1,7 +1,10 @@
 import type { PosterLayoutProfile } from '../utils/furiganaLayout/types';
 
-/** 歌词语言模式：日语（默认）或韩语 */
-export type LyricsLanguage = 'jp' | 'ko';
+/** 歌词语言模式：auto（自动，默认）、日语、韩语或英语 */
+export type LyricsLanguage = 'auto' | 'jp' | 'ko' | 'en';
+
+/** 排版管线语言编码：由大模型声明或自动检测，决定走哪条排版管线（与波轮解耦） */
+export type LangCode = 'jp' | 'ko' | 'en' | 'zh';
 
 /** 全局换肤：mono 墨 | blue 绀 | red 赤 */
 export type ColorTheme = 'mono' | 'blue' | 'red';
@@ -13,7 +16,7 @@ export type AppSettings = {
   defaultExportLayout: PosterLayoutProfile;
   /** 首页「一键生成指令」默认是否附带词解与语法 */
   defaultIncludeVocabAndGrammar: boolean;
-  /** 歌词语言模式：日语（jp）或韩语（ko） */
+  /** 歌词语言模式：auto（自动，默认）、日语、韩语或英语 */
   lyricsLanguage: LyricsLanguage;
   /** 抽屉、铅笔等交互音效 */
   interactionSoundsEnabled: boolean;
@@ -25,7 +28,7 @@ const DEFAULTS: AppSettings = {
   colorTheme: 'mono',
   defaultExportLayout: 'clipPosterPrint',
   defaultIncludeVocabAndGrammar: true,
-  lyricsLanguage: 'jp',
+  lyricsLanguage: 'auto',
   interactionSoundsEnabled: true,
 };
 
@@ -49,7 +52,7 @@ function isLayoutProfile(v: unknown): v is PosterLayoutProfile {
 }
 
 function isLyricsLanguage(v: unknown): v is LyricsLanguage {
-  return v === 'jp' || v === 'ko';
+  return v === 'auto' || v === 'jp' || v === 'ko' || v === 'en';
 }
 
 export function getAppSettings(): AppSettings {

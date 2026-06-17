@@ -4,6 +4,7 @@ import { sanitizeFuriganaPosterHtml } from '../../components/FuriganaPosterPrevi
 import { buildVectorPrintInnerCss } from './buildVectorPrintInnerCss';
 import { getPrintFontFaceCss } from './printFonts';
 import { printPageSpec } from './printPageSpec';
+import type { LyricsLanguage } from '../../services/appSettings';
 
 /** html2canvas 渲染补偿因子（与 posterExportMount.ts 保持同步） */
 const EXPORT_HTML2CANVAS_SCALE_FUDGE = 0.98;
@@ -56,6 +57,7 @@ export async function buildPrintDocumentHtml(
   title: string,
   layoutProfile: PosterLayoutProfile,
   artist?: string,
+  language: LyricsLanguage = 'jp',
 ): Promise<string> {
   if (pageSlices.length === 0) {
     throw new Error('没有可导出的页面');
@@ -63,12 +65,15 @@ export async function buildPrintDocumentHtml(
 
   const spec = printPageSpec(layoutProfile);
   const fontFaceCss = await getPrintFontFaceCss();
-  const baseCss = buildVectorPrintInnerCss(layoutProfile, spec, { spacingScale: EXPORT_HTML2CANVAS_SCALE_FUDGE });
+  const baseCss = buildVectorPrintInnerCss(layoutProfile, spec, {
+    spacingScale: EXPORT_HTML2CANVAS_SCALE_FUDGE,
+    language,
+  });
 
   const spacingScales = [...new Set(pageSlices.map((s) => s.spacingScale * EXPORT_HTML2CANVAS_SCALE_FUDGE))].filter((s) => s !== EXPORT_HTML2CANVAS_SCALE_FUDGE);
   const scaledCss = spacingScales
     .map((scale) => {
-      const inner = buildVectorPrintInnerCss(layoutProfile, spec, { spacingScale: scale });
+      const inner = buildVectorPrintInnerCss(layoutProfile, spec, { spacingScale: scale, language });
       return scopePrintCss(inner, `.print-page[data-spacing-scale="${scale}"]`);
     })
     .join('\n');

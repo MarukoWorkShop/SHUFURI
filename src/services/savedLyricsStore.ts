@@ -21,6 +21,8 @@ export type SavedLyricsProject = {
   pageHtmls: string[];
   layoutProfile: PosterLayoutProfile;
   includeVocabAndGrammar?: boolean;
+  /** 排版管线语言（大模型声明 / 自动检测） */
+  lang?: import('./appSettings').LangCode;
   savedAt: number;
 };
 
