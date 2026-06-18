@@ -9,7 +9,7 @@ export function annotateInkEditTargets(bodyHtml: string): string {
 
   root.querySelectorAll('.lyrics-group').forEach((group, groupIndex) => {
     group.setAttribute('data-ink-g', String(groupIndex));
-    group.querySelectorAll('.jp-line ruby').forEach((ruby, rubyIndex) => {
+    group.querySelectorAll('.jp-line ruby, .cn-line ruby').forEach((ruby, rubyIndex) => {
       ruby.setAttribute('data-ink-r', String(rubyIndex));
     });
   });

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState, type RefObject } from 'react';
-import { getFuriganaPosterCanvasDimensions } from '../utils/furiganaLayout/furiganaPosterShared';
-import type { PosterLayoutProfile } from '../utils/furiganaLayout/types';
+import { getShufuriPosterCanvasDimensions } from '../utils/shufuriPoster/shufuriPosterShared';
+import type { PosterLayoutProfile } from '../utils/shufuriPoster/types';
 
 export const PAGE_GAP_PX = 20;
 
@@ -32,7 +32,7 @@ export function usePosterPreviewFitScale(
       return;
     }
 
-    const { width: pageWidth } = getFuriganaPosterCanvasDimensions(layoutProfile);
+    const { width: pageWidth } = getShufuriPosterCanvasDimensions(layoutProfile);
 
     const update = () => {
       const width = el.getBoundingClientRect().width;

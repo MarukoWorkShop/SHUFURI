@@ -1,11 +1,16 @@
-import { KOZUKA_MINCHO_EL_FAMILY, KO_FONT_FAMILY, ZH_FONT_FAMILY } from '../furiganaLayout/fonts';
+import { KOZUKA_MINCHO_EL_FAMILY, KOZMIN_PRO_REGULAR_FAMILY, KO_FONT_FAMILY, ZH_FONT_FAMILY } from '../shufuriPoster/fonts';
 
-let cachedJpFontFaceCss: string | null = null;
+let cachedJpElFontFaceCss: string | null = null;
+let cachedJpRegularFontFaceCss: string | null = null;
 let cachedKoFontFaceCss: string | null = null;
 let cachedEnFontFaceCss: string | null = null;
 
 async function loadFontBase64FromGenerated(
-  key: 'PRINT_JP_FONT_BASE64_GENERATED' | 'PRINT_KO_FONT_BASE64_GENERATED' | 'PRINT_EN_FONT_BASE64_GENERATED',
+  key:
+    | 'PRINT_JP_FONT_BASE64_GENERATED'
+    | 'PRINT_JP_REGULAR_FONT_BASE64_GENERATED'
+    | 'PRINT_KO_FONT_BASE64_GENERATED'
+    | 'PRINT_EN_FONT_BASE64_GENERATED',
   assetName: string,
 ): Promise<string> {
   try {
@@ -33,21 +38,39 @@ async function loadFontBase64FromGenerated(
 }
 
 export async function getPrintJapaneseFontFaceCss(): Promise<string> {
-  if (cachedJpFontFaceCss) {
-    return cachedJpFontFaceCss;
+  if (cachedJpElFontFaceCss) {
+    return cachedJpElFontFaceCss;
   }
   const base64 = await loadFontBase64FromGenerated(
     'PRINT_JP_FONT_BASE64_GENERATED',
     'KozMinPro-ExtraLight.otf',
   );
-  cachedJpFontFaceCss = `
+  cachedJpElFontFaceCss = `
 @font-face {
   font-family: "Kozuka Mincho Pro EL";
   src: url(data:font/otf;base64,${base64}) format("opentype");
   font-weight: 200;
   font-style: normal;
 }`;
-  return cachedJpFontFaceCss;
+  return cachedJpElFontFaceCss;
+}
+
+export async function getPrintJapaneseRegularFontFaceCss(): Promise<string> {
+  if (cachedJpRegularFontFaceCss) {
+    return cachedJpRegularFontFaceCss;
+  }
+  const base64 = await loadFontBase64FromGenerated(
+    'PRINT_JP_REGULAR_FONT_BASE64_GENERATED',
+    'KozMinPro-Light.otf',
+  );
+  cachedJpRegularFontFaceCss = `
+@font-face {
+  font-family: "Kozuka Mincho Pro R";
+  src: url(data:font/otf;base64,${base64}) format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}`;
+  return cachedJpRegularFontFaceCss;
 }
 
 export async function getPrintKoreanFontFaceCss(): Promise<string> {
@@ -88,12 +111,13 @@ export async function getPrintEnglishFontFaceCss(): Promise<string> {
 
 /** 日文+韩文+英文字体 @font-face，PDF 打印时内嵌 */
 export async function getPrintFontFaceCss(): Promise<string> {
-  const [jpCss, koCss, enCss] = await Promise.all([
+  const [jpEl, jpRegular, koCss, enCss] = await Promise.all([
     getPrintJapaneseFontFaceCss(),
+    getPrintJapaneseRegularFontFaceCss(),
     getPrintKoreanFontFaceCss(),
     getPrintEnglishFontFaceCss(),
   ]);
-  return `${jpCss}\n${koCss}\n${enCss}`;
+  return `${jpEl}\n${jpRegular}\n${koCss}\n${enCss}`;
 }
 
-export { KOZUKA_MINCHO_EL_FAMILY, KO_FONT_FAMILY, ZH_FONT_FAMILY };
+export { KOZUKA_MINCHO_EL_FAMILY, KOZMIN_PRO_REGULAR_FAMILY, KO_FONT_FAMILY, ZH_FONT_FAMILY };

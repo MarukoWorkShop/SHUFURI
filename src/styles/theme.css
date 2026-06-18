@@ -15,7 +15,7 @@
 /* 1. 静态基元                                                         */
 /* ------------------------------------------------------------------ */
 
-/* Sansation 字体（SIL Open Font License 1.1） */
+/* 品牌字标 Sansation Light（SIL Open Font License 1.1） */
 @font-face {
   font-family: "Sansation Light";
   src: url("/assets/Sansation-Light.ttf") format("truetype");
@@ -25,17 +25,33 @@
 }
 
 @font-face {
-  font-family: "Sansation";
-  src: url("/assets/Sansation-Regular.ttf") format("truetype");
+  font-family: "Kozuka Mincho Pro R";
+  src: url("/assets/KozMinPro-Light.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HCR Batang";
+  src: url("/assets/HCRBatang.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 :root {
-  /* Typography — 字体族 */
-  --font-sans: "Sansation Light", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
-  --font-en: "Sansation Light", system-ui, sans-serif;
+  /* Typography — 字体族（UI 与英文统一 PingFang Light） */
+  --font-zh: "PingFang SC", "PingFang SC Light", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-sans: var(--font-zh);
+  --font-en: var(--font-zh);
+  /** 日文/英文学习区衬线（词卡正面主标、例句等） */
+  --font-serif-jp: "Kozuka Mincho Pro R", "Kozuka Mincho Pro", "YuMincho", "Yu Mincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", serif;
+  /** 韩文学习区衬线（词卡） */
+  --font-serif-ko: "HCR Batang", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", serif;
+  /** 中文学习区衬线 / 背面汉语大号释义 */
+  --font-serif-zh: "Songti SC", "STSong", "Songti TC", "SimSun", serif;
+  --font-brand: "Sansation Light", sans-serif;
   --font-mono: "SF Mono", "Menlo", monospace;
 
   /* Typography — 字号阶梯 */
@@ -47,6 +63,7 @@
   --text-home-title: 24px;
 
   /* Typography — 字重 */
+  --weight-light: 300;
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-bold: 600;
@@ -167,7 +184,6 @@
   --color-accent-hover: #333333;
   --color-accent-muted: #555555;
   --color-accent-on: #ffffff;
-
   --color-overlay: rgba(15, 23, 42, 0.18);
   --color-overlay-hover: rgba(15, 23, 42, 0.05);
   --color-overlay-hover-active: rgba(15, 23, 42, 0.08);
@@ -237,7 +253,6 @@
   --color-accent-hover: #1e2834;
   --color-accent-muted: #3d5066;
   --color-accent-on: #ffffff;
-
   --color-overlay: rgba(26, 35, 48, 0.22);
   --color-overlay-hover: rgba(43, 58, 74, 0.08);
   --color-overlay-hover-active: rgba(43, 58, 74, 0.14);
@@ -307,7 +322,6 @@
   --color-accent-hover: #8b3535;
   --color-accent-muted: #b85555;
   --color-accent-on: #ffffff;
-
   --color-overlay: rgba(28, 25, 23, 0.2);
   --color-overlay-hover: rgba(166, 62, 62, 0.08);
   --color-overlay-hover-active: rgba(166, 62, 62, 0.14);
@@ -457,6 +471,7 @@
   --ui-line-strong: var(--color-border-strong);
 
   --ui-font-sans: var(--font-sans);
+  --ui-font-serif: var(--font-serif-jp);
   --ui-font-mono: var(--font-mono);
 
   --ui-text-xs: var(--text-xs);
@@ -466,6 +481,7 @@
   --ui-text-xl: var(--text-xl);
   --ui-text-home-title: var(--text-home-title);
 
+  --ui-weight-light: var(--weight-light);
   --ui-weight-regular: var(--weight-regular);
   --ui-weight-medium: var(--weight-medium);
   --ui-weight-bold: var(--weight-bold);
@@ -522,10 +538,11 @@
   button,
   [role="button"],
   a,
-  input,
+  input:not(.ext-pipeline__input),
   textarea,
   select,
-  .lang-wheel__scroller
+  .lang-wheel__scroller,
+  .paper-wheel__scroller
 ):focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;

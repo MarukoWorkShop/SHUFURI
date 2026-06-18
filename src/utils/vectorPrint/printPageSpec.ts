@@ -1,5 +1,5 @@
-import type { PosterLayoutProfile } from '../furiganaLayout/types';
-import { B5_DIM, MOBILE_DIM } from '../furiganaLayout/dimensions';
+import type { PosterLayoutProfile } from '../shufuriPoster/types';
+import { B5_DIM, MOBILE_DIM, SQUARE_DIM } from '../shufuriPoster/dimensions';
 
 export type PrintPageSpec = {
   widthMm: number;
@@ -36,6 +36,9 @@ function dimToSpec(
 export function printPageSpec(profile: PosterLayoutProfile): PrintPageSpec {
   if (profile === 'mobilePoster') {
     return dimToSpec(95, 171, MOBILE_DIM);
+  }
+  if (profile === 'squarePoster') {
+    return dimToSpec(150, 150, SQUARE_DIM);
   }
   return dimToSpec(176, 250, B5_DIM);
 }

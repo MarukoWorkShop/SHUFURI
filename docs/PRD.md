@@ -1,6 +1,6 @@
 # SHUFURI 产品需求文档（PRD）
 
-**版本**：v1.0  
+**版本**：v1.1  
 **更新日期**：2026-06-03  
 **产品定位**：个人字音排版与数字活页工具  
 **技术栈**：Vite + React（Web）/ iOS WebView 壳（Capacitor 桥接）
@@ -66,11 +66,11 @@ input ← 重置 / 新建
 
 ### 4.1 标准路径（外部 AI 管线）
 
-1. 首页填写歌名/歌手，选择语言波轮（AUTO/JAP/KOR/ENG）
+1. 首页填写歌名/歌手，选择语言波轮（JAP/KOR/ENG/中文）
 2. 「一键生成指令」→ 口令写入剪贴板 → 跳转外部 AI App
-3. 用户在豆包等粘贴口令，AI 返回结构化文本
+3. 用户在豆包等粘贴口令，AI 返回记录流（`@0 … @9`）
 4. 回到 SHUFURI：自动剪贴板弹窗 或 手动「粘贴并排版」
-5. 确认 → `parseStructuredLyricsText` → **edit** 模式
+5. 确认 → `compileDocument` → **edit** 模式
 6. 可选墨微调 → **export** → 保存歌词本 / 导出 PDF·PNG
 
 ### 4.2 辅助入口
@@ -95,21 +95,22 @@ input ← 重置 / 新建
 
 ### 5.2 语言波轮
 
-| 选项 | Prompt | 说明 |
-|------|--------|------|
-| AUTO | `auto` | AI 判断 `LANG:` |
-| JAP | `jp` | 强制日语 + ruby |
-| KOR | `ko` | 强制韩语 |
-| ENG | `en` | 强制英语 |
+拨轮选项由**语言矩阵 → 学习目标语言**推导（顺序 JAP → KOR → ENG → 中文），**无 AUTO**。详见 [`docs/LANGUAGE_MATRIX.md`](LANGUAGE_MATRIX.md)。
+
+| 选项 | Prompt `activeTarget` | 说明 |
+|------|----------------------|------|
+| JAP | `jp` | 日语 + `{汉字:假名}` |
+| KOR | `ko` | 韩语 |
+| ENG | `en` | 英语 |
+| 中文 | `zh` | 中文 + `{汉字:拼音}` |
 
 - 存 `appSettings.lyricsLanguage`（localStorage）
-- **仅 AUTO** 时用 OCR/链接检测语言覆盖 Prompt
-- 用户手动选 JAP/KOR/ENG 时不被剪贴板覆盖
+- OCR/链接检测仅**预选**拨轮，不生成 AUTO 口令
 
 ### 5.3 一键生成指令
 
-- `buildExternalAiPrompt(artist, title, options)`
-- 四套模板：jp / ko / en / auto
+- `buildEncoderPrompt(artist, title, options)` + **`LanguageMatrixContext`**
+- 四份隔离 encoder：jp / ko / en / zh
 - 「附词解与语法品读」控制 VOCAB/GRAMMAR 区段
 - 可注入 OCR/链接上下文
 
@@ -122,27 +123,24 @@ input ← 重置 / 新建
 
 ---
 
-## 6. 外部 AI 数据协议（Shufu-Life-Parser v2.5）
+## 6. 外部 AI 数据协议（记录流 ENC）
 
 ```
-===BEGIN===
-# 歌手《歌名》
-LANG: jp | ko | en
-===LYRICS===
----PAIR---
-JP: / KO: / EN:
-ZH:
----END---
-===VOCAB===      （可选）
-===GRAMMAR===    （可选）
-===END===
+@0
+H|歌手|歌名|jp
+L|1|{淡:あわ}い{色:いろ}|淡淡的
+...
+@1
+V|1|{秋桜:コスモス}|秋樱|3|
+@2
+G|1|ば形（假定形）|详解|7|译
+@9
 ```
 
-- 日语：`{汉字|假名}` ruby
-- 语法 TITLE：`原语言（纯中文名）` 括号格式
-- 一首歌一个 LANG，不混用标签族
+- 注音：`{基字:读音}`（冒号）；列分隔 `|`，字段内字面 `|` 写 `\|`
+- V/G 第 5 列纯数字 = 歌词行号引用
 
-本地清洗：`cleanDoubaoPaste.ts` 修复豆包粘贴变体。
+本地清洗：`cleanDoubaoPaste.ts` 去 Python 污染 + strip 围栏。
 
 ---
 
@@ -151,7 +149,7 @@ ZH:
 | 步骤 | 模块 |
 |------|------|
 | 清洗 | `cleanDoubaoPaste` |
-| 解析 | `structuredLyricsParser` → `buildLyricsGroups` / VOCAB / GRAMMAR |
+| 解析 | `src/codec/compileDocument` → roleCompiler → 现有 DOM class |
 | Ruby | `applyRubyMarkup`（仅 JP） |
 | 语法标题拆分 | `buildGrammarTitleHtml`（括号 → ja/ko + zh span） |
 | 归一化 | `normalizeLyricsBodyHtml` |
@@ -208,8 +206,13 @@ IndexedDB `saved-lyrics`：title, artist, bodyHtml, rawLyrics, pageHtmls, layout
 |----|------|
 | 配色主题 mono/blue/red | mono |
 | 默认导出规格 | B5 |
+| **语言矩阵 — 使用语言** | 跟随系统（zh / en） |
+| **语言矩阵 — 跟随系统语言** | 开 |
+| **语言矩阵 — 学习目标语言** | JAP + KOR + ENG |
 | 附词解与语法 | 开 |
 | 交互音效 | 开 |
+
+语言矩阵完整规格见 [`docs/LANGUAGE_MATRIX.md`](LANGUAGE_MATRIX.md)。
 
 ---
 
@@ -236,12 +239,13 @@ IndexedDB `saved-lyrics`：title, artist, bodyHtml, rawLyrics, pageHtmls, layout
 | 区域 | 路径 |
 |------|------|
 | 主控 | `src/App.tsx` |
-| 口令 | `src/services/externalPromptTemplate.ts` |
-| 解析 | `src/utils/structuredLyricsParser.ts` |
+| 口令 | `src/codec/prompt/buildEncoderPrompt.ts` |
+| 解析 | `src/codec/` |
 | 分页 | `src/utils/furiganaLayout/paginateFuriganaHtml.ts` |
 | 排版 CSS | `src/utils/furiganaLayout/furiganaPosterShared.ts` |
 | 主题 | `src/styles/theme.css` |
 | 设计规范 | `docs/DESIGN_SYSTEM.md` |
+| **语言矩阵** | `docs/LANGUAGE_MATRIX.md` |
 
 ---
 

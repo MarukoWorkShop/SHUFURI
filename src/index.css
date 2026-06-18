@@ -42,22 +42,20 @@ a, img, button, [role="button"] {
   user-select: none;
 }
 
-/* 全局禁用所有滚动容器的弹簧效果 */
+/* 全局禁用弹簧效果；隐藏全部滚动条，保留 overflow 滚动能力 */
 * {
   overscroll-behavior: none;
-}
-
-html {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-html::-webkit-scrollbar {
+*::-webkit-scrollbar {
   display: none;
 }
 
 body {
   font-family: var(--ui-font-sans);
+  font-weight: var(--weight-light, 300);
   background: var(--ui-bg);
   color: var(--ui-fg);
   -webkit-font-smoothing: antialiased;
@@ -67,12 +65,6 @@ body {
 .lyrics-scroll-container {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.lyrics-scroll-container::-webkit-scrollbar {
-  display: none;
 }
 
 input,

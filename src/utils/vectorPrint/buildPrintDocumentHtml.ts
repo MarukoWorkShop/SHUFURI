@@ -1,10 +1,11 @@
-import type { PosterLayoutProfile, PosterPageSlice } from '../furiganaLayout/types';
-import { buildPosterTitleInnerHtml } from '../furiganaLayout/posterTitle';
-import { sanitizeFuriganaPosterHtml } from '../../components/FuriganaPosterPreview';
+import type { PosterLayoutProfile, PosterPageSlice } from '../shufuriPoster/types.ts';
+import { buildPosterTitleInnerHtml } from '../shufuriPoster/posterTitle.ts';
+import { sanitizeShufuriPosterHtml } from '../../components/ShufuriPosterPreview.tsx';
 import { buildVectorPrintInnerCss } from './buildVectorPrintInnerCss';
 import { getPrintFontFaceCss } from './printFonts';
 import { printPageSpec } from './printPageSpec';
-import type { LyricsLanguage } from '../../services/appSettings';
+import type { LyricsLanguage, LangCode } from '../../services/appSettings';
+import { getAppSettings } from '../../services/appSettings';
 
 /** html2canvas 渲染补偿因子（与 posterExportMount.ts 保持同步） */
 const EXPORT_HTML2CANVAS_SCALE_FUDGE = 0.98;
@@ -33,7 +34,7 @@ function buildSinglePrintPageHtml(
   artist: string | undefined,
   showTitle: boolean,
 ): string {
-  const safeBody = sanitizeFuriganaPosterHtml(slice.html);
+  const safeBody = sanitizeShufuriPosterHtml(slice.html);
   const titleBlock = showTitle
     ? `<h1 class="fv-title-h">${buildPosterTitleInnerHtml(title, artist)}</h1>`
     : '';
@@ -58,22 +59,31 @@ export async function buildPrintDocumentHtml(
   layoutProfile: PosterLayoutProfile,
   artist?: string,
   language: LyricsLanguage = 'jp',
+  lang?: LangCode,
 ): Promise<string> {
   if (pageSlices.length === 0) {
     throw new Error('没有可导出的页面');
   }
 
+  const colorTheme = getAppSettings().colorTheme;
   const spec = printPageSpec(layoutProfile);
   const fontFaceCss = await getPrintFontFaceCss();
   const baseCss = buildVectorPrintInnerCss(layoutProfile, spec, {
     spacingScale: EXPORT_HTML2CANVAS_SCALE_FUDGE,
     language,
+    lang,
+    colorTheme,
   });
 
   const spacingScales = [...new Set(pageSlices.map((s) => s.spacingScale * EXPORT_HTML2CANVAS_SCALE_FUDGE))].filter((s) => s !== EXPORT_HTML2CANVAS_SCALE_FUDGE);
   const scaledCss = spacingScales
     .map((scale) => {
-      const inner = buildVectorPrintInnerCss(layoutProfile, spec, { spacingScale: scale, language });
+      const inner = buildVectorPrintInnerCss(layoutProfile, spec, {
+        spacingScale: scale,
+        language,
+        lang,
+        colorTheme,
+      });
       return scopePrintCss(inner, `.print-page[data-spacing-scale="${scale}"]`);
     })
     .join('\n');

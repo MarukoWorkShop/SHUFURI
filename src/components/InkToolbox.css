@@ -1,0 +1,130 @@
+.ink-toolbox {
+  position: fixed;
+  right: calc(var(--ui-space-1) + var(--safe-right, 0px));
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 350;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  pointer-events: none;
+}
+
+.ink-toolbox__trigger {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ink-toolbox__chevron {
+  display: block;
+  width: 0;
+  height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 9px solid var(--color-accent);
+  opacity: 0.75;
+  animation: ink-toolbox-chevron-nudge 2s ease-in-out infinite;
+  transition:
+    transform 0.28s ease,
+    border-right-color var(--ui-transition),
+    opacity var(--ui-transition);
+}
+
+.ink-toolbox__trigger:hover .ink-toolbox__chevron {
+  border-right-color: var(--color-accent-hover);
+  opacity: 1;
+}
+
+.ink-toolbox.is-open .ink-toolbox__chevron {
+  transform: rotate(180deg);
+  border-right-color: var(--color-accent);
+  opacity: 1;
+  animation: none;
+}
+
+@keyframes ink-toolbox-chevron-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-6px);
+  }
+}
+
+.ink-toolbox__panel {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-right: 4px;
+  padding: 8px 6px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-bg-panel, var(--ui-bg)) 82%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-popover);
+  transform: translateX(calc(100% + 36px));
+  opacity: 0;
+  transition:
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.24s ease;
+}
+
+.ink-toolbox.is-open .ink-toolbox__panel {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.ink-toolbox__tool {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-fg-disabled);
+  box-shadow: none;
+  cursor: pointer;
+  transition:
+    color var(--ui-transition),
+    background var(--ui-transition);
+}
+
+.ink-toolbox__tool:hover:not(.is-active) {
+  color: var(--color-fg-muted);
+  background: color-mix(in srgb, var(--color-fg) 6%, transparent);
+}
+
+.ink-toolbox__tool.is-active {
+  color: var(--ui-bg);
+  background: var(--color-accent);
+  box-shadow: none;
+}
+
+.ink-toolbox__tool--undo:disabled {
+  color: var(--color-fg-faint);
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.ink-toolbox__tool--undo:not(:disabled):hover {
+  color: var(--color-fg-muted);
+  background: color-mix(in srgb, var(--color-fg) 6%, transparent);
+}
+
+.ink-toolbox__icon {
+  display: block;
+}

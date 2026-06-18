@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import InkFineTunePopover, { type InkEditTarget } from './InkFineTunePopover';
-import { readPosterTitleFromElement } from '../utils/furiganaLayout/posterTitle';
+import { readPosterTitleFromElement } from '../utils/shufuriPoster/posterTitle';
 
 const DOUBLE_TAP_MS = 320;
 
@@ -39,7 +39,7 @@ function resolveEditTarget(el: Element): InkEditTarget | null {
     };
   }
 
-  const zhLine = el.closest('.zh-line');
+  const zhLine = el.closest('.zh-line, .gloss-line');
   if (zhLine) {
     const group = zhLine.closest('[data-ink-g]');
     const groupIndex = group?.getAttribute('data-ink-g');
@@ -105,6 +105,7 @@ export default function InkFineTuneEditor({
   children,
 }: Props) {
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const handlePointerTarget = useCallback(
     (el: Element | null) => {
@@ -180,6 +181,8 @@ export default function InkFineTuneEditor({
     });
   }, [containerRef, focusGroupIndex, editTarget]);
 
+  const useFocusDim = focusGroupIndex != null;
+
   const popoverPortal =
     editTarget &&
     createPortal(
@@ -207,7 +210,8 @@ export default function InkFineTuneEditor({
 
   return (
     <div
-      className={`ink-fine-tune-root${focusGroupIndex != null ? ' ink-fine-tune-root--focus' : ''}`}
+      ref={rootRef}
+      className={['ink-fine-tune-root', useFocusDim ? 'ink-fine-tune-root--focus' : ''].filter(Boolean).join(' ')}
       data-ink-focus-g={focusGroupIndex ?? undefined}
     >
       {children}

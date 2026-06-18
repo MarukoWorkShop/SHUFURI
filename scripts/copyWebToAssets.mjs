@@ -52,7 +52,8 @@ copyRecursive(distDir, targetDir);
 
 const indexInTarget = path.join(targetDir, 'index.html');
 const assetsDir = path.join(targetDir, 'assets');
-const fontFile = path.join(assetsDir, 'KozMinPro-ExtraLight.otf');
+const fontFileEl = path.join(assetsDir, 'KozMinPro-ExtraLight.otf');
+const fontFileLight = path.join(assetsDir, 'KozMinPro-Light.otf');
 
 if (!fs.existsSync(indexInTarget)) {
   console.error('[copy:web-assets] copy failed: assets/web/index.html not found');
@@ -66,11 +67,12 @@ const manifest = {
   target: 'assets/web/',
   fileCount,
   hasIndexHtml: true,
-  hasJapaneseFont: fs.existsSync(fontFile),
+  hasJapaneseFont: fs.existsSync(fontFileEl),
+  hasJapaneseLightFont: fs.existsSync(fontFileLight),
 };
 
 fs.writeFileSync(path.join(targetDir, 'offline-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
 console.log(`[copy:web-assets] ${distDir} → ${targetDir}`);
-console.log(`[copy:web-assets] ${fileCount} files, index.html OK, font ${manifest.hasJapaneseFont ? 'OK' : 'MISSING'}`);
+console.log(`[copy:web-assets] ${fileCount} files, index.html OK, font EL ${manifest.hasJapaneseFont ? 'OK' : 'MISSING'}, Light ${manifest.hasJapaneseLightFont ? 'OK' : 'MISSING'}`);
 console.log('[copy:web-assets] iOS 构建时会从 assets/web 复制到 App 包内 web/ 目录');

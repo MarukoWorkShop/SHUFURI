@@ -20,7 +20,7 @@ export interface SetContentPayload {
   bodyHtml?: string;
   rawText?: string;
   title: string;
-  layoutProfile: 'clipPosterPrint' | 'mobilePoster';
+  layoutProfile: 'clipPosterPrint' | 'mobilePoster' | 'squarePoster';
 }
 
 export type BridgeCommand =

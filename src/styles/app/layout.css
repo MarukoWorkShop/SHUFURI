@@ -23,8 +23,13 @@ html:has(.app--export) {
 }
 
 .app-screen__header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   flex: 0 0 auto;
-  z-index: 2;
+  z-index: 250;
+  background: var(--ui-bg);
 }
 
 .app-screen__body {
@@ -34,11 +39,11 @@ html:has(.app--export) {
   overflow-y: auto;
   overscroll-behavior: none;
   touch-action: pan-y;
-  -ms-overflow-style: none;
 }
 
-.app-screen__body::-webkit-scrollbar {
-  display: none;
+.app--edit .app-screen__body,
+.app--export .app-screen__body {
+  padding-top: calc(48px + var(--safe-top));
 }
 
 .app-header {
@@ -256,7 +261,7 @@ html:has(.app--export) {
 .app-brand {
   margin: 0;
   padding: 0;
-  font-family: var(--ui-font-sans);
+  font-family: var(--font-brand, "Sansation Light", sans-serif);
   font-size: 23px;
   font-weight: 300;
   letter-spacing: 0.01em;
@@ -365,6 +370,7 @@ html:has(.app--export) {
 }
 
 .app--home .app-screen__body {
+  padding-top: calc(52px + var(--safe-top));
   overflow: hidden;
   /* 不设置 touch-action，让子元素（如波轮）自由控制 */
   display: flex;
@@ -440,11 +446,6 @@ html:has(.app--export) {
   -webkit-user-select: text;
   user-select: text;
   cursor: text;
-  -ms-overflow-style: none;
-}
-
-.app--home .ext-pipeline__textarea::-webkit-scrollbar {
-  display: none;
 }
 
 .app--home .ext-pipeline__paste-actions {

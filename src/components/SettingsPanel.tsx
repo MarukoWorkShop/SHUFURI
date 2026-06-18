@@ -3,10 +3,12 @@ import { createPortal } from 'react-dom';
 import {
   getAppSettings,
   saveAppSettings,
+  resolveSystemInterfaceLanguage,
   type AppSettings,
   type ColorTheme,
+  type InterfaceLanguage,
+  type LearningTargetLanguage,
 } from '../services/appSettings';
-import type { PosterLayoutProfile } from '../utils/furiganaLayout/types';
 
 type Props = {
   open: boolean;
@@ -20,6 +22,13 @@ const COLOR_THEMES: { id: ColorTheme; label: string }[] = [
   { id: 'mono', label: '墨' },
   { id: 'blue', label: '绀' },
   { id: 'red', label: '赤' },
+];
+
+const LEARNING_TARGET_OPTIONS: { id: LearningTargetLanguage; label: string }[] = [
+  { id: 'jp', label: 'JAP' },
+  { id: 'ko', label: 'KOR' },
+  { id: 'en', label: 'ENG' },
+  { id: 'zh', label: '中文' },
 ];
 
 export default function SettingsPanel({ open, onClose, onChange }: Props) {
@@ -61,8 +70,12 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
     [onChange],
   );
 
-  const handleLayoutChange = (layout: PosterLayoutProfile) => {
-    patch({ defaultExportLayout: layout });
+  const toggleLearningTarget = (id: LearningTargetLanguage) => {
+    const current = settings.learningTargetLanguages;
+    const has = current.includes(id);
+    if (has && current.length <= 1) return;
+    const next = has ? current.filter((t) => t !== id) : [...current, id];
+    patch({ learningTargetLanguages: next });
   };
 
   if (!visible) return null;
@@ -108,24 +121,67 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
           </section>
 
           <section className="app-settings__section">
-            <p className="app-settings__label">默认导出规格</p>
+            <p className="app-settings__label">语言矩阵</p>
+            <p className="app-settings__sublabel">使用语言</p>
             <div className="app-settings__segmented">
               <button
                 type="button"
-                className={`app-settings__segment${settings.defaultExportLayout === 'clipPosterPrint' ? ' is-active' : ''}`}
-                onClick={() => handleLayoutChange('clipPosterPrint')}
+                className={`app-settings__segment${settings.interfaceLanguage === 'zh' ? ' is-active' : ''}`}
+                onClick={() =>
+                  patch({ interfaceLanguage: 'zh' as InterfaceLanguage, followSystemInterfaceLanguage: false })
+                }
               >
-                B5 打印
+                中文
               </button>
               <button
                 type="button"
-                className={`app-settings__segment${settings.defaultExportLayout === 'mobilePoster' ? ' is-active' : ''}`}
-                onClick={() => handleLayoutChange('mobilePoster')}
+                className={`app-settings__segment${settings.interfaceLanguage === 'en' ? ' is-active' : ''}`}
+                onClick={() =>
+                  patch({ interfaceLanguage: 'en' as InterfaceLanguage, followSystemInterfaceLanguage: false })
+                }
               >
-                手机竖屏
+                English
               </button>
             </div>
-            <p className="app-settings__hint">新建排版进入导出时使用的默认画布尺寸</p>
+            <label className="app-settings__row app-settings__row--nested">
+              <span className="app-settings__row-text">跟随系统语言</span>
+              <input
+                type="checkbox"
+                className="app-settings__checkbox"
+                checked={settings.followSystemInterfaceLanguage}
+                onChange={(e) => {
+                  const follow = e.target.checked;
+                  patch(
+                    follow
+                      ? {
+                          followSystemInterfaceLanguage: true,
+                          interfaceLanguage: resolveSystemInterfaceLanguage(),
+                        }
+                      : { followSystemInterfaceLanguage: false },
+                  );
+                }}
+              />
+            </label>
+            <p className="app-settings__hint">决定词解、翻译、语法解析在 Prompt 中的输出语言</p>
+
+            <p className="app-settings__sublabel app-settings__sublabel--targets">学习目标语言</p>
+            <div className="app-settings__lang-chips">
+              {LEARNING_TARGET_OPTIONS.map(({ id, label }) => {
+                const active = settings.learningTargetLanguages.includes(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`app-settings__lang-chip${active ? ' is-active' : ''}`}
+                    aria-pressed={active}
+                    onClick={() => toggleLearningTarget(id)}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="app-settings__hint">首页拨轮显示 AUTO + 已选语言；至少保留一项</p>
           </section>
 
           <section className="app-settings__section">

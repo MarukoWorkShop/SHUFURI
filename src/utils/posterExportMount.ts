@@ -1,14 +1,16 @@
 import {
   applyPosterBodyMaxHeight,
-  buildFuriganaPosterInnerCss,
-  buildFuriganaPosterRootStyle,
-  getFuriganaCanvasInsets,
-  getFuriganaPosterCanvasDimensions,
-} from './furiganaLayout/furiganaPosterShared';
-import { ZH_FONT_FAMILY } from './furiganaLayout/fonts';
-import type { PosterLayoutProfile } from './furiganaLayout/types';
+  buildShufuriPosterInnerCss,
+  buildShufuriPosterRootStyle,
+  getShufuriCanvasInsets,
+  getShufuriPosterCanvasDimensions,
+} from './shufuriPoster/shufuriPosterShared';
+import { ZH_FONT_FAMILY } from './shufuriPoster/fonts';
+import type { PosterLayoutProfile } from './shufuriPoster/types';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
-import { applyPosterTitleElement } from './furiganaLayout/posterTitle';
+import { getAppSettings } from '../services/appSettings';
+import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
+import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
 
 const PAGE_NUMBER_FONT_PX = 13;
 const PAGE_NUMBER_TEXT_COLOR = '#94A3B8';
@@ -71,9 +73,9 @@ export function mountPosterExportPage(
     language = 'jp',
     lang,
   } = opts;
-  const { width: canvasW, height: canvasH } = getFuriganaPosterCanvasDimensions(layoutProfile);
-  const pad = getFuriganaCanvasInsets(layoutProfile);
-  const rootStyle = buildFuriganaPosterRootStyle(layoutProfile);
+  const { width: canvasW, height: canvasH } = getShufuriPosterCanvasDimensions(layoutProfile);
+  const pad = getShufuriCanvasInsets(layoutProfile);
+  const rootStyle = buildShufuriPosterRootStyle(layoutProfile);
 
   // 全屏白色 backdrop：为 html2canvas 提供干净的渲染表面，同时视觉上隐藏导出 DOM。
   // 关键约束：
@@ -114,7 +116,13 @@ export function mountPosterExportPage(
   const styleEl = doc.createElement('style');
   // 叠加 html2canvas 渲染补偿因子，确保 PDF 栅格化不溢出
   const exportScale = spacingScale * EXPORT_HTML2CANVAS_SCALE_FUDGE;
-  styleEl.textContent = buildFuriganaPosterInnerCss(layoutProfile, { spacingScale: exportScale, language, lang });
+  const pipelineLang = resolvePosterPipelineLang(lang, bodyFragmentHtml, language);
+  styleEl.textContent = buildShufuriPosterInnerCss(layoutProfile, {
+    spacingScale: exportScale,
+    language,
+    lang: pipelineLang,
+    colorTheme: getAppSettings().colorTheme,
+  });
   shell.appendChild(styleEl);
 
   if (showTitle) {
@@ -215,5 +223,5 @@ export function getPosterExportCanvasSize(layoutProfile: PosterLayoutProfile): {
   width: number;
   height: number;
 } {
-  return getFuriganaPosterCanvasDimensions(layoutProfile);
+  return getShufuriPosterCanvasDimensions(layoutProfile);
 }

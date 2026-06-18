@@ -2,26 +2,29 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
 } from 'react';
 import { hapticButton } from '../hooks/useHaptics';
-import { isInteractionSoundEnabled } from '../services/appSettings';
+import { isInteractionSoundEnabled, type LyricsLanguage } from '../services/appSettings';
 import { playKataClickSound } from '../utils/kataClickSound';
 import './LanguageWheel.css';
 
-export type LangCode = 'auto' | 'jp' | 'ko' | 'en';
+export type { LyricsLanguage as LangCode };
 
 const ITEM_W = 76;
 
-const LANGS: readonly { code: LangCode; label: string }[] = [
-  { code: 'auto', label: 'AUTO' },
-  { code: 'ko', label: 'KOR' },
-  { code: 'jp', label: 'JAP' },
-  { code: 'en', label: 'ENG' },
-];
+const LANG_LABELS: Record<LyricsLanguage, string> = {
+  jp: 'JAP',
+  ko: 'KOR',
+  en: 'ENG',
+  zh: '中文',
+};
 
-function langIndex(code: LangCode): number {
-  const i = LANGS.findIndex((l) => l.code === code);
+const DEFAULT_LANGUAGES: LyricsLanguage[] = ['jp', 'ko', 'en', 'zh'];
+
+function langIndex(code: LyricsLanguage, languages: readonly LyricsLanguage[]): number {
+  const i = languages.findIndex((l) => l === code);
   return i >= 0 ? i : 0;
 }
 
@@ -32,18 +35,25 @@ function triggerWheelSnapFeedback(soundEnabled: boolean): void {
 }
 
 type Props = {
-  value: LangCode;
-  onChange: (lang: LangCode) => void;
+  value: LyricsLanguage;
+  onChange: (lang: LyricsLanguage) => void;
+  /** 由语言矩阵 learningTargetLanguages 推导；默认全部 */
+  languages?: LyricsLanguage[];
   soundEnabled?: boolean;
 };
 
 /**
  * 横向滚轮语言选择器：居中项清晰，两侧项缩小 + 模糊；滚停时吸附并触发轻震 / カタ 声。
  */
-export default function LanguageWheel({ value, onChange, soundEnabled }: Props) {
+export default function LanguageWheel({ value, onChange, languages, soundEnabled }: Props) {
+  const wheelLanguages = useMemo(() => {
+    const list = languages?.length ? languages : DEFAULT_LANGUAGES;
+    return list.filter((code) => code in LANG_LABELS);
+  }, [languages]);
+
   const scrollerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const indexRef = useRef(langIndex(value));
+  const indexRef = useRef(langIndex(value, wheelLanguages));
   const rafRef = useRef<number | null>(null);
   const settleTimerRef = useRef<number | null>(null);
   const feedbackEnabled = soundEnabled ?? isInteractionSoundEnabled();
@@ -69,29 +79,29 @@ export default function LanguageWheel({ value, onChange, soundEnabled }: Props) 
   const scrollToIndex = useCallback((index: number, smooth: boolean) => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
-    const clamped = Math.max(0, Math.min(LANGS.length - 1, index));
+    const clamped = Math.max(0, Math.min(wheelLanguages.length - 1, index));
     scroller.scrollTo({
       left: clamped * ITEM_W,
       behavior: smooth ? 'smooth' : 'auto',
     });
-  }, []);
+  }, [wheelLanguages.length]);
 
   const commitIndex = useCallback(
     (index: number, fromUser: boolean) => {
-      const clamped = Math.max(0, Math.min(LANGS.length - 1, index));
+      const clamped = Math.max(0, Math.min(wheelLanguages.length - 1, index));
       if (clamped === indexRef.current) {
         applyItemVisuals();
         return;
       }
       indexRef.current = clamped;
-      const next = LANGS[clamped]!.code;
+      const next = wheelLanguages[clamped]!;
       onChange(next);
       if (fromUser) {
         triggerWheelSnapFeedback(feedbackEnabled);
       }
       applyItemVisuals();
     },
-    [applyItemVisuals, feedbackEnabled, onChange],
+    [applyItemVisuals, feedbackEnabled, onChange, wheelLanguages],
   );
 
   const settleScroll = useCallback(
@@ -127,11 +137,11 @@ export default function LanguageWheel({ value, onChange, soundEnabled }: Props) 
   }, [applyItemVisuals, settleScroll]);
 
   useLayoutEffect(() => {
-    const nextIndex = langIndex(value);
+    const nextIndex = langIndex(value, wheelLanguages);
     indexRef.current = nextIndex;
     scrollToIndex(nextIndex, false);
     applyItemVisuals();
-  }, [value, scrollToIndex, applyItemVisuals]);
+  }, [value, wheelLanguages, scrollToIndex, applyItemVisuals]);
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -158,25 +168,26 @@ export default function LanguageWheel({ value, onChange, soundEnabled }: Props) 
           tabIndex={0}
         >
           <div className="lang-wheel__list" role="listbox" aria-label="语言选择">
-            {LANGS.map((lang, i) => (
+            {wheelLanguages.map((code, i) => (
               <div
-                key={lang.code}
+                key={code}
                 ref={(el) => {
                   itemRefs.current[i] = el;
                 }}
                 className="lang-wheel__item"
                 role="option"
-                {...(lang.code === value
+                {...(code === value
                   ? ({ 'aria-selected': 'true' } as const)
                   : ({ 'aria-selected': 'false' } as const))}
-                data-lang={lang.code}
+                data-lang={code}
               >
-                {lang.label}
+                {LANG_LABELS[code]}
               </div>
             ))}
           </div>
         </div>
         <div className="lang-wheel__mask" aria-hidden />
+        <span className="lang-wheel__indicator" aria-hidden />
       </div>
     </div>
   );

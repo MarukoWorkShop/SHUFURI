@@ -4,16 +4,22 @@
  * 将海报页面 HTML 转换为自包含 SVG（含嵌入字体与全量 CSS），
  * 支持任意缩放无锯齿，通过 foreignObject 保留原始 HTML 布局。
  */
-import type { PosterLayoutProfile } from './furiganaLayout/types';
+import type { PosterLayoutProfile } from './shufuriPoster/types';
 import {
-  buildFuriganaPosterInnerCss,
-  buildFuriganaPosterRootStyle,
-  getFuriganaCanvasInsets,
-  getFuriganaPosterCanvasDimensions,
-} from './furiganaLayout/furiganaPosterShared';
-import { applyPosterTitleElement } from './furiganaLayout/posterTitle';
-import { getPosterJapaneseFontFaceCss, getPosterKoreanFontFaceCss, ZH_FONT_FAMILY } from './furiganaLayout/fonts';
-import type { LyricsLanguage } from '../services/appSettings';
+  buildShufuriPosterInnerCss,
+  buildShufuriPosterRootStyle,
+  getShufuriCanvasInsets,
+  getShufuriPosterCanvasDimensions,
+} from './shufuriPoster/shufuriPosterShared';
+import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
+import {
+  getPosterJapaneseFontsFaceCss,
+  getPosterKoreanFontFaceCss,
+  ZH_FONT_FAMILY,
+} from './shufuriPoster/fonts';
+import type { LyricsLanguage, LangCode } from '../services/appSettings';
+import { getAppSettings } from '../services/appSettings';
+import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
 
 /** 将 JS 样式对象转为内联 style 属性字符串 */
 function styleObjToAttr(style: Record<string, string | number>): string {
@@ -44,6 +50,7 @@ export interface GeneratePageSvgOptions {
   layoutProfile: PosterLayoutProfile;
   spacingScale?: number;
   language?: LyricsLanguage;
+  lang?: LangCode;
 }
 
 /**
@@ -60,39 +67,42 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
     layoutProfile,
     spacingScale = 1,
     language = 'jp',
+    lang,
   } = opts;
 
-  const { width: w, height: h } = getFuriganaPosterCanvasDimensions(layoutProfile);
-  const pad = getFuriganaCanvasInsets(layoutProfile);
-  const rootStyle = buildFuriganaPosterRootStyle(layoutProfile);
-  const innerCss = buildFuriganaPosterInnerCss(layoutProfile, { spacingScale, language });
+  const { width: w, height: h } = getShufuriPosterCanvasDimensions(layoutProfile);
+  const pad = getShufuriCanvasInsets(layoutProfile);
+  const rootStyle = buildShufuriPosterRootStyle(layoutProfile);
+  const pipelineLang = resolvePosterPipelineLang(lang, bodyFragmentHtml, language);
+  const innerCss = buildShufuriPosterInnerCss(layoutProfile, {
+    spacingScale,
+    language,
+    lang: pipelineLang,
+    colorTheme: getAppSettings().colorTheme,
+  });
 
-  // 嵌入日文字体 + 韩文字体
-  const jpFontCss = getPosterJapaneseFontFaceCss();
+  const jpFontCss = getPosterJapaneseFontsFaceCss();
   const koFontCss = getPosterKoreanFontFaceCss();
 
-  // 页码
   const pageNoText = `— ${String(pageIndex + 1).padStart(2, '0')} / ${String(pageCount).padStart(2, '0')} —`;
   const pageNoBottom = layoutProfile === 'mobilePoster'
     ? Math.round(pad.bottom * 0.42)
-    : Math.round(pad.bottom * 0.28);
+    : layoutProfile === 'squarePoster'
+      ? Math.round(pad.bottom * 0.38)
+      : Math.round(pad.bottom * 0.28);
 
-  // 构建标题 HTML
   let titleHtml = '';
   if (showTitle) {
-    // 使用临时元素生成标题 HTML
     const tmp = document.createElement('h1');
     tmp.className = 'fv-title-h';
     applyPosterTitleElement(tmp, title, artist);
     titleHtml = `\n    ${tmp.outerHTML}`;
   }
 
-  // 清理片段 HTML
   const cleanBody = bodyFragmentHtml
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
 
-  // 构建 root 内联样式
   const rootInlineStyle = styleObjToAttr(rootStyle);
 
   return `<?xml version="1.0" encoding="UTF-8"?>

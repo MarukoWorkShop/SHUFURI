@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   deleteSavedLyricsProject,
+  deleteSavedLyricsProjects,
   listSavedLyricsProjects,
   type SavedLyricsProject,
 } from '../services/savedLyricsStore';
@@ -36,6 +37,7 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
   const [unlatching, setUnlatching] = useState(false);
   const [closing, setClosing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
   const unlatchTimerRef = useRef<number | null>(null);
 
@@ -106,6 +108,16 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
     });
   }, []);
 
+  const allSelected = items.length > 0 && selectedIds.size === items.length;
+
+  const toggleSelectAll = useCallback(() => {
+    if (!items.length) return;
+    setSelectedIds((prev) => {
+      if (prev.size === items.length) return new Set();
+      return new Set(items.map((item) => item.id));
+    });
+  }, [items]);
+
   useEffect(() => {
     if (!drawerOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -120,6 +132,27 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
       closeDrawer();
     } else {
       openDrawer();
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!selectedIds.size || deleting) return;
+    const count = selectedIds.size;
+    const msg =
+      count === items.length
+        ? `确定删除全部 ${count} 篇歌词？`
+        : `确定删除已选的 ${count} 篇歌词？`;
+    if (!window.confirm(msg)) return;
+    setDeleting(true);
+    setError('');
+    try {
+      await deleteSavedLyricsProjects([...selectedIds]);
+      setSelectedIds(new Set());
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '删除失败');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -138,10 +171,28 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
         aria-modal="true"
         aria-label="我的歌词本"
       >
-        <div className="saved-library-drawer__binding" aria-hidden />
         <header className="saved-library-drawer__header">
           <span className="saved-library-title">我的歌词本</span>
           <div className="saved-library-drawer__header-aside">
+            {selectedIds.size > 0 && (
+              <button
+                type="button"
+                className="saved-library-drawer__delete-selected"
+                disabled={deleting}
+                onClick={() => void handleDeleteSelected()}
+              >
+                {deleting ? '删除中…' : '删除所选'}
+              </button>
+            )}
+            {items.length > 0 && (
+              <button
+                type="button"
+                className="saved-library-drawer__select-all"
+                onClick={toggleSelectAll}
+              >
+                {allSelected ? '取消全选' : '全选'}
+              </button>
+            )}
             <button type="button" className="saved-library-drawer__close" onClick={closeDrawer}>
               帰 / 收起
             </button>
@@ -169,6 +220,7 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
                   <label className="saved-library-drawer__row-check">
                     <input
                       type="checkbox"
+                      className="saved-library-drawer__checkbox"
                       checked={selectedIds.has(item.id)}
                       onChange={() => toggleSelect(item.id)}
                       aria-label={`选择 ${item.title}`}

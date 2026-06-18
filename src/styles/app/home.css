@@ -28,6 +28,21 @@
   cursor: text;
 }
 
+.ext-pipeline__field::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background-color: var(--color-border);
+  pointer-events: none;
+}
+
+.ext-pipeline__field:focus-within::after {
+  background-color: var(--color-accent);
+}
+
 .ext-pipeline__label {
   position: absolute;
   bottom: 12px;
@@ -63,19 +78,19 @@
   font-weight: 400;
 }
 
-/* 极简底部边框输入 */
+/* 极简底部边框输入 — 下划线由 .ext-pipeline__field::after 绘制，避免 iOS 双线 */
 .ext-pipeline__input {
   width: 100%;
   min-width: 0;
   border: none;
-  border-bottom: 1px solid var(--color-border);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
   padding: 16px 0 12px;
   font-family: var(--ui-font-sans);
-  font-size: 20px;
-  font-weight: 400;
+  font-size: 16px;
+  font-weight: 300;
+  letter-spacing: 0.01em;
   color: var(--ui-fg);
   text-align: center;
   outline: none;
@@ -90,12 +105,16 @@
 .ext-pipeline__input::placeholder {
   color: var(--color-fg-faint);
   opacity: 1;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 300;
+  letter-spacing: 0.01em;
 }
 
-.ext-pipeline__field:focus-within .ext-pipeline__input {
-  border-bottom-color: var(--color-accent);
+.ext-pipeline__input:focus,
+.ext-pipeline__input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 .ext-pipeline__actions {
@@ -471,6 +490,10 @@
   background: var(--color-bg-segment);
 }
 
+.app-settings__segmented--triple {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .app-settings__segment {
   border: none;
   border-radius: 8px;
@@ -576,6 +599,50 @@
   line-height: 1.45;
   letter-spacing: 0.03em;
   color: var(--color-fg-subtle);
+}
+
+.app-settings__sublabel {
+  margin: var(--ui-space-2) 0 var(--ui-space-1);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ui-fg-secondary);
+}
+
+.app-settings__sublabel--targets {
+  margin-top: var(--ui-space-3);
+}
+
+.app-settings__row--nested {
+  margin-top: var(--ui-space-2);
+}
+
+.app-settings__lang-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.app-settings__lang-chip {
+  margin: 0;
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
+  border-radius: 4px;
+  background: transparent;
+  font-family: var(--ui-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--color-accent);
+  cursor: pointer;
+  transition:
+    background var(--ui-transition),
+    border-color var(--ui-transition);
+}
+
+.app-settings__lang-chip.is-active {
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
 
 .app-settings__footer {

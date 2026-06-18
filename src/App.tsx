@@ -1,15 +1,17 @@
-import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import './App.css';
 import { normalizeLyricsBodyHtml } from './services/lyricsHtml';
-import { resolveExportTitle } from './utils/furiganaLayout/posterTitle';
-import { buildPosterPagesFromBody, posterPageHtmls } from './utils/furiganaLayout/buildPosterPages';
+import { resolveExportTitle } from './utils/shufuriPoster/posterTitle';
+import { buildPosterPagesFromBody, posterPageHtmls } from './utils/shufuriPoster/buildPosterPages';
 import { exportPosterPdf } from './utils/exportPosterPdf';
 import { exportPosterPdfFromPageHtmls, exportPosterPngFromPageHtmls, posterPdfExportFilename } from './utils/pdfExport';
 import InkFineTuneEditor from './components/InkFineTuneEditor';
+import InkToolbox from './components/InkToolbox';
 import type { InkEditTarget } from './components/InkFineTunePopover';
-import FuriganaEditCanvas from './components/FuriganaEditCanvas';
+import ShufuriPosterEditCanvas from './components/ShufuriPosterEditCanvas';
 import ExportPreviewPanel from './components/ExportPreviewPanel';
 import SavedLyricsLibrary from './components/SavedLyricsLibrary';
+import StudyCardsLibrary from './components/StudyCardsLibrary';
 import HtmlPasteInput from './components/HtmlPasteInput';
 import ClipboardDetectCard from './components/ClipboardDetectCard';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -18,18 +20,25 @@ import { usePosterPreviewFitScale } from './hooks/usePosterPreviewFitScale';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { hapticSuccess, hapticError } from './hooks/useHaptics';
 import { useGlobalButtonFeedback } from './hooks/useGlobalButtonFeedback';
-import { ensurePosterFontsLoaded } from './utils/furiganaLayout/fonts';
+import { ensurePosterFontsLoaded } from './utils/shufuriPoster/fonts';
 import { resetPosterPageRefs } from './utils/posterPageRefs';
 import { saveLyricsProject, type SavedLyricsProject } from './services/savedLyricsStore';
 import { annotateInkEditTargets } from './utils/inkFineTune/annotateInkEditTargets';
+import { stripLegacyInkHighlightsFromHtml } from './utils/inkFineTune/stripInkHighlights';
 import { applyRubyEdit, applyZhLineEdit } from './utils/inkFineTune/applyInkEdit';
 import { saveInkFineTuneDraft } from './utils/inkFineTune/inkFineTuneDraft';
 import { playPencilScratchSound } from './utils/inkFineTune/pencilScratchSound';
-import type { PosterLayoutProfile, PosterPageSlice } from './utils/furiganaLayout/types';
+import {
+  type InkEditSnapshot,
+  inkEditSnapshotsEqual,
+  INK_EDIT_UNDO_LIMIT,
+} from './utils/inkFineTune/inkEditHistory';
+import type { PosterLayoutProfile, PosterPageSlice } from './utils/shufuriPoster/types';
 import SettingsPanel from './components/SettingsPanel';
 import SettingsMenuIcon from './components/icons/SettingsMenuIcon';
 import LinkChainIcon from './components/icons/LinkChainIcon';
-import { getAppSettings, saveAppSettings, type AppSettings, type LangCode, type LyricsLanguage } from './services/appSettings';
+import { getAppSettings, saveAppSettings, syncInterfaceLanguageFromSystem, type AppSettings, type LangCode, type LyricsLanguage } from './services/appSettings';
+import { buildLanguageMatrixContext, getWheelLanguages } from './services/languageMatrix';
 import type { OcrDetectedLanguage } from './services/ocrTypes';
 import { applyColorTheme } from './utils/applyColorTheme';
 import {
@@ -57,6 +66,11 @@ import { useClipboardStructuredLyrics } from './hooks/useClipboardHasContent';
 import { useTimedMessage } from './hooks/useTimedMessage';
 import { AppToastContext } from './context/AppToastContext';
 import AppToast from './components/AppToast';
+import {
+  createStudyCardsBundleId,
+  scheduleStudyCardsSync,
+  tryMigrateStudyCardsBundle,
+} from './studyCards/syncStudyCards';
 
 type Mode = 'input' | 'edit' | 'export';
 
@@ -66,7 +80,14 @@ const EXPORT_DEADLINE_MS = 180_000;
 const INK_POPOVER_CLOSE_MS = 220;
 
 function prepareBodyHtmlForPreview(rawBodyHtml: string): string {
-  return annotateInkEditTargets(normalizeLyricsBodyHtml(rawBodyHtml));
+  return annotateInkEditTargets(
+    normalizeLyricsBodyHtml(stripLegacyInkHighlightsFromHtml(rawBodyHtml)),
+  );
+}
+
+function prepareTitleMarkupHtml(raw: string | undefined): string | undefined {
+  if (!raw?.trim()) return undefined;
+  return stripLegacyInkHighlightsFromHtml(raw);
 }
 
 /** 桥接用：解析 rawText → bodyHtml */
@@ -79,7 +100,7 @@ async function prepareBridgedRawText(rawText: string): Promise<string> {
 function ocrLangToLyricsLanguage(lang: OcrDetectedLanguage): LyricsLanguage | undefined {
   if (lang === 'jp') return 'jp';
   if (lang === 'ko') return 'ko';
-  if (lang === 'zh' || lang === 'mixed') return 'auto';
+  if (lang === 'zh') return 'zh';
   return undefined;
 }
 
@@ -127,17 +148,65 @@ export default function App() {
   const [artist, setArtist] = useState('');
   const [bodyHtml, setBodyHtml] = useState('');
   const [pages, setPages] = useState<PosterPageSlice[]>([]);
-  const [layoutProfile, setLayoutProfile] = useState<PosterLayoutProfile>(
-    () => getAppSettings().defaultExportLayout,
-  );
+  const [layoutProfile, setLayoutProfile] = useState<PosterLayoutProfile>(() => EDIT_LAYOUT);
   const [exporting, setExporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedProjectId, setSavedProjectId] = useState<string | null>(null);
   const [libraryRefreshKey, setLibraryRefreshKey] = useState(0);
+  const [studyCardsRefreshKey, setStudyCardsRefreshKey] = useState(0);
+  const studyCardsBundleIdRef = useRef(createStudyCardsBundleId());
+  const bumpStudyCardsRefresh = useCallback(() => {
+    setStudyCardsRefreshKey((k) => k + 1);
+  }, []);
+
   const [inputResetKey, setInputResetKey] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [appSettings, setAppSettings] = useState<AppSettings>(() => getAppSettings());
+
+  const syncStudyCardsFromRaw = useCallback(
+    (
+      rawLyrics: string,
+      bundleId: string,
+      meta: {
+        title?: string;
+        artist?: string;
+        lang?: LangCode;
+        includeVocabAndGrammar?: boolean;
+      },
+    ) => {
+      scheduleStudyCardsSync(
+        {
+          rawLyrics,
+          bundleId,
+          title: meta.title,
+          artist: meta.artist,
+          lang: meta.lang,
+          includeVocabAndGrammar:
+            meta.includeVocabAndGrammar ?? appSettings.defaultIncludeVocabAndGrammar,
+        },
+        bumpStudyCardsRefresh,
+      );
+    },
+    [appSettings.defaultIncludeVocabAndGrammar, bumpStudyCardsRefresh],
+  );
+
   const lyricsLanguage = appSettings.lyricsLanguage;
+
+  const wheelLanguages = useMemo(
+    () => getWheelLanguages(appSettings.learningTargetLanguages),
+    [appSettings.learningTargetLanguages],
+  );
+
+  const languageMatrixContext = useMemo(
+    () => buildLanguageMatrixContext(appSettings),
+    [appSettings],
+  );
+
+  useEffect(() => {
+    const synced = syncInterfaceLanguageFromSystem();
+    setAppSettings(synced);
+    applyColorTheme(synced.colorTheme);
+  }, []);
   /** 排版管线语言（大模型声明 / 自动检测，与波轮解耦） */
   const [lang, setLang] = useState<LangCode | undefined>(undefined);
   /** 链条 icon tooltip 显示 */
@@ -235,6 +304,9 @@ export default function App() {
   }, []);
   const [inkEditTarget, setInkEditTarget] = useState<InkEditTarget | null>(null);
   const [inkPopoverClosing, setInkPopoverClosing] = useState(false);
+  const [inkToolboxOpen, setInkToolboxOpen] = useState(false);
+  const [titleMarkupHtml, setTitleMarkupHtml] = useState<string | undefined>(undefined);
+  const [canUndoInkEdit, setCanUndoInkEdit] = useState(false);
   const [inkDraftKanji, setInkDraftKanji] = useState('');
   const [inkDraftKana, setInkDraftKana] = useState('');
   const [inkDraftZh, setInkDraftZh] = useState('');
@@ -244,13 +316,15 @@ export default function App() {
   const editCanvasRef = useRef<HTMLDivElement>(null);
   const exportPagesRef = useRef<HTMLDivElement>(null);
   const exportingRef = useRef(false);
+  const undoStackRef = useRef<InkEditSnapshot[]>([]);
+  const titleMarkupHtmlRef = useRef<string | undefined>(undefined);
 
   // ---- 用 refs 保持 bridge 回调中的最新状态 ----
   const bodyHtmlRef = useRef('');
   const titleRef = useRef('');
   const artistRef = useRef('');
   const pagesRef = useRef<PosterPageSlice[]>([]);
-  const layoutProfileRef = useRef<PosterLayoutProfile>(getAppSettings().defaultExportLayout);
+  const layoutProfileRef = useRef<PosterLayoutProfile>(EDIT_LAYOUT);
   const bridgeReadyRef = useRef(false);
   const nativeExportingRef = useRef(false);
 
@@ -260,6 +334,7 @@ export default function App() {
   useEffect(() => { artistRef.current = artist; }, [artist]);
   useEffect(() => { layoutProfileRef.current = layoutProfile; }, [layoutProfile]);
   useEffect(() => { pagesRef.current = pages; }, [pages]);
+  useEffect(() => { titleMarkupHtmlRef.current = titleMarkupHtml; }, [titleMarkupHtml]);
 
   // ---- Native 导出处理器（通过 ref 读取最新状态） ----
   const handleNativeExport = useCallback(async (exportType: string) => {
@@ -558,6 +633,7 @@ export default function App() {
       projectId: string | null,
       nextArtist?: string,
       nextLang?: LangCode,
+      nextTitleMarkupHtml?: string,
     ) => {
       await ensurePosterFontsLoaded();
       const normalized = prepareBodyHtmlForPreview(nextBodyHtml);
@@ -570,6 +646,11 @@ export default function App() {
       setMode('edit');
       setSavedProjectId(projectId);
       setLang(nextLang);
+      setTitleMarkupHtml(prepareTitleMarkupHtml(nextTitleMarkupHtml));
+      setInkToolboxOpen(false);
+      setInkEditTarget(null);
+      undoStackRef.current = [];
+      setCanUndoInkEdit(false);
       resetPosterPageRefs(pageRefs, 0);
     },
     [],
@@ -580,15 +661,32 @@ export default function App() {
       return;
     }
     await ensurePosterFontsLoaded();
-    const pageHtmls = buildPosterPagesFromBody(bodyHtml, title, layoutProfile, artist, lyricsLanguage, lang);
+    const exportProfile = EDIT_LAYOUT;
+    const pageHtmls = buildPosterPagesFromBody(
+      bodyHtml,
+      title,
+      exportProfile,
+      artist,
+      lyricsLanguage,
+      lang,
+      titleMarkupHtml,
+    );
+    setLayoutProfile(exportProfile);
     setPages(pageHtmls);
     setMode('export');
     resetPosterPageRefs(pageRefs, pageHtmls.length);
-  }, [bodyHtml, title, layoutProfile, artist, lyricsLanguage, lang]);
+  }, [bodyHtml, title, artist, lyricsLanguage, lang, titleMarkupHtml]);
 
   const openProject = useCallback(
     async (project: SavedLyricsProject) => {
-      const profile = project.layoutProfile ?? getAppSettings().defaultExportLayout;
+      const profile = project.layoutProfile ?? EDIT_LAYOUT;
+      studyCardsBundleIdRef.current = project.id;
+      syncStudyCardsFromRaw(project.rawLyrics, project.id, {
+        title: project.title,
+        artist: project.artist,
+        lang: project.lang,
+        includeVocabAndGrammar: project.includeVocabAndGrammar,
+      });
       await enterEditWithLayout(
         project.bodyHtml,
         project.title,
@@ -597,24 +695,32 @@ export default function App() {
         project.id,
         project.artist,
         project.lang,
+        project.titleMarkupHtml,
       );
     },
-    [enterEditWithLayout],
+    [enterEditWithLayout, syncStudyCardsFromRaw],
   );
 
   const handleLayoutFromHtml = useCallback(
     async (nextBodyHtml: string, nextTitle: string, rawPaste: string, nextArtist?: string, nextLang?: LangCode) => {
+      studyCardsBundleIdRef.current = createStudyCardsBundleId();
+      const bundleId = studyCardsBundleIdRef.current;
       await enterEditWithLayout(
         nextBodyHtml,
         nextTitle,
         rawPaste,
-        appSettings.defaultExportLayout,
+        EDIT_LAYOUT,
         null,
         nextArtist,
         nextLang,
       );
+      syncStudyCardsFromRaw(rawPaste, bundleId, {
+        title: nextTitle,
+        artist: nextArtist,
+        lang: nextLang,
+      });
     },
-    [enterEditWithLayout, appSettings.defaultExportLayout],
+    [enterEditWithLayout, syncStudyCardsFromRaw],
   );
 
   const handleLayoutChange = useCallback(
@@ -623,12 +729,20 @@ export default function App() {
         return;
       }
       await ensurePosterFontsLoaded();
-      const pageHtmls = buildPosterPagesFromBody(bodyHtml, title, profile, artist, lyricsLanguage, lang);
+      const pageHtmls = buildPosterPagesFromBody(
+        bodyHtml,
+        title,
+        profile,
+        artist,
+        lyricsLanguage,
+        lang,
+        titleMarkupHtml,
+      );
       setLayoutProfile(profile);
       setPages(pageHtmls);
       resetPosterPageRefs(pageRefs, pageHtmls.length);
     },
-    [layoutProfile, bodyHtml, title, artist, lyricsLanguage, lang],
+    [layoutProfile, bodyHtml, title, artist, lyricsLanguage, lang, titleMarkupHtml],
   );
 
   const handleBackToEdit = useCallback(() => {
@@ -646,12 +760,16 @@ export default function App() {
     setArtist('');
     setBodyHtml('');
     setPages([]);
-    setLayoutProfile(getAppSettings().defaultExportLayout);
+    setLayoutProfile(EDIT_LAYOUT);
     setSavedProjectId(null);
     setInputResetKey((k) => k + 1);
     setInkEditTarget(null);
     setInkPopoverClosing(false);
     setLang(undefined);
+    setTitleMarkupHtml(undefined);
+    setInkToolboxOpen(false);
+    undoStackRef.current = [];
+    setCanUndoInkEdit(false);
     resetPosterPageRefs(pageRefs, 0);
   }, []);
 
@@ -662,6 +780,34 @@ export default function App() {
       setInkPopoverClosing(false);
     }, INK_POPOVER_CLOSE_MS);
   }, []);
+
+  const pushUndoSnapshot = useCallback(() => {
+    const snap: InkEditSnapshot = {
+      bodyHtml: bodyHtmlRef.current,
+      title: titleRef.current,
+      artist: artistRef.current,
+      titleMarkupHtml: titleMarkupHtmlRef.current,
+    };
+    const stack = undoStackRef.current;
+    const last = stack[stack.length - 1];
+    if (last && inkEditSnapshotsEqual(last, snap)) return;
+    stack.push(snap);
+    if (stack.length > INK_EDIT_UNDO_LIMIT) stack.shift();
+    setCanUndoInkEdit(true);
+  }, []);
+
+  const handleInkUndo = useCallback(() => {
+    const stack = undoStackRef.current;
+    if (stack.length === 0) return;
+    const prev = stack.pop()!;
+    setBodyHtml(prepareBodyHtmlForPreview(prev.bodyHtml));
+    setTitle(prev.title);
+    setArtist(prev.artist);
+    setTitleMarkupHtml(prepareTitleMarkupHtml(prev.titleMarkupHtml));
+    setCanUndoInkEdit(stack.length > 0);
+    closeInkPopover();
+    playPencilScratchSound();
+  }, [closeInkPopover]);
 
   const handleInkOpenTarget = useCallback((target: InkEditTarget) => {
     setInkEditTarget(target);
@@ -680,9 +826,12 @@ export default function App() {
   const handleInkConfirm = useCallback(async () => {
     if (!inkEditTarget) return;
 
+    pushUndoSnapshot();
+
     if (inkEditTarget.kind === 'title') {
       setTitle(inkDraftTitle.trim());
       setArtist(inkDraftArtist.trim());
+      setTitleMarkupHtml(undefined);
       playPencilScratchSound();
       closeInkPopover();
       return;
@@ -716,6 +865,7 @@ export default function App() {
     inkDraftArtist,
     savedProjectId,
     closeInkPopover,
+    pushUndoSnapshot,
   ]);
 
   const handleExportPdf = useCallback(async () => {
@@ -757,18 +907,41 @@ export default function App() {
       const pageHtmls =
         pages.length > 0
           ? posterPageHtmls(pages)
-          : posterPageHtmls(buildPosterPagesFromBody(bodyHtml, title, layoutProfile, artist, lyricsLanguage, lang));
+          : posterPageHtmls(
+              buildPosterPagesFromBody(
+                bodyHtml,
+                title,
+                layoutProfile,
+                artist,
+                lyricsLanguage,
+                lang,
+                titleMarkupHtml,
+              ),
+            );
+      const cleanedBody = prepareBodyHtmlForPreview(bodyHtml);
+      const cleanedTitleMarkup = prepareTitleMarkupHtml(titleMarkupHtml);
       const saved = await saveLyricsProject({
         id: savedProjectId ?? undefined,
         title: resolveExportTitle(title),
         artist: artist.trim() || undefined,
         rawLyrics: lyrics,
-        bodyHtml,
+        bodyHtml: cleanedBody,
         pageHtmls,
         layoutProfile,
         lang,
+        ...(cleanedTitleMarkup ? { titleMarkupHtml: cleanedTitleMarkup } : {}),
       });
       setSavedProjectId(saved.id);
+      const sessionBundleId = studyCardsBundleIdRef.current;
+      if (!savedProjectId) {
+        await tryMigrateStudyCardsBundle(sessionBundleId, saved.id);
+      }
+      studyCardsBundleIdRef.current = saved.id;
+      syncStudyCardsFromRaw(lyrics, saved.id, {
+        title: resolveExportTitle(title),
+        artist: artist.trim() || undefined,
+        lang,
+      });
       setLibraryRefreshKey((k) => k + 1);
       appToast.show('已保存到我的歌词库', 2400);
       hapticSuccess();
@@ -778,7 +951,7 @@ export default function App() {
     } finally {
       setSaving(false);
     }
-  }, [bodyHtml, pages, savedProjectId, title, artist, lyrics, layoutProfile, saving, appToast.show]);
+  }, [bodyHtml, pages, savedProjectId, title, artist, lyrics, layoutProfile, saving, appToast.show, titleMarkupHtml, lyricsLanguage, lang, syncStudyCardsFromRaw]);
 
   const isWorkspaceMode = mode === 'edit' || mode === 'export';
   const inkFocusGroupIndex =
@@ -876,8 +1049,10 @@ export default function App() {
                     key={inputResetKey}
                     includeVocabAndGrammar={appSettings.defaultIncludeVocabAndGrammar}
                     language={appSettings.lyricsLanguage}
+                    wheelLanguages={wheelLanguages}
+                    matrix={languageMatrixContext}
                     onLanguageChange={(lang) => {
-                      handleSettingsChange({ ...appSettings, lyricsLanguage: lang });
+                      handleSettingsChange(saveAppSettings({ lyricsLanguage: lang }));
                     }}
                     initialTitle={shareOcrData?.title}
                     initialArtist={shareOcrData?.artist}
@@ -889,11 +1064,18 @@ export default function App() {
                     }}
                   />
                   <SavedLyricsLibrary onOpen={openProject} refreshKey={libraryRefreshKey} />
+                  <StudyCardsLibrary refreshKey={studyCardsRefreshKey} />
             </div>
           )}
 
           {mode === 'edit' && (
             <div className="edit-area">
+              <InkToolbox
+                open={inkToolboxOpen}
+                canUndo={canUndoInkEdit}
+                onToggle={() => setInkToolboxOpen((v) => !v)}
+                onUndo={handleInkUndo}
+              />
               <div className="edit-toolbar">
                 <button type="button" className="btn-secondary" onClick={handleReset}>
                   ← 重新输入
@@ -939,12 +1121,16 @@ export default function App() {
                   onArtistChange={setInkDraftArtist}
                   onConfirm={() => void handleInkConfirm()}
                 >
-                  <FuriganaEditCanvas
+                  <ShufuriPosterEditCanvas
                     title={title}
                     artist={artist}
                     bodyHtml={bodyHtml}
                     layoutProfile={EDIT_LAYOUT}
                     displayScale={editScale}
+                    titleMarkupHtml={titleMarkupHtml}
+                    lang={lang}
+                    language={lyricsLanguage}
+                    colorTheme={appSettings.colorTheme}
                   />
                 </InkFineTuneEditor>
               </div>

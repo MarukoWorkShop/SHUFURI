@@ -1,4 +1,4 @@
-import type { PosterLayoutProfile } from '../utils/furiganaLayout/types';
+import type { PosterLayoutProfile } from '../utils/shufuriPoster/types';
 import { extractArtistFromLyricsRaw } from './lyricsHtml';
 
 const DB_NAME = 'japanese-kana-app';
@@ -20,6 +20,8 @@ export type SavedLyricsProject = {
   bodyHtml: string;
   pageHtmls: string[];
   layoutProfile: PosterLayoutProfile;
+  /** 标题区笔刷高亮 markup（h1 innerHTML） */
+  titleMarkupHtml?: string;
   includeVocabAndGrammar?: boolean;
   /** 排版管线语言（大模型声明 / 自动检测） */
   lang?: import('./appSettings').LangCode;
@@ -100,6 +102,7 @@ export async function saveLyricsProject(
     bodyHtml: project.bodyHtml,
     pageHtmls: project.pageHtmls,
     layoutProfile: project.layoutProfile,
+    ...(project.titleMarkupHtml ? { titleMarkupHtml: project.titleMarkupHtml } : {}),
     ...(project.includeVocabAndGrammar !== undefined
       ? { includeVocabAndGrammar: project.includeVocabAndGrammar }
       : {}),
@@ -110,7 +113,27 @@ export async function saveLyricsProject(
 }
 
 export async function deleteSavedLyricsProject(id: string): Promise<void> {
-  await runTransaction('readwrite', (store) => store.delete(id));
+  await deleteSavedLyricsProjects([id]);
+}
+
+export async function deleteSavedLyricsProjects(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    for (const id of ids) {
+      store.delete(id);
+    }
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error ?? new Error('删除歌词项目失败'));
+    };
+  });
 }
 
 function sanitizeDirName(name: string): string {

@@ -1,4 +1,4 @@
-import type { PosterLayoutProfile, PosterPageSlice } from './furiganaLayout/types';
+import type { PosterLayoutProfile, PosterPageSlice } from './shufuriPoster/types';
 import { isNativeWebView, postExportVectorPdf } from './nativeBridge';
 import { exportPosterPdfFromPageHtmls, posterPdfExportFilename } from './pdfExport';
 import { buildPrintDocumentHtml } from './vectorPrint/buildPrintDocumentHtml';
@@ -20,7 +20,7 @@ export async function exportPosterPdf(
   const filename = posterPdfExportFilename(baseName, layoutProfile);
 
   if (isNativeWebView()) {
-    const html = await buildPrintDocumentHtml(pages, title, layoutProfile, artist, language);
+    const html = await buildPrintDocumentHtml(pages, title, layoutProfile, artist, language, lang);
     const spec = printPageSpec(layoutProfile);
     await postExportVectorPdf({
       html,

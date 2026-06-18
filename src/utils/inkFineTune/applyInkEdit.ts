@@ -10,12 +10,16 @@ function parseBodyDoc(bodyHtml: string): { doc: Document; root: Element } | null
   return { doc, root };
 }
 
+export function applyGlossLineEdit(bodyHtml: string, groupIndex: number, newGloss: string): string {
+  return applyZhLineEdit(bodyHtml, groupIndex, newGloss);
+}
+
 export function applyZhLineEdit(bodyHtml: string, groupIndex: number, newZh: string): string {
   const parsed = parseBodyDoc(bodyHtml);
   if (!parsed) return bodyHtml;
 
   const group = parsed.root.querySelector(`[data-ink-g="${groupIndex}"]`);
-  const zhLine = group?.querySelector('.zh-line');
+  const zhLine = group?.querySelector('.zh-line') ?? group?.querySelector('.gloss-line');
   if (!zhLine) return bodyHtml;
 
   zhLine.textContent = newZh.trim();
@@ -33,7 +37,9 @@ export function applyRubyEdit(
   if (!parsed) return bodyHtml;
 
   const group = parsed.root.querySelector(`[data-ink-g="${groupIndex}"]`);
-  const ruby = group?.querySelector(`.jp-line ruby[data-ink-r="${rubyIndex}"]`);
+  const ruby = group?.querySelector(
+    `.jp-line ruby[data-ink-r="${rubyIndex}"], .cn-line ruby[data-ink-r="${rubyIndex}"]`,
+  );
   if (!ruby) return bodyHtml;
 
   const k = kanji.trim();

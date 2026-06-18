@@ -1,0 +1,353 @@
+.study-cards-library {
+  margin-top: 0;
+  padding-top: var(--ui-space-3);
+}
+
+.study-cards-drawer {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 520;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 420px);
+  max-height: min(78vh, 640px);
+  margin: 0;
+  padding: 0 0 calc(var(--safe-bottom, 0px) + 12px);
+  border: none;
+  background: var(--color-bg-elevated);
+  box-shadow: var(--shadow-modal);
+  transform: translate(-50%, 100%);
+  opacity: 0;
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.28s ease;
+  pointer-events: none;
+}
+
+.study-cards-drawer.is-open {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.study-cards-drawer.is-closing {
+  transform: translate(-50%, 100%);
+  opacity: 0;
+}
+
+.study-cards-drawer.is-open.is-dismiss-dragging {
+  transition: none;
+}
+
+.study-cards-drawer__dismiss-handle {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 28px;
+  padding: 10px 24px 4px;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.study-cards-drawer__dismiss-handle:active {
+  cursor: grabbing;
+}
+
+.study-cards-drawer__binding {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-border);
+  pointer-events: none;
+}
+
+.study-cards-drawer__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 12px calc(18px + var(--safe-right)) 10px calc(18px + var(--safe-left));
+}
+
+.study-cards-drawer__header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.study-cards-drawer__lang-filter {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 1px 4px;
+  border: none;
+  border-radius: 2px;
+  font-family: var(--ui-font-sans);
+  font-size: 6px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  cursor: pointer;
+  transition:
+    background var(--ui-transition),
+    color var(--ui-transition);
+}
+
+.study-cards-drawer__lang-filter:hover {
+  background: color-mix(in srgb, var(--color-accent) 32%, transparent);
+}
+
+.study-cards-drawer__lang-filter:active {
+  background: color-mix(in srgb, var(--color-accent) 40%, transparent);
+}
+
+.study-cards-drawer__header-aside {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px 12px;
+  margin-left: auto;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.study-cards-drawer__select-all {
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  font-family: var(--ui-font-sans);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  transition: color var(--ui-transition);
+}
+
+.study-cards-drawer__select-all:hover {
+  color: var(--color-fg);
+}
+
+.study-cards-drawer__delete-selected {
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  font-family: var(--ui-font-sans);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  cursor: pointer;
+  transition: color var(--ui-transition);
+}
+
+.study-cards-drawer__delete-selected:hover:not(:disabled) {
+  color: var(--color-fg);
+}
+
+.study-cards-drawer__delete-selected:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.study-cards-drawer__close {
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  font-family: var(--ui-font-sans);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+}
+
+.study-cards-drawer__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 14px 0;
+}
+
+.study-cards-drawer__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.study-cards-drawer__row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 10px;
+  min-height: 56px;
+}
+
+.study-cards-drawer__row-check {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0 0 0 4px;
+  cursor: pointer;
+}
+
+.study-cards-drawer__row-check input {
+  margin: 0;
+}
+
+.study-cards-drawer__checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.study-cards-drawer__row-open {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 14px;
+  text-align: left;
+  cursor: pointer;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--color-bg-elevated) 94%, #fffaf5) 0%,
+    color-mix(in srgb, var(--color-accent) 8%, var(--color-bg-subtle)) 100%
+  );
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 50%, transparent) inset,
+    0 6px 16px color-mix(in srgb, var(--color-accent) 10%, transparent),
+    0 1px 3px rgba(15, 23, 42, 0.06);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.study-cards-drawer__row-open:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 50%, transparent) inset,
+    0 10px 22px color-mix(in srgb, var(--color-accent) 14%, transparent),
+    0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.study-cards-drawer__row-open:active {
+  transform: translateY(0);
+}
+
+.study-cards-drawer__row.is-selected .study-cards-drawer__row-open {
+  outline: 1px solid color-mix(in srgb, var(--color-accent) 28%, transparent);
+}
+
+.study-cards-drawer__row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.study-cards-drawer__row-front {
+  display: block;
+  min-width: 0;
+  font-family: var(--font-serif-jp);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--color-fg);
+  word-break: break-word;
+}
+
+.study-cards-drawer__row-front[data-lang='ko'] {
+  font-family: var(--font-serif-ko);
+}
+
+.study-cards-drawer__row-front[data-lang='zh'] {
+  font-family: var(--font-serif-zh);
+}
+
+.study-cards-drawer__row-meta {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--ui-font-sans);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--color-fg-muted);
+}
+
+.study-cards-drawer__row-delete {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  padding: 4px 6px;
+  font-family: var(--ui-font-sans);
+  font-size: 11px;
+  color: transparent;
+  cursor: pointer;
+  transition: color var(--ui-transition);
+  z-index: 1;
+}
+
+.study-cards-drawer__row:hover .study-cards-drawer__row-delete,
+.study-cards-drawer__row:focus-within .study-cards-drawer__row-delete {
+  color: var(--ui-fg-muted);
+}
+
+.study-cards-drawer__row-delete:hover {
+  color: var(--ui-fg-secondary);
+}
+
+.study-cards-drawer__footer {
+  flex-shrink: 0;
+  padding: 14px 18px 0;
+  text-align: center;
+}
+
+.study-cards-drawer__export {
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  font-family: var(--ui-font-sans);
+  font-size: 12px;
+  font-weight: var(--ui-weight-medium);
+  letter-spacing: 0.12em;
+  color: var(--color-fg-secondary);
+  cursor: pointer;
+  transition: color var(--ui-transition);
+}
+
+.study-cards-drawer__export:hover:not(:disabled) {
+  color: var(--color-fg);
+}
+
+.study-cards-drawer__export:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.study-cards-drawer__export-hint {
+  margin: 6px 0 0;
+  font-size: 10px;
+  color: var(--color-fg-faint);
+}
+
+html.study-cards-drawer-open .app-screen__body {
+  overflow: hidden;
+}
+
+html.study-cards-drawer-open .home-body {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease-in-out;
+}

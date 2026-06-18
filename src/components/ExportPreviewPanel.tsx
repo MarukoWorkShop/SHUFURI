@@ -1,7 +1,7 @@
 import type { RefObject } from 'react';
-import FuriganaHtmlPosterPreview from './FuriganaPosterPreview';
-import PosterLayoutToggle from './PosterLayoutToggle';
-import type { PosterLayoutProfile, PosterPageSlice } from '../utils/furiganaLayout/types';
+import ShufuriPosterPreview from './ShufuriPosterPreview';
+import PosterLayoutWheel from './PosterLayoutWheel';
+import type { PosterLayoutProfile, PosterPageSlice } from '../utils/shufuriPoster/types';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
 
 type Props = {
@@ -42,20 +42,17 @@ export default function ExportPreviewPanel({
   return (
     <div className="preview-area export-area">
       <div className="preview-toolbar">
-        <div className="preview-toolbar-left">
+        <div className="preview-toolbar-nav">
           <button type="button" className="btn-secondary" onClick={onBackToEdit}>
             ← 返回编辑
           </button>
-        </div>
-
-        <div className="preview-toolbar-center">
-          <PosterLayoutToggle
+          <PosterLayoutWheel
             value={layoutProfile}
             onChange={(profile) => onLayoutChange(profile)}
           />
         </div>
 
-        <div className="preview-toolbar-right">
+        <div className="preview-toolbar-actions">
           <span className="page-count">共 {pages.length} 页</span>
           <span className="export-gallery-hint">长按页面保存到图库</span>
           <div className="export-buttons">
@@ -80,7 +77,7 @@ export default function ExportPreviewPanel({
       </div>
 
       <div ref={previewPagesRef} className="preview-pages-fit">
-        <FuriganaHtmlPosterPreview
+        <ShufuriPosterPreview
           title={title}
           artist={artist}
           pageSlices={pages}

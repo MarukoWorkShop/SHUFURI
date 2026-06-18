@@ -4,8 +4,8 @@
  */
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { ensurePosterFontsLoaded } from './furiganaLayout/fonts';
-import type { PosterLayoutProfile, PosterPageSlice } from './furiganaLayout/types';
+import { ensurePosterFontsLoaded } from './shufuriPoster/fonts';
+import type { PosterLayoutProfile, PosterPageSlice } from './shufuriPoster/types';
 import { isNativeWebView, postShareImage } from './nativeBridge';
 import {
   mountPosterExportPage,
@@ -262,7 +262,9 @@ export async function rasterizePosterLayoutPageRoot(el: HTMLElement): Promise<HT
 
 /** 根据排版模式为 PDF 文件名追加 wide / narrow 后缀 */
 export function posterPdfExportFilename(baseName: string, layoutProfile: PosterLayoutProfile): string {
-  const sizeTag = layoutProfile === 'mobilePoster' ? 'narrow' : 'wide';
+  let sizeTag = 'wide';
+  if (layoutProfile === 'mobilePoster') sizeTag = 'narrow';
+  else if (layoutProfile === 'squarePoster') sizeTag = 'square';
   const safeBase = baseName.replace(/[/\\?*:|"]/g, '_').slice(0, 110) || 'poster';
   return `${safeBase}_${sizeTag}`;
 }

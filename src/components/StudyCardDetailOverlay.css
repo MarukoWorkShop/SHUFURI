@@ -1,0 +1,311 @@
+.study-card-detail {
+  position: fixed;
+  inset: 0;
+  z-index: 560;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--safe-top, 0px) + 16px) 16px calc(var(--safe-bottom, 0px) + 16px);
+}
+
+.study-card-detail__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: color-mix(in srgb, var(--color-fg) 28%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+
+.study-card-detail__stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(calc(100vw - 32px), calc(100vh - 200px), 340px);
+  max-height: 100%;
+}
+
+.study-card-scene {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  perspective: 1200px;
+}
+
+.study-card-flip {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.62s cubic-bezier(0.34, 1.15, 0.48, 1);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.study-card-flip.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.study-card-face {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 18px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 40%, transparent) inset,
+    0 14px 36px color-mix(in srgb, var(--color-accent) 18%, transparent),
+    0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.study-card-face__inner {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 24px 20px;
+  overflow: hidden;
+}
+
+.study-card-face--front {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--color-bg-elevated) 92%, #fff6ee) 0%,
+    color-mix(in srgb, var(--color-accent) 12%, #fff8f0) 48%,
+    color-mix(in srgb, var(--color-accent) 22%, #f5ebe0) 100%
+  );
+}
+
+.study-card-face--front .study-card-face__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.study-card-face--back {
+  transform: rotateY(180deg);
+  text-align: left;
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--color-bg-elevated) 88%, #fffaf5) 0%,
+    color-mix(in srgb, var(--color-accent) 10%, #faf3ea) 100%
+  );
+}
+
+.study-card-face__inner--back {
+  --study-card-back-emphasis: clamp(15px, 4.2vw, 17px);
+  --study-card-back-meta: 11px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.study-card-face__kind {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  font-family: var(--ui-font-sans);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--color-accent);
+  opacity: 0.72;
+}
+
+.study-card-face__headline {
+  font-family: var(--study-card-serif, var(--font-serif-jp));
+  font-size: clamp(24px, 7vw, 32px);
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+  color: var(--color-fg);
+  word-break: break-word;
+}
+
+.study-card-face__headline ruby {
+  ruby-align: center;
+  -webkit-ruby-position: before;
+  ruby-position: over;
+}
+
+.study-card-face__headline rt {
+  font-size: 0.42em;
+  letter-spacing: 0.08em;
+  color: var(--color-accent-muted);
+}
+
+.study-card-face__gloss {
+  margin: 12px 0 0;
+  font-family: var(--ui-font-sans);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--color-fg-secondary);
+}
+
+.study-card-back__label {
+  margin: 0 0 5px;
+  font-family: var(--ui-font-sans);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-fg-muted);
+}
+
+.study-card-back__label:not(:first-child) {
+  margin-top: 14px;
+}
+
+.study-card-back__meaning {
+  margin: 0;
+  font-family: var(--study-card-serif, var(--font-serif-jp));
+  font-size: var(--study-card-back-emphasis, clamp(15px, 4.2vw, 17px));
+  line-height: 1.42;
+  color: var(--color-fg);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+/* 背面大号汉语释义：宋体；标签/译文/正面 gloss 仍走 PingFang */
+.study-card-back__meaning--han {
+  font-family: var(--font-serif-zh);
+}
+
+/* 勿对含 ruby 的行使用 -webkit-line-clamp：iOS WebKit 会只渲染 rt、隐藏主字 */
+.study-card-back__source-lyric {
+  margin: 0;
+  font-family: var(--study-card-serif, var(--font-serif-jp));
+  font-size: var(--study-card-back-emphasis, clamp(15px, 4.2vw, 17px));
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+  color: var(--color-fg);
+  word-break: break-word;
+}
+
+.study-card-back__source-lyric ruby {
+  ruby-align: center;
+  -webkit-ruby-position: before;
+  ruby-position: over;
+}
+
+.study-card-back__source-lyric rt {
+  font-size: 0.42em;
+  letter-spacing: 0.06em;
+  color: var(--color-accent-muted);
+}
+
+.study-card-back__source-meta {
+  margin: 6px 0 0;
+  font-family: var(--ui-font-sans);
+  font-size: var(--study-card-back-meta, 11px);
+  line-height: 1.5;
+  color: var(--color-fg-secondary);
+}
+
+.study-card-back__source-sep {
+  opacity: 0.55;
+}
+
+.study-card-back__source-song {
+  white-space: nowrap;
+}
+
+.study-card-back__lyric--zh {
+  margin: 0;
+  font-family: var(--ui-font-sans);
+  font-size: var(--study-card-back-meta, 11px);
+  line-height: 1.5;
+  color: var(--color-fg-secondary);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.study-card-detail__hint {
+  margin: 14px 0 0;
+  font-family: var(--ui-font-sans);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: color-mix(in srgb, var(--color-bg-elevated) 72%, var(--color-fg));
+  opacity: 0.85;
+}
+
+.study-card-detail__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 18px;
+}
+
+.study-card-detail__nav-btn {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 12px;
+  font-family: var(--ui-font-sans);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--color-fg-secondary);
+  background: color-mix(in srgb, var(--color-bg-elevated) 88%, transparent);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.1);
+  cursor: pointer;
+  transition:
+    opacity var(--ui-transition),
+    transform var(--ui-transition);
+}
+
+.study-card-detail__nav-btn:hover:not(:disabled) {
+  color: var(--color-fg);
+}
+
+.study-card-detail__nav-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.study-card-detail__nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.study-card-detail__nav-btn--close {
+  flex: 1.15;
+  color: var(--color-accent-on);
+  background: var(--color-accent);
+}
+
+.study-card-detail__counter {
+  margin: 10px 0 0;
+  font-family: var(--ui-font-sans);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--color-bg-elevated) 70%, var(--color-fg));
+  font-variant-numeric: tabular-nums;
+}
+
+/* 语种衬线：jp/en→KozMin · ko→Batang · zh→宋体 */
+.study-card-flip[data-lang='jp'],
+.study-card-flip[data-lang='en'] {
+  --study-card-serif: var(--font-serif-jp);
+}
+
+.study-card-flip[data-lang='ko'] {
+  --study-card-serif: var(--font-serif-ko);
+}
+
+.study-card-flip[data-lang='zh'] {
+  --study-card-serif: var(--font-serif-zh);
+}

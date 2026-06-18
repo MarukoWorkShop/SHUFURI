@@ -1,17 +1,15 @@
 /** 歌词 HTML 本地归一化与校验（无 AI 依赖） */
 
 import { cleanDoubaoPaste } from '../utils/cleanDoubaoPaste';
-import {
-  isStructuredLyricsText,
-  parseStructuredLyricsText,
-  extractStructuredHeader,
-} from '../utils/structuredLyricsParser';
+import { compileDocument, isLegacyStructuredLyricsText, isStreamCodecText } from '../codec';
+import { extractStreamHeader } from '../codec/parseStream';
 import {
   DEFAULT_ARTIST,
   normalizeArtistName,
-} from '../utils/furiganaLayout/posterTitle';
+} from '../utils/shufuriPoster/posterTitle';
 
 import type { LangCode } from './appSettings';
+import { getAppSettings } from './appSettings';
 
 export type PreparedPasteForLayout = {
   bodyHtml: string;
@@ -20,28 +18,33 @@ export type PreparedPasteForLayout = {
   lang?: LangCode;
 };
 
-/** 将粘贴内容（结构化文本或 HTML）转为可排版 bodyHtml */
+/** 将粘贴内容（记录流或 HTML）转为可排版 bodyHtml */
 export function preparePasteForLayout(raw: string): PreparedPasteForLayout {
   const trimmed = cleanDoubaoPaste(raw.trim());
   if (!trimmed) {
     throw new Error('粘贴内容为空');
   }
 
-  if (isStructuredLyricsText(trimmed)) {
-    return parseStructuredLyricsText(trimmed);
+  if (isLegacyStructuredLyricsText(trimmed)) {
+    throw new Error('旧版 ===BEGIN=== 格式已停用，请重新复制 AI 口令并粘贴新记录流（@0 … @9）');
+  }
+
+  if (isStreamCodecText(trimmed)) {
+    const settings = getAppSettings();
+    return compileDocument(trimmed, { interfaceLanguage: settings.interfaceLanguage });
   }
 
   if (isValidLyricsHtml(trimmed)) {
     return { bodyHtml: sanitizePastedHtml(trimmed) };
   }
 
-  throw new Error('内容需为 Shufu 结构化文本（===LYRICS===）或 HTML 片段');
+  throw new Error('内容需为记录流（@0 … @9）或 HTML 片段');
 }
 
-/** 从结构化粘贴文本的 # 歌手《歌名》 或 歌手《歌名》 行提取歌手 */
+/** 从 H 行或旧式 # 歌手《歌名》 提取歌手 */
 export function extractArtistFromLyricsRaw(raw: string): string | null {
   const normalized = cleanDoubaoPaste(raw.replace(/\r\n/g, '\n'));
-  const header = extractStructuredHeader(normalized);
+  const header = extractStreamHeader(normalized);
   if (header.artist && header.artist !== DEFAULT_ARTIST) {
     return header.artist;
   }
@@ -97,7 +100,7 @@ export function sanitizePastedHtml(html: string): string {
 }
 
 const LYRICS_HTML_MARKERS =
-  /(?:class\s*=\s*["'][^"']*\b(?:jp-line|ko-line|lyrics-group|lyrics-vocabulary|lyrics-grammar|clip-body)\b|<ruby\b)/i;
+  /(?:class\s*=\s*["'][^"']*\b(?:jp-line|ko-line|cn-line|lyrics-group|lyrics-vocabulary|lyrics-grammar|clip-body)\b|<ruby\b)/i;
 
 /** 轻量校验：非空 HTML 且含歌词相关标记 */
 export function isValidLyricsHtml(html: string): boolean {
@@ -106,7 +109,7 @@ export function isValidLyricsHtml(html: string): boolean {
   return LYRICS_HTML_MARKERS.test(t);
 }
 
-/** 补全词汇/语法板块的分页标记（打开旧歌词库记录时也会用到） */
+/** 补全词汇/语法板块的分页标记，并确保 clip-body 包裹（分页器需单一根或 clip-body） */
 export function normalizeLyricsBodyHtml(html: string): string {
-  return ensureSectionPageBreakAttrs(html.trim());
+  return wrapClipBody(ensureSectionPageBreakAttrs(html.trim()));
 }

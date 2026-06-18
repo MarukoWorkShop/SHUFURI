@@ -1,36 +1,31 @@
 /**
- * 自测：---END===VOCAB=== 等区段粘连
+ * 自测：记录流 V/G 段解析
  * 运行: npx tsx scripts/testGluedSectionsPaste.mjs
  */
-import { readFileSync } from 'fs';
-import { cleanDoubaoPaste } from '../src/utils/cleanDoubaoPaste.ts';
-import { parseStructuredLyricsText } from '../src/utils/structuredLyricsParser.ts';
+import { compileDocument } from '../src/codec/compileDocument.ts';
 
-const samplePath = new URL('./fixtures/akizakura-glued-sections.txt', import.meta.url);
-const raw = readFileSync(samplePath, 'utf8');
+const raw = `@0
+H|山口百惠|秋樱|jp
+L|1|{淡:あわ}い{色:いろ}|淡淡的
+@1
+V|1|{秋桜:コスモス}|秋樱|1|
+@2
+G|1|ば形（假定形）|详解|1|译
+@9`;
 
-const cleaned = cleanDoubaoPaste(raw);
-const parsed = parseStructuredLyricsText(cleaned);
-
+const parsed = compileDocument(raw);
 const vocabCount = (parsed.bodyHtml.match(/class="lyrics-vocab-item"/g) || []).length;
 const grammarCount = (parsed.bodyHtml.match(/class="lyrics-grammar-item"/g) || []).length;
-const hasVocabSection = parsed.bodyHtml.includes('lyrics-vocabulary');
-const hasGrammarSection = parsed.bodyHtml.includes('lyrics-grammar');
-
-console.log('has VOCAB section:', hasVocabSection, 'items:', vocabCount);
-console.log('has GRAMMAR section:', hasGrammarSection, 'items:', grammarCount);
-console.log('title:', parsed.title, 'artist:', parsed.artist);
 
 const ok =
-  hasVocabSection &&
-  hasGrammarSection &&
+  parsed.bodyHtml.includes('lyrics-vocabulary') &&
+  parsed.bodyHtml.includes('lyrics-grammar') &&
   vocabCount === 1 &&
   grammarCount === 1 &&
   parsed.title === '秋樱';
 
 if (!ok) {
   console.error('FAIL');
-  console.error('cleaned tail:\n', cleaned.slice(-400));
   process.exit(1);
 }
 console.log('OK');

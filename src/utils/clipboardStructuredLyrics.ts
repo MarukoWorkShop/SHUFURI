@@ -1,19 +1,18 @@
 import type { LangCode } from '../services/appSettings';
 import { cleanDoubaoPaste } from './cleanDoubaoPaste';
-import {
-  extractStructuredHeader,
-  extractStructuredLang,
-  isStructuredLyricsText,
-} from './structuredLyricsParser';
+import { isLegacyStructuredLyricsText, isStreamCodecText } from '../codec';
+import { extractStreamHeader, extractStreamLang } from '../codec/parseStream';
 
 export function prepareStructuredLyricsClipboardText(raw: string): string {
   return cleanDoubaoPaste(raw.trim());
 }
 
-/** 剪贴板内容是否为可排版的结构化歌词（与 preparePasteForLayout 同源判定） */
+/** 剪贴板内容是否为可排版的记录流 */
 export function isStructuredLyricsClipboardText(raw: string): boolean {
   const trimmed = prepareStructuredLyricsClipboardText(raw);
-  return trimmed.length > 0 && isStructuredLyricsText(trimmed);
+  if (!trimmed.length) return false;
+  if (isLegacyStructuredLyricsText(trimmed)) return false;
+  return isStreamCodecText(trimmed);
 }
 
 export type StructuredLyricsCardFallbacks = {
@@ -21,7 +20,7 @@ export type StructuredLyricsCardFallbacks = {
   artist?: string;
 };
 
-/** 从结构化歌词提取确认卡片展示用的歌名 / 歌手 */
+/** 从记录流提取确认卡片展示用的歌名 / 歌手 */
 export function getStructuredLyricsCardMeta(
   raw: string,
   fallbacks?: StructuredLyricsCardFallbacks,
@@ -30,7 +29,7 @@ export function getStructuredLyricsCardMeta(
     return null;
   }
   const trimmed = prepareStructuredLyricsClipboardText(raw);
-  const header = extractStructuredHeader(trimmed);
+  const header = extractStreamHeader(trimmed);
   const title =
     header.title?.trim() ||
     fallbacks?.title?.trim() ||
@@ -39,7 +38,7 @@ export function getStructuredLyricsCardMeta(
     header.artist?.trim() ||
     fallbacks?.artist?.trim() ||
     '';
-  const lang = extractStructuredLang(trimmed);
+  const lang = extractStreamLang(trimmed);
   return { title, artist, lang };
 }
 

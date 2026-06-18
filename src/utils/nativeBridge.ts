@@ -8,7 +8,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Clipboard } from '@capacitor/clipboard';
 import { Share } from '@capacitor/share';
-import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { App } from '@capacitor/app';
 import SaveToGallery from '../bridge/saveToGalleryPlugin';
 import type { GalleryPermissionStatus } from '../bridge/saveToGalleryPlugin';
@@ -172,6 +172,26 @@ export async function postShareImage(payload: Omit<ShareImagePayload, 'type' | '
     title: payload.filename,
     url: uri,
     dialogTitle: `分享 ${payload.filename}`,
+  });
+}
+
+export async function shareTextFile(
+  content: string,
+  filename: string,
+  dialogTitle = '分享文本',
+): Promise<void> {
+  const base = filename.replace(/\.txt$/i, '');
+  const safeName = sanitizeFilename(base);
+  const result = await Filesystem.writeFile({
+    path: `${safeName}.txt`,
+    data: content,
+    directory: Directory.Cache,
+    encoding: Encoding.UTF8,
+  });
+  await Share.share({
+    title: safeName,
+    url: result.uri,
+    dialogTitle,
   });
 }
 

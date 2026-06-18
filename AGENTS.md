@@ -19,13 +19,15 @@ Vite + React web app. Run `npm run dev` to start the dev server.
   → joinPageBlocks（输出 HTML 字符串数组）
 ```
 
-**入口函数**: `paginateFuriganaBodyHtml`（`src/utils/furiganaLayout/paginateFuriganaHtml.ts`）
+**入口函数**: `paginateShufuriPosterBodyHtml`（`src/utils/shufuriPoster/paginateShufuriPosterHtml.ts`；兼容别名 `paginateFuriganaBodyHtml`）
 
-**预览组件**: `FuriganaPosterPreview`（`src/components/FuriganaPosterPreview.tsx`）
+**预览组件**: `ShufuriPosterPreview`（`src/components/ShufuriPosterPreview.tsx`）
+
+**Typography API**: `src/utils/posterTypography/` — `resolvePosterTypography` → `compilePosterCss`
 
 ---
 
-### 二、核心尺寸常量（`src/utils/furiganaLayout/dimensions.ts`）
+### 二、核心尺寸常量（`src/utils/shufuriPoster/dimensions.ts`）
 
 | 参数 | B5 打印 (600×852) | 手机竖屏 (1080×1920) |
 |---|---|---|
@@ -40,9 +42,9 @@ Vite + React web app. Run `npm run dev` to start the dev server.
 
 ---
 
-### 三、CSS 生成（`buildFuriganaPosterInnerCss` + `buildFuriganaPosterRootStyle`）
+### 三、CSS 生成（`buildShufuriPosterInnerCss` + `buildShufuriPosterRootStyle`）
 
-> **这些函数按 profile 参数动态生成不同尺寸的样式，必须与 `dimensions.ts` 联动修改。**
+> **Typography 由 `posterTypography/` 统一算力；`shufuriPosterShared` 为薄包装。**
 
 **根节点样式**（`buildFuriganaPosterRootStyle`）：
 - `display: flex; flex-direction: column; box-sizing: border-box`
