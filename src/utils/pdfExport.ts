@@ -495,6 +495,7 @@ export async function exportPosterPdfFromPageHtmls(
   artist?: string,
   language: import('../services/appSettings').LyricsLanguage = 'jp',
   lang?: import('../services/appSettings').LangCode,
+  renderOptions?: import('./shufuriPoster/types').PosterRenderOptions,
 ): Promise<void> {
   if (pageSlices.length === 0) {
     throw new Error('没有可导出的页面');
@@ -510,7 +511,16 @@ export async function exportPosterPdfFromPageHtmls(
   }
 
   await ensurePosterFontsLoaded();
-  const mounts = mountPosterExportPages(document, pageSlices, title, layoutProfile, artist, language, lang);
+  const mounts = mountPosterExportPages(
+    document,
+    pageSlices,
+    title,
+    layoutProfile,
+    artist,
+    language,
+    lang,
+    renderOptions,
+  );
   const { width, height } = getPosterExportCanvasSize(layoutProfile);
 
   // 【闪烁修复】在栅格化前才将所有页面的 backdrop 移入可见区域
@@ -572,6 +582,7 @@ export async function rasterizePageHtmlToBlob(
   options: QuickSaveImageOptions = {},
   language: import('../services/appSettings').LyricsLanguage = 'jp',
   lang?: import('../services/appSettings').LangCode,
+  renderOptions?: import('./shufuriPoster/types').PosterRenderOptions,
 ): Promise<{ blob: Blob; mimeType: 'image/jpeg' | 'image/png' }> {
   const format = options.format ?? 'jpeg';
   const jpegQuality = options.jpegQuality ?? QUICK_SAVE_JPEG_QUALITY;
@@ -591,6 +602,7 @@ export async function rasterizePageHtmlToBlob(
     spacingScale,
     language,
     lang,
+    renderOptions,
   });
   mount.prepare({ visible: prepareVisible });
   try {
@@ -679,6 +691,7 @@ export async function exportPosterPngFromPageHtmls(
   artist?: string,
   language: import('../services/appSettings').LyricsLanguage = 'jp',
   lang?: import('../services/appSettings').LangCode,
+  renderOptions?: import('./shufuriPoster/types').PosterRenderOptions,
 ): Promise<number> {
   if (pageSlices.length === 0) {
     throw new Error('没有可导出的页面');
@@ -706,6 +719,7 @@ export async function exportPosterPngFromPageHtmls(
       },
       language,
       lang,
+      renderOptions,
     );
 
     const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';

@@ -19,7 +19,7 @@ import {
 import { ZH_FONT_FAMILY } from '../utils/shufuriPoster/fonts';
 import { resolvePosterPipelineLang } from '../utils/shufuriPoster/inferPosterLang';
 import { PAGE_GAP_PX } from '../hooks/usePosterPreviewFitScale';
-import type { PosterLayoutProfile, PosterPageSlice } from '../utils/shufuriPoster/types';
+import type { PosterLayoutProfile, PosterPageSlice, PosterRenderOptions } from '../utils/shufuriPoster/types';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
 import { useTimedMessage } from '../hooks/useTimedMessage';
@@ -63,6 +63,7 @@ type ShufuriPosterSinglePageProps = {
   spacingScale?: number;
   language?: LyricsLanguage;
   lang?: LangCode;
+  renderOptions?: PosterRenderOptions;
   captureRef?: Ref<HTMLDivElement>;
 };
 
@@ -79,8 +80,10 @@ function ShufuriPosterSinglePage({
   spacingScale = 1,
   language = 'jp',
   lang,
+  renderOptions,
   captureRef,
 }: ShufuriPosterSinglePageProps) {
+  const showRuby = renderOptions?.showRuby ?? true;
   const safeFragment = useMemo(
     () => sanitizeShufuriPosterHtml(bodyFragmentHtml),
     [bodyFragmentHtml],
@@ -98,8 +101,11 @@ function ShufuriPosterSinglePage({
         language,
         lang: pipelineLang,
         colorTheme: getAppSettings().colorTheme,
+        showRuby: renderOptions?.showRuby,
+        userFontScale: renderOptions?.userFontScale,
+        userLineHeightScale: renderOptions?.userLineHeightScale,
       }),
-    [layoutProfile, spacingScale, language, pipelineLang],
+    [layoutProfile, spacingScale, language, pipelineLang, renderOptions],
   );
   const rootStyle = useMemo(
     () => buildShufuriPosterRootStyle(layoutProfile),
@@ -195,6 +201,7 @@ function ShufuriPosterSinglePage({
         },
         language,
         lang,
+        renderOptions,
       );
 
       if (native) {
@@ -265,6 +272,7 @@ function ShufuriPosterSinglePage({
     pageCount,
     layoutProfile,
     spacingScale,
+    renderOptions,
   ]);
 
   const onTouchStartPage = useCallback(
@@ -346,6 +354,7 @@ function ShufuriPosterSinglePage({
         <div
           ref={captureRef}
           className="fv-html-poster-root"
+          data-ruby-visible={showRuby ? 'true' : 'false'}
           style={rootStyle as CSSProperties}
         >
           <style>{innerCss}</style>
@@ -396,6 +405,7 @@ export type ShufuriPosterPreviewProps = {
   pageGapPx?: number;
   language?: LyricsLanguage;
   lang?: LangCode;
+  renderOptions?: PosterRenderOptions;
   captureRef?: (pageIndex: number) => (el: HTMLDivElement | null) => void;
 };
 
@@ -409,6 +419,7 @@ export default function ShufuriPosterPreview({
   pageGapPx = PAGE_GAP_PX,
   language,
   lang,
+  renderOptions,
   captureRef,
 }: ShufuriPosterPreviewProps) {
   const pages = pageSlices.length > 0 ? pageSlices : [{ html: '', spacingScale: 1 }];
@@ -430,6 +441,7 @@ export default function ShufuriPosterPreview({
           displayScale={displayScale}
           language={language}
           lang={lang}
+          renderOptions={renderOptions}
           captureRef={captureRef?.(i)}
         />
       ))}

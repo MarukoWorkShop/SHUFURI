@@ -127,6 +127,9 @@ export type FuriganaPosterCssOptions = {
   language?: LyricsLanguage;
   lang?: LangCode;
   colorTheme?: ColorTheme;
+  showRuby?: boolean;
+  userFontScale?: number;
+  userLineHeightScale?: number;
 };
 
 export function buildShufuriPosterInnerCss(
@@ -134,14 +137,18 @@ export function buildShufuriPosterInnerCss(
   options: FuriganaPosterCssOptions = {},
 ): string {
   const lang = resolveLangFromOptions(options);
+  const showRuby = options.showRuby ?? true;
   const resolved = resolvePosterTypography({
     profile,
     lang,
     spacingScale: options.spacingScale,
     colorTheme: options.colorTheme,
     language: options.language,
+    showRuby,
+    userFontScale: options.userFontScale,
+    userLineHeightScale: options.userLineHeightScale,
   });
-  return compilePosterCss(resolved, { unit: 'px', viewMode: 'screen' });
+  return compilePosterCss(resolved, { unit: 'px', viewMode: 'screen', showRuby });
 }
 
 /** @deprecated 使用 buildShufuriPosterInnerCss */

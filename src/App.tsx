@@ -33,7 +33,14 @@ import {
   inkEditSnapshotsEqual,
   INK_EDIT_UNDO_LIMIT,
 } from './utils/inkFineTune/inkEditHistory';
-import type { PosterLayoutProfile, PosterPageSlice } from './utils/shufuriPoster/types';
+import {
+  DEFAULT_PREVIEW_TYPOGRAPHY,
+  buildPosterRenderOptions,
+  type PosterLayoutProfile,
+  type PosterPageSlice,
+  type PreviewTypography,
+} from './utils/shufuriPoster/types';
+import { resolvePosterPipelineLang } from './utils/shufuriPoster/inferPosterLang';
 import SettingsPanel from './components/SettingsPanel';
 import SettingsMenuIcon from './components/icons/SettingsMenuIcon';
 import LinkChainIcon from './components/icons/LinkChainIcon';
@@ -305,6 +312,12 @@ export default function App() {
   const [inkEditTarget, setInkEditTarget] = useState<InkEditTarget | null>(null);
   const [inkPopoverClosing, setInkPopoverClosing] = useState(false);
   const [inkToolboxOpen, setInkToolboxOpen] = useState(false);
+  const [showRubyAnnotations, setShowRubyAnnotations] = useState(true);
+  const [previewTypography, setPreviewTypography] = useState<PreviewTypography>(
+    DEFAULT_PREVIEW_TYPOGRAPHY,
+  );
+  const [repaginating, setRepaginating] = useState(false);
+  const repaginateDebounceRef = useRef<number | null>(null);
   const [titleMarkupHtml, setTitleMarkupHtml] = useState<string | undefined>(undefined);
   const [canUndoInkEdit, setCanUndoInkEdit] = useState(false);
   const [inkDraftKanji, setInkDraftKanji] = useState('');
@@ -318,6 +331,8 @@ export default function App() {
   const exportingRef = useRef(false);
   const undoStackRef = useRef<InkEditSnapshot[]>([]);
   const titleMarkupHtmlRef = useRef<string | undefined>(undefined);
+  const showRubyRef = useRef(showRubyAnnotations);
+  const previewTypographyRef = useRef(previewTypography);
 
   // ---- 用 refs 保持 bridge 回调中的最新状态 ----
   const bodyHtmlRef = useRef('');
@@ -335,6 +350,82 @@ export default function App() {
   useEffect(() => { layoutProfileRef.current = layoutProfile; }, [layoutProfile]);
   useEffect(() => { pagesRef.current = pages; }, [pages]);
   useEffect(() => { titleMarkupHtmlRef.current = titleMarkupHtml; }, [titleMarkupHtml]);
+  useEffect(() => { showRubyRef.current = showRubyAnnotations; }, [showRubyAnnotations]);
+  useEffect(() => { previewTypographyRef.current = previewTypography; }, [previewTypography]);
+
+  const posterPipelineLang = useMemo(
+    () => resolvePosterPipelineLang(lang, bodyHtml, lyricsLanguage),
+    [lang, bodyHtml, lyricsLanguage],
+  );
+  const rubyToggleSupported = posterPipelineLang === 'jp' || posterPipelineLang === 'zh';
+  const posterRenderOpts = useMemo(
+    () => buildPosterRenderOptions(showRubyAnnotations, previewTypography),
+    [showRubyAnnotations, previewTypography],
+  );
+
+  const rebuildExportPages = useCallback(async () => {
+    if (!bodyHtml.trim()) {
+      setPages([]);
+      resetPosterPageRefs(pageRefs, 0);
+      return;
+    }
+    setRepaginating(true);
+    try {
+      await ensurePosterFontsLoaded();
+      const pageHtmls = buildPosterPagesFromBody(
+        bodyHtml,
+        title,
+        layoutProfile,
+        artist,
+        lyricsLanguage,
+        lang,
+        titleMarkupHtml,
+        buildPosterRenderOptions(showRubyAnnotations, previewTypography),
+      );
+      setPages(pageHtmls);
+      resetPosterPageRefs(pageRefs, pageHtmls.length);
+    } finally {
+      setRepaginating(false);
+    }
+  }, [
+    bodyHtml,
+    title,
+    layoutProfile,
+    artist,
+    lyricsLanguage,
+    lang,
+    titleMarkupHtml,
+    showRubyAnnotations,
+    previewTypography,
+  ]);
+
+  const scheduleRebuildExportPages = useCallback(() => {
+    if (repaginateDebounceRef.current != null) {
+      window.clearTimeout(repaginateDebounceRef.current);
+    }
+    repaginateDebounceRef.current = window.setTimeout(() => {
+      repaginateDebounceRef.current = null;
+      void rebuildExportPages();
+    }, 300);
+  }, [rebuildExportPages]);
+
+  const handleShowRubyChange = useCallback(
+    (next: boolean) => {
+      setShowRubyAnnotations(next);
+      if (mode === 'export') {
+        void rebuildExportPages();
+      }
+    },
+    [mode, rebuildExportPages],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (repaginateDebounceRef.current != null) {
+        window.clearTimeout(repaginateDebounceRef.current);
+      }
+    };
+  }, []);
 
   // ---- Native 导出处理器（通过 ref 读取最新状态） ----
   const handleNativeExport = useCallback(async (exportType: string) => {
@@ -363,6 +454,8 @@ export default function App() {
         currentArtist,
         lyricsLanguage,
         lang,
+        titleMarkupHtmlRef.current,
+        buildPosterRenderOptions(showRubyRef.current, previewTypographyRef.current),
       );
       pagesRef.current = currentPages;
       setPages(currentPages);
@@ -383,6 +476,7 @@ export default function App() {
           currentArtist,
           lyricsLanguage,
           lang,
+          buildPosterRenderOptions(showRubyRef.current, previewTypographyRef.current),
         );
       } else {
         await exportPosterPngFromPageHtmls(
@@ -393,6 +487,7 @@ export default function App() {
           currentArtist,
           lyricsLanguage,
           lang,
+          buildPosterRenderOptions(showRubyRef.current, previewTypographyRef.current),
         );
       }
 
@@ -648,6 +743,8 @@ export default function App() {
       setLang(nextLang);
       setTitleMarkupHtml(prepareTitleMarkupHtml(nextTitleMarkupHtml));
       setInkToolboxOpen(false);
+      setShowRubyAnnotations(true);
+      setPreviewTypography(DEFAULT_PREVIEW_TYPOGRAPHY);
       setInkEditTarget(null);
       undoStackRef.current = [];
       setCanUndoInkEdit(false);
@@ -670,12 +767,13 @@ export default function App() {
       lyricsLanguage,
       lang,
       titleMarkupHtml,
+      posterRenderOpts,
     );
     setLayoutProfile(exportProfile);
     setPages(pageHtmls);
     setMode('export');
     resetPosterPageRefs(pageRefs, pageHtmls.length);
-  }, [bodyHtml, title, artist, lyricsLanguage, lang, titleMarkupHtml]);
+  }, [bodyHtml, title, artist, lyricsLanguage, lang, titleMarkupHtml, posterRenderOpts]);
 
   const openProject = useCallback(
     async (project: SavedLyricsProject) => {
@@ -737,12 +835,13 @@ export default function App() {
         lyricsLanguage,
         lang,
         titleMarkupHtml,
+        posterRenderOpts,
       );
       setLayoutProfile(profile);
       setPages(pageHtmls);
       resetPosterPageRefs(pageRefs, pageHtmls.length);
     },
-    [layoutProfile, bodyHtml, title, artist, lyricsLanguage, lang, titleMarkupHtml],
+    [layoutProfile, bodyHtml, title, artist, lyricsLanguage, lang, titleMarkupHtml, posterRenderOpts],
   );
 
   const handleBackToEdit = useCallback(() => {
@@ -768,6 +867,8 @@ export default function App() {
     setLang(undefined);
     setTitleMarkupHtml(undefined);
     setInkToolboxOpen(false);
+    setShowRubyAnnotations(true);
+    setPreviewTypography(DEFAULT_PREVIEW_TYPOGRAPHY);
     undoStackRef.current = [];
     setCanUndoInkEdit(false);
     resetPosterPageRefs(pageRefs, 0);
@@ -885,7 +986,15 @@ export default function App() {
 
     try {
       await Promise.race([
-        exportPosterPdf(pages, resolveExportTitle(title), layoutProfile, artist, lyricsLanguage, lang),
+        exportPosterPdf(
+          pages,
+          resolveExportTitle(title),
+          layoutProfile,
+          artist,
+          lyricsLanguage,
+          lang,
+          posterRenderOpts,
+        ),
         deadline,
       ]);
     } catch (e) {
@@ -895,7 +1004,7 @@ export default function App() {
       exportingRef.current = false;
       setExporting(false);
     }
-  }, [pages, layoutProfile, title, artist]);
+  }, [pages, layoutProfile, title, artist, lyricsLanguage, lang, posterRenderOpts]);
 
   const handleSave = useCallback(async () => {
     if (!bodyHtml.trim() || saving) {
@@ -904,20 +1013,21 @@ export default function App() {
     setSaving(true);
     try {
       await ensurePosterFontsLoaded();
-      const pageHtmls =
-        pages.length > 0
-          ? posterPageHtmls(pages)
-          : posterPageHtmls(
-              buildPosterPagesFromBody(
-                bodyHtml,
-                title,
-                layoutProfile,
-                artist,
-                lyricsLanguage,
-                lang,
-                titleMarkupHtml,
-              ),
-            );
+      const slices = buildPosterPagesFromBody(
+        bodyHtml,
+        title,
+        layoutProfile,
+        artist,
+        lyricsLanguage,
+        lang,
+        titleMarkupHtml,
+        posterRenderOpts,
+      );
+      const pageHtmls = posterPageHtmls(slices);
+      if (mode === 'export') {
+        setPages(slices);
+        resetPosterPageRefs(pageRefs, slices.length);
+      }
       const cleanedBody = prepareBodyHtmlForPreview(bodyHtml);
       const cleanedTitleMarkup = prepareTitleMarkupHtml(titleMarkupHtml);
       const saved = await saveLyricsProject({
@@ -951,7 +1061,22 @@ export default function App() {
     } finally {
       setSaving(false);
     }
-  }, [bodyHtml, pages, savedProjectId, title, artist, lyrics, layoutProfile, saving, appToast.show, titleMarkupHtml, lyricsLanguage, lang, syncStudyCardsFromRaw]);
+  }, [
+    bodyHtml,
+    mode,
+    savedProjectId,
+    title,
+    artist,
+    lyrics,
+    layoutProfile,
+    saving,
+    appToast.show,
+    titleMarkupHtml,
+    lyricsLanguage,
+    lang,
+    posterRenderOpts,
+    syncStudyCardsFromRaw,
+  ]);
 
   const isWorkspaceMode = mode === 'edit' || mode === 'export';
   const inkFocusGroupIndex =
@@ -1073,8 +1198,11 @@ export default function App() {
               <InkToolbox
                 open={inkToolboxOpen}
                 canUndo={canUndoInkEdit}
+                showRuby={showRubyAnnotations}
+                rubySupported={rubyToggleSupported}
                 onToggle={() => setInkToolboxOpen((v) => !v)}
                 onUndo={handleInkUndo}
+                onShowRubyChange={handleShowRubyChange}
               />
               <div className="edit-toolbar">
                 <button type="button" className="btn-secondary" onClick={handleReset}>
@@ -1131,6 +1259,7 @@ export default function App() {
                     lang={lang}
                     language={lyricsLanguage}
                     colorTheme={appSettings.colorTheme}
+                    showRuby={showRubyAnnotations}
                   />
                 </InkFineTuneEditor>
               </div>
@@ -1146,13 +1275,21 @@ export default function App() {
               displayScale={exportScale}
               exporting={exporting}
               saving={saving}
+              repaginating={repaginating}
+              showRuby={showRubyAnnotations}
+              rubySupported={rubyToggleSupported}
+              previewTypography={previewTypography}
               previewPagesRef={exportPagesRef}
               onBackToEdit={handleBackToEdit}
               onLayoutChange={(profile) => void handleLayoutChange(profile)}
               onSave={() => void handleSave()}
               onExportPdf={() => void handleExportPdf()}
+              onShowRubyChange={handleShowRubyChange}
+              onPreviewTypographyChange={setPreviewTypography}
+              onPreviewTypographyCommit={scheduleRebuildExportPages}
               language={lyricsLanguage}
               lang={lang}
+              renderOptions={posterRenderOpts}
               captureRef={(index) => (el) => {
                 pageRefs.current[index] = el;
               }}

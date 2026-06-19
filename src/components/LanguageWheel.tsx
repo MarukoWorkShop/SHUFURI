@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { hapticButton } from '../hooks/useHaptics';
 import { isInteractionSoundEnabled, type LyricsLanguage } from '../services/appSettings';
-import { playWheelDialTickSound } from '../utils/wheelDialTickSound';
+import { playKataClickSound } from '../utils/kataClickSound';
 import './LanguageWheel.css';
 
 export type { LyricsLanguage as LangCode };
@@ -31,11 +31,7 @@ function langIndex(code: LyricsLanguage, languages: readonly LyricsLanguage[]): 
 function triggerWheelSnapFeedback(soundEnabled: boolean): void {
   if (!soundEnabled) return;
   hapticButton();
-}
-
-function triggerWheelDialTick(soundEnabled: boolean): void {
-  if (!soundEnabled) return;
-  playWheelDialTickSound();
+  playKataClickSound();
 }
 
 type Props = {
@@ -47,7 +43,7 @@ type Props = {
 };
 
 /**
- * 横向滚轮语言选择器：居中项清晰，两侧项缩小 + 模糊；拨过档位时机械咔嗒声，吸附时轻震。
+ * 横向滚轮语言选择器：居中项清晰，两侧项缩小 + 模糊；定住吸附时点击声 + 轻震。
  */
 export default function LanguageWheel({ value, onChange, languages, soundEnabled }: Props) {
   const wheelLanguages = useMemo(() => {
@@ -58,9 +54,9 @@ export default function LanguageWheel({ value, onChange, languages, soundEnabled
   const scrollerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const indexRef = useRef(langIndex(value, wheelLanguages));
-  const tickIndexRef = useRef(langIndex(value, wheelLanguages));
   const rafRef = useRef<number | null>(null);
   const settleTimerRef = useRef<number | null>(null);
+  const settleFeedbackKeyRef = useRef<string | null>(null);
   const feedbackEnabled = soundEnabled ?? isInteractionSoundEnabled();
 
   const applyItemVisuals = useCallback(() => {
@@ -92,46 +88,49 @@ export default function LanguageWheel({ value, onChange, languages, soundEnabled
   }, [wheelLanguages.length]);
 
   const commitIndex = useCallback(
-    (index: number, fromUser: boolean) => {
+    (index: number) => {
       const clamped = Math.max(0, Math.min(wheelLanguages.length - 1, index));
       if (clamped === indexRef.current) {
         applyItemVisuals();
         return;
       }
       indexRef.current = clamped;
-      tickIndexRef.current = clamped;
       const next = wheelLanguages[clamped]!;
       onChange(next);
-      if (fromUser) {
-        triggerWheelSnapFeedback(feedbackEnabled);
-      }
       applyItemVisuals();
     },
-    [applyItemVisuals, feedbackEnabled, onChange, wheelLanguages],
+    [applyItemVisuals, onChange, wheelLanguages],
   );
 
   const settleScroll = useCallback(
     (fromUser: boolean) => {
       const scroller = scrollerRef.current;
       if (!scroller) return;
-      const index = Math.round(scroller.scrollLeft / ITEM_W);
-      const targetLeft = index * ITEM_W;
+      const rawIndex = Math.round(scroller.scrollLeft / ITEM_W);
+      const clamped = Math.max(0, Math.min(wheelLanguages.length - 1, rawIndex));
+      const targetLeft = clamped * ITEM_W;
       if (Math.abs(scroller.scrollLeft - targetLeft) > 0.5) {
         scroller.scrollTo({ left: targetLeft, behavior: 'smooth' });
+        return;
       }
-      commitIndex(index, fromUser);
+      commitIndex(clamped);
+      if (!fromUser) return;
+      const feedbackKey = String(clamped);
+      if (settleFeedbackKeyRef.current === feedbackKey) return;
+      settleFeedbackKeyRef.current = feedbackKey;
+      triggerWheelSnapFeedback(feedbackEnabled);
     },
-    [commitIndex],
+    [commitIndex, feedbackEnabled, wheelLanguages.length],
   );
 
   const onScroll = useCallback(() => {
     const scroller = scrollerRef.current;
     if (scroller) {
-      const tickIndex = Math.round(scroller.scrollLeft / ITEM_W);
-      const clampedTick = Math.max(0, Math.min(wheelLanguages.length - 1, tickIndex));
-      if (clampedTick !== tickIndexRef.current) {
-        tickIndexRef.current = clampedTick;
-        triggerWheelDialTick(feedbackEnabled);
+      const rawIndex = Math.round(scroller.scrollLeft / ITEM_W);
+      const clamped = Math.max(0, Math.min(wheelLanguages.length - 1, rawIndex));
+      const targetLeft = clamped * ITEM_W;
+      if (Math.abs(scroller.scrollLeft - targetLeft) > 0.5) {
+        settleFeedbackKeyRef.current = null;
       }
     }
 
@@ -150,12 +149,12 @@ export default function LanguageWheel({ value, onChange, languages, soundEnabled
       settleTimerRef.current = null;
       settleScroll(true);
     }, 120);
-  }, [applyItemVisuals, settleScroll, feedbackEnabled, wheelLanguages.length]);
+  }, [applyItemVisuals, settleScroll, wheelLanguages.length]);
 
   useLayoutEffect(() => {
     const nextIndex = langIndex(value, wheelLanguages);
     indexRef.current = nextIndex;
-    tickIndexRef.current = nextIndex;
+    settleFeedbackKeyRef.current = null;
     scrollToIndex(nextIndex, false);
     applyItemVisuals();
   }, [value, wheelLanguages, scrollToIndex, applyItemVisuals]);

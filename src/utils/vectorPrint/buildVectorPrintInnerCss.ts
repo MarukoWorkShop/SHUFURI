@@ -12,6 +12,9 @@ export type VectorPrintCssOptions = {
   language?: LyricsLanguage;
   lang?: LangCode;
   colorTheme?: ColorTheme;
+  showRuby?: boolean;
+  userFontScale?: number;
+  userLineHeightScale?: number;
 };
 
 /**
@@ -29,11 +32,15 @@ export function buildVectorPrintInnerCss(
     spacingScale: options.spacingScale,
     colorTheme: options.colorTheme,
     language: options.language,
+    showRuby: options.showRuby,
+    userFontScale: options.userFontScale,
+    userLineHeightScale: options.userLineHeightScale,
   });
   return compilePosterCss(resolved, {
     unit: 'mm',
     spec,
     viewMode: 'screen',
     includeFontFaces: false,
+    showRuby: options.showRuby,
   });
 }

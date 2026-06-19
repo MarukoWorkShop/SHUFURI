@@ -15,12 +15,21 @@ export async function exportPosterPdf(
   artist?: string,
   language: LyricsLanguage = 'jp',
   lang?: LangCode,
+  renderOptions?: import('./shufuriPoster/types').PosterRenderOptions,
 ): Promise<void> {
   const baseName = title.trim() || '歌词笔记';
   const filename = posterPdfExportFilename(baseName, layoutProfile);
 
   if (isNativeWebView()) {
-    const html = await buildPrintDocumentHtml(pages, title, layoutProfile, artist, language, lang);
+    const html = await buildPrintDocumentHtml(
+      pages,
+      title,
+      layoutProfile,
+      artist,
+      language,
+      lang,
+      renderOptions,
+    );
     const spec = printPageSpec(layoutProfile);
     await postExportVectorPdf({
       html,
@@ -31,5 +40,14 @@ export async function exportPosterPdf(
     return;
   }
 
-  await exportPosterPdfFromPageHtmls(pages, title, layoutProfile, filename, artist, language, lang);
+  await exportPosterPdfFromPageHtmls(
+    pages,
+    title,
+    layoutProfile,
+    filename,
+    artist,
+    language,
+    lang,
+    renderOptions,
+  );
 }

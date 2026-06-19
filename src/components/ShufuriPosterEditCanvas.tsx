@@ -29,6 +29,7 @@ type Props = {
   /** 波轮歌词语言（auto 时仅作兜底） */
   language?: LyricsLanguage;
   colorTheme?: ColorTheme;
+  showRuby?: boolean;
 };
 
 export default function ShufuriPosterEditCanvas({
@@ -41,6 +42,7 @@ export default function ShufuriPosterEditCanvas({
   lang,
   language = 'jp',
   colorTheme,
+  showRuby = true,
 }: Props) {
   const safeBody = useMemo(() => sanitizeShufuriPosterHtml(bodyHtml), [bodyHtml]);
   const safeTitleMarkup = useMemo(
@@ -57,8 +59,9 @@ export default function ShufuriPosterEditCanvas({
         language,
         lang: pipelineLang,
         colorTheme,
+        showRuby,
       })}${buildShufuriEditDocumentCssOverrides()}`,
-    [layoutProfile, language, pipelineLang, colorTheme],
+    [layoutProfile, language, pipelineLang, colorTheme, showRuby],
   );
   const rootStyle = useMemo(
     () => buildShufuriEditDocumentRootStyle(layoutProfile),
@@ -112,6 +115,7 @@ export default function ShufuriPosterEditCanvas({
         <div
           ref={rootRef}
           className="fv-html-poster-root fv-edit-document-root"
+          data-ruby-visible={showRuby ? 'true' : 'false'}
           style={rootStyle as CSSProperties}
         >
           <style>{innerCss}</style>

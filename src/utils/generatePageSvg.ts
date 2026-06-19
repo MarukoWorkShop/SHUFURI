@@ -4,7 +4,7 @@
  * 将海报页面 HTML 转换为自包含 SVG（含嵌入字体与全量 CSS），
  * 支持任意缩放无锯齿，通过 foreignObject 保留原始 HTML 布局。
  */
-import type { PosterLayoutProfile } from './shufuriPoster/types';
+import type { PosterLayoutProfile, PosterRenderOptions } from './shufuriPoster/types';
 import {
   buildShufuriPosterInnerCss,
   buildShufuriPosterRootStyle,
@@ -51,6 +51,7 @@ export interface GeneratePageSvgOptions {
   spacingScale?: number;
   language?: LyricsLanguage;
   lang?: LangCode;
+  renderOptions?: PosterRenderOptions;
 }
 
 /**
@@ -68,7 +69,10 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
     spacingScale = 1,
     language = 'jp',
     lang,
+    renderOptions,
   } = opts;
+
+  const showRuby = renderOptions?.showRuby ?? true;
 
   const { width: w, height: h } = getShufuriPosterCanvasDimensions(layoutProfile);
   const pad = getShufuriCanvasInsets(layoutProfile);
@@ -79,6 +83,9 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
     language,
     lang: pipelineLang,
     colorTheme: getAppSettings().colorTheme,
+    showRuby: renderOptions?.showRuby,
+    userFontScale: renderOptions?.userFontScale,
+    userLineHeightScale: renderOptions?.userLineHeightScale,
   });
 
   const jpFontCss = getPosterJapaneseFontsFaceCss();
@@ -130,6 +137,7 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
   <foreignObject width="100%" height="100%">
     <div xmlns="http://www.w3.org/1999/xhtml"
          class="fv-html-poster-root"
+         data-ruby-visible="${showRuby ? 'true' : 'false'}"
          style="${rootInlineStyle}">${titleHtml}
       <div class="fv-body-h" style="flex:1 1 auto;min-height:0;overflow:hidden;box-sizing:border-box;text-align:left;">
         ${cleanBody}

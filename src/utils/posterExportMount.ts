@@ -6,7 +6,7 @@ import {
   getShufuriPosterCanvasDimensions,
 } from './shufuriPoster/shufuriPosterShared';
 import { ZH_FONT_FAMILY } from './shufuriPoster/fonts';
-import type { PosterLayoutProfile } from './shufuriPoster/types';
+import type { PosterLayoutProfile, PosterRenderOptions } from './shufuriPoster/types';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
 import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
@@ -59,6 +59,7 @@ export function mountPosterExportPage(
     spacingScale?: number;
     language?: LyricsLanguage;
     lang?: LangCode;
+    renderOptions?: PosterRenderOptions;
   },
 ): PosterExportPageMount {
   const {
@@ -72,6 +73,7 @@ export function mountPosterExportPage(
     spacingScale = 1,
     language = 'jp',
     lang,
+    renderOptions,
   } = opts;
   const { width: canvasW, height: canvasH } = getShufuriPosterCanvasDimensions(layoutProfile);
   const pad = getShufuriCanvasInsets(layoutProfile);
@@ -112,6 +114,7 @@ export function mountPosterExportPage(
   // 将预期画布尺寸存为 data 属性，供 rasterize 阶段读取以确保 canvas 尺寸精确
   shell.dataset.exportCanvasW = String(canvasW);
   shell.dataset.exportCanvasH = String(canvasH);
+  shell.dataset.rubyVisible = (renderOptions?.showRuby ?? true) ? 'true' : 'false';
 
   const styleEl = doc.createElement('style');
   // 叠加 html2canvas 渲染补偿因子，确保 PDF 栅格化不溢出
@@ -122,6 +125,9 @@ export function mountPosterExportPage(
     language,
     lang: pipelineLang,
     colorTheme: getAppSettings().colorTheme,
+    showRuby: renderOptions?.showRuby,
+    userFontScale: renderOptions?.userFontScale,
+    userLineHeightScale: renderOptions?.userLineHeightScale,
   });
   shell.appendChild(styleEl);
 
@@ -201,6 +207,7 @@ export function mountPosterExportPages(
   artist?: string,
   language: import('../services/appSettings').LyricsLanguage = 'jp',
   lang?: LangCode,
+  renderOptions?: PosterRenderOptions,
 ): PosterExportPageMount[] {
   const n = pageSlices.length;
   return pageSlices.map((slice, i) =>
@@ -215,6 +222,7 @@ export function mountPosterExportPages(
       spacingScale: slice.spacingScale ?? 1,
       language,
       lang,
+      renderOptions,
     }),
   );
 }

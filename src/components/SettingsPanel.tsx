@@ -183,7 +183,7 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
                 onChange={(e) => patch({ interactionSoundsEnabled: e.target.checked })}
               />
             </label>
-            <p className="app-settings__hint">开启时，按键附带轻震与短促「カタ」声（物理质感，非电子音）</p>
+            <p className="app-settings__hint">开启时，按键与拨轮定住附带轻震与 Logitech 点按声</p>
           </section>
 
           <footer className="app-settings__footer">

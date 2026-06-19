@@ -6,7 +6,7 @@ import {
   getShufuriPosterCanvasDimensions,
 } from './shufuriPosterShared';
 import { applyPosterTitleElement, resolveDisplayArtist, resolveDisplayTitle } from './posterTitle';
-import type { PosterLayoutProfile, PosterPageSlice } from './types';
+import type { PosterLayoutProfile, PosterPageSlice, PosterRenderOptions } from './types';
 import type { LyricsLanguage, LangCode } from '../../services/appSettings';
 import { getAppSettings } from '../../services/appSettings';
 import {
@@ -71,6 +71,7 @@ export function createPosterMeasurer(
   language: LyricsLanguage = 'jp',
   lang?: LangCode,
   titleMarkupHtml?: string,
+  renderOptions?: PosterRenderOptions,
 ): PosterMeasurer {
   const { width: canvasW, height: canvasH } = getShufuriPosterCanvasDimensions(profile);
 
@@ -92,6 +93,7 @@ export function createPosterMeasurer(
   // 直接使用 buildFuriganaPosterRootStyle 的完整样式（已含带 px 单位的 width/height）
   Object.assign(shell.style, buildShufuriPosterRootStyle(profile));
   shell.style.position = 'relative';
+  shell.dataset.rubyVisible = (renderOptions?.showRuby ?? true) ? 'true' : 'false';
 
   const styleEl = doc.createElement('style');
   styleEl.textContent = buildShufuriPosterInnerCss(profile, {
@@ -99,6 +101,9 @@ export function createPosterMeasurer(
     language,
     lang,
     colorTheme: getAppSettings().colorTheme,
+    showRuby: renderOptions?.showRuby,
+    userFontScale: renderOptions?.userFontScale,
+    userLineHeightScale: renderOptions?.userLineHeightScale,
   });
   const titleEl = doc.createElement('h1');
   titleEl.className = 'fv-title-h';
@@ -819,10 +824,22 @@ function createMeasurerAtScale(
   title: string,
   artist: string | undefined,
   scale: number,
+  language: LyricsLanguage = 'jp',
   lang?: LangCode,
   titleMarkupHtml?: string,
+  renderOptions?: PosterRenderOptions,
 ): PosterMeasurer {
-  return createPosterMeasurer(doc, profile, title, artist, scale, undefined, lang, titleMarkupHtml);
+  return createPosterMeasurer(
+    doc,
+    profile,
+    title,
+    artist,
+    scale,
+    language,
+    lang,
+    titleMarkupHtml,
+    renderOptions,
+  );
 }
 
 /** 末页 ≤2 行时尝试收紧行距并并回上一页；行距不低于 0.9，否则保留孤页 */
@@ -832,8 +849,10 @@ function preventOrphanPages(
   profile: PosterLayoutProfile,
   title: string,
   artist?: string,
+  language: LyricsLanguage = 'jp',
   lang?: LangCode,
   titleMarkupHtml?: string,
+  renderOptions?: PosterRenderOptions,
 ): PagePack[] {
   let packs: PagePack[] = pages.map((blocks) => ({ blocks, spacingScale: 1 }));
 
@@ -863,7 +882,17 @@ function preventOrphanPages(
         continue;
       }
 
-      const probeMeasurer = createMeasurerAtScale(doc, profile, title, artist, scale, lang, titleMarkupHtml);
+      const probeMeasurer = createMeasurerAtScale(
+        doc,
+        profile,
+        title,
+        artist,
+        scale,
+        language,
+        lang,
+        titleMarkupHtml,
+        renderOptions,
+      );
       try {
         const html = joinPageBlocks(combined, new Set<string>());
         if (!probeMeasurer.pageHtmlOverflows(html, showTitle)) {
@@ -892,8 +921,10 @@ function optimizeCjkTypographyOnPacks(
   profile: PosterLayoutProfile,
   title: string,
   artist?: string,
+  language: LyricsLanguage = 'jp',
   lang?: LangCode,
   titleMarkupHtml?: string,
+  renderOptions?: PosterRenderOptions,
 ): PagePack[] {
   return packs.map((pack, packIdx) => {
     const showTitle = packIdx === 0;
@@ -911,8 +942,10 @@ function optimizeCjkTypographyOnPacks(
         title,
         artist,
         scale,
+        language,
         lang,
         titleMarkupHtml,
+        renderOptions,
       );
       try {
         if (!measurer.contentFitsInPlace(trialBlocks, showTitle)) {
@@ -965,6 +998,7 @@ export function paginateShufuriPosterBodyHtml(
   language: LyricsLanguage = 'jp',
   lang?: LangCode,
   titleMarkupHtml?: string,
+  renderOptions?: PosterRenderOptions,
 ): PosterPageSlice[] {
   const trimmed = safeBodyHtml.trim();
   if (!trimmed) {
@@ -980,19 +1014,41 @@ export function paginateShufuriPosterBodyHtml(
   atoms = repairLyricsGroupAtoms(atoms);
   atoms = preparePaginationAtoms(atoms);
 
-  const measurer = createPosterMeasurer(doc, profile, title, artist, 1, language, lang, titleMarkupHtml);
+  const measurer = createPosterMeasurer(
+    doc,
+    profile,
+    title,
+    artist,
+    1,
+    language,
+    lang,
+    titleMarkupHtml,
+    renderOptions,
+  );
 
   try {
     const rawPages = flowAtomsIntoPages(atoms, measurer);
     const pages = verifyAndRepairPages(rawPages, measurer);
     const pagePacks = optimizeCjkTypographyOnPacks(
-      preventOrphanPages(pages, doc, profile, title, artist, lang, titleMarkupHtml),
+      preventOrphanPages(
+        pages,
+        doc,
+        profile,
+        title,
+        artist,
+        language,
+        lang,
+        titleMarkupHtml,
+        renderOptions,
+      ),
       doc,
       profile,
       title,
       artist,
+      language,
       lang,
       titleMarkupHtml,
+      renderOptions,
     );
 
     if (pagePacks.length === 0) {
