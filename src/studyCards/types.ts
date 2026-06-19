@@ -13,6 +13,8 @@ export type StudyCard = {
   back: string;
   tags: string;
   sourceRaw: string;
+  /** 全局去重键：`${lang}|${kind}|${canonicalTerm}` */
+  dedupeKey: string;
   createdAt: number;
   /** 释义 / 详解（纯文本） */
   meaning?: string;
@@ -25,7 +27,7 @@ export type StudyCard = {
   lyricZh?: string;
 };
 
-export type StudyCardDraft = Omit<StudyCard, 'id' | 'createdAt'>;
+export type StudyCardDraft = Omit<StudyCard, 'id' | 'createdAt' | 'dedupeKey'>;
 
 export type StudyCardDetail = {
   meaning: string;

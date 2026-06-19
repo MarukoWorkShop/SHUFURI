@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import {
   getAppSettings,
   saveAppSettings,
-  resolveSystemInterfaceLanguage,
   type AppSettings,
   type ColorTheme,
   type InterfaceLanguage,
@@ -127,42 +126,19 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
               <button
                 type="button"
                 className={`app-settings__segment${settings.interfaceLanguage === 'zh' ? ' is-active' : ''}`}
-                onClick={() =>
-                  patch({ interfaceLanguage: 'zh' as InterfaceLanguage, followSystemInterfaceLanguage: false })
-                }
+                onClick={() => patch({ interfaceLanguage: 'zh' as InterfaceLanguage })}
               >
                 中文
               </button>
               <button
                 type="button"
                 className={`app-settings__segment${settings.interfaceLanguage === 'en' ? ' is-active' : ''}`}
-                onClick={() =>
-                  patch({ interfaceLanguage: 'en' as InterfaceLanguage, followSystemInterfaceLanguage: false })
-                }
+                onClick={() => patch({ interfaceLanguage: 'en' as InterfaceLanguage })}
               >
                 English
               </button>
             </div>
-            <label className="app-settings__row app-settings__row--nested">
-              <span className="app-settings__row-text">跟随系统语言</span>
-              <input
-                type="checkbox"
-                className="app-settings__checkbox"
-                checked={settings.followSystemInterfaceLanguage}
-                onChange={(e) => {
-                  const follow = e.target.checked;
-                  patch(
-                    follow
-                      ? {
-                          followSystemInterfaceLanguage: true,
-                          interfaceLanguage: resolveSystemInterfaceLanguage(),
-                        }
-                      : { followSystemInterfaceLanguage: false },
-                  );
-                }}
-              />
-            </label>
-            <p className="app-settings__hint">决定词解、翻译、语法解析在 Prompt 中的输出语言</p>
+            <p className="app-settings__hint">决定词解、翻译、语法解析在 Prompt 中的输出语言（中文 / English）</p>
 
             <p className="app-settings__sublabel app-settings__sublabel--targets">学习目标语言</p>
             <div className="app-settings__lang-chips">

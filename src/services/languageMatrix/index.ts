@@ -23,7 +23,6 @@ import type { LanguageMatrix, LanguageMatrixContext } from './types';
 export function matrixFromSettings(settings: AppSettings): LanguageMatrix {
   return {
     interfaceLanguage: settings.interfaceLanguage,
-    followSystemInterfaceLanguage: settings.followSystemInterfaceLanguage,
     learningTargetLanguages: settings.learningTargetLanguages,
   };
 }

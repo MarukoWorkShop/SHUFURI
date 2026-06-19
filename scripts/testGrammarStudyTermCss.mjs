@@ -43,7 +43,6 @@ const enPrompt = buildEncoderPrompt('A', 'B', {
   includeVocabAndGrammar: true,
   matrix: {
     interfaceLanguage: 'zh',
-    followSystemInterfaceLanguage: false,
     learningTargetLanguages: ['en'],
     activeTarget: 'en',
   },

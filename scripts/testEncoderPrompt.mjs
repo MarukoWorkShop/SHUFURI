@@ -8,7 +8,6 @@ const FORBIDDEN = /海报|手账|Shufuri|SHUFURI|===BEGIN===|===LYRICS===|===VOC
 
 const matrix = {
   interfaceLanguage: 'zh',
-  followSystemInterfaceLanguage: false,
   learningTargetLanguages: ['jp', 'ko', 'en', 'zh'],
   activeTarget: 'jp',
 };

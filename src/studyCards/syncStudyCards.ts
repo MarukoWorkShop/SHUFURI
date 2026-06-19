@@ -36,8 +36,8 @@ export async function trySyncStudyCardsFromRaw(options: SyncStudyCardsOptions): 
     });
     if (!drafts.length) return 0;
 
-    await replaceStudyCardsForBundle(options.bundleId, drafts);
-    return drafts.length;
+    const { written } = await replaceStudyCardsForBundle(options.bundleId, drafts);
+    return written;
   } catch (err) {
     console.warn('[study-cards] sync skipped:', err);
     return 0;

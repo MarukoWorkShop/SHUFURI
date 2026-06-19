@@ -1,7 +1,7 @@
 # 语言矩阵（Language Matrix）
 
-**版本**：v1.1  
-**更新日期**：2026-06-03  
+**版本**：v1.2  
+**更新日期**：2026-06-18  
 **关联 PRD**：§5.2–5.3、§11；**关联设计规范**：§7.3、§7.4
 
 语言矩阵是 SHUFURI **设置层与 Prompt 生成层**之间的二维约束框架，决定：
@@ -17,8 +17,7 @@
 |------|------|------|------|
 | **使用语言** | `interfaceLanguage` | `'zh' \| 'en'` | Prompt 中 `MEANING` / `DETAIL` / `ZH` / `EX_ZH` 及语法标题括注的内容语言 |
 | **学习目标语言** | `learningTargetLanguages` | `('jp'\|'ko'\|'en'\|'zh')[]` | 过滤首页拨轮；约束 AI 只检索允许的原曲语言 |
-| **跟随系统** | `followSystemInterfaceLanguage` | `boolean` | App 启动时是否用 `navigator.language` 刷新使用语言 |
-| **拨轮当前项** | `lyricsLanguage` | `'auto'\|'jp'\|'ko'\|'en'\|'zh'` | 运行时 `activeTarget`，写入 Prompt `[Language_Target]` |
+| **拨轮当前项** | `lyricsLanguage` | `'jp'\|'ko'\|'en'\|'zh'` | 运行时 `activeTarget`，写入 Prompt `[Language_Target]` |
 
 **与排版管线的关系**：
 
@@ -33,10 +32,9 @@
 
 ```json
 {
-  "interfaceLanguage": "<系统推断，见 §3>",
-  "followSystemInterfaceLanguage": true,
+  "interfaceLanguage": "<首次默认，见 §3；之后由设置手动持久化>",
   "learningTargetLanguages": ["jp", "ko", "en"],
-  "lyricsLanguage": "auto"
+  "lyricsLanguage": "jp"
 }
 ```
 
@@ -45,29 +43,38 @@
 
 ---
 
-## 3. 使用语言与跟随系统
+## 3. 使用语言与首次默认
 
-### 3.1 系统语言推断
+### 3.1 系统语言推断（仅首次安装 / 无 localStorage 时）
 
-[`resolveSystemLanguage.ts`](../src/services/languageMatrix/resolveSystemLanguage.ts)：
+[`resolveSystemLanguage.ts`](../src/services/languageMatrix/resolveSystemLanguage.ts) 在 `buildDefaults()` 中调用一次：
 
 | `navigator.language` | → `interfaceLanguage` |
 |----------------------|-------------------------|
 | 以 `en` 开头 | `en` |
 | 以 `zh` 开头 | `zh` |
-| 其他 | `zh`（兜底） |
+| 其他（泰语、日语、韩语等） | `en`（兜底） |
 
 ### 3.2 优先级
 
 | 场景 | 生效值 |
 |------|--------|
-| App **启动**且「跟随系统语言」**开启** | 系统语言覆盖 `interfaceLanguage`（`syncInterfaceLanguageFromSystem`） |
-| App **启动**且「跟随系统语言」**关闭** | 保持上次手动保存的 `interfaceLanguage` |
-| 设置里手动点「中文 / English」 | 更新 `interfaceLanguage`，并**关闭**跟随 |
-| 设置里**开启**「跟随系统语言」 | **开启**跟随，并**立即**用系统语言更新 `interfaceLanguage` |
-| **生成 Prompt** | 始终读当前 persisted 的 `interfaceLanguage` |
+| **首次安装**（无 localStorage） | `resolveSystemInterfaceLanguage()` 写入默认 |
+| 设置里手动点「中文 / English」 | 更新并持久化 `interfaceLanguage` |
+| **App 启动** | 保持上次保存的 `interfaceLanguage`，**不再**根据系统语言覆盖 |
+| **生成 Prompt** | 读当前 persisted 的 `interfaceLanguage` |
 
-> 跟随仅在 **App 启动时**同步；运行中修改系统语言需重启 App 且保持跟随开启。
+> 暂不提供「跟随系统语言」开关；产品当前仅支持中文 / English 两套 Prompt 释义。日后扩展第三母语时可恢复跟随或改为下拉选择。
+
+### 3.3 日后扩展（Future）
+
+| 层 | 扩展方式 |
+|----|----------|
+| 类型 | `InterfaceLanguage` 扩 union 或 BCP-47 主码 |
+| 推断 | `resolveSystemLanguage` 加 `th→th` 等映射；未知仍可 `en` |
+| Prompt | `glossSpec.ts` 增加对应母语条目 |
+| 设置 | 恢复「跟随系统」或「使用语言」多选 |
+| 同步时机 | 可选：回前台 `visibilitychange` 再 sync |
 
 ---
 
@@ -130,9 +137,8 @@ AI 输出 `@0 … @9` 单行管道密文（`H/L/V/G` 记录），前端 [`src/co
 
 | 控件 | 绑定字段 |
 |------|----------|
-| 分段：中文 / English | `interfaceLanguage`（手动选择时关闭跟随） |
-| 勾选：跟随系统语言 | `followSystemInterfaceLanguage` |
-| 多选 chip：JAP / KOR / ENG | `learningTargetLanguages` |
+| 分段：中文 / English | `interfaceLanguage` |
+| 多选 chip：JAP / KOR / ENG / 中文 | `learningTargetLanguages` |
 
 样式：`.app-settings__lang-chip`（6px 字、主题色底，对齐 Study Cards 语言标签尺寸）
 
@@ -142,7 +148,7 @@ AI 输出 `@0 … @9` 单行管道密文（`H/L/V/G` 记录），前端 [`src/co
 
 ```
 navigator.language
-       ↓ (followSystem=true, 启动时)
+       ↓ (仅首次 buildDefaults)
 appSettings.interfaceLanguage ──→ getGlossSpec ──→ Prompt 释义语言
 appSettings.learningTargetLanguages ──→ getWheelLanguages ──→ LanguageWheel
 appSettings.lyricsLanguage ──→ activeTarget ──→ [Language_Target]
@@ -165,7 +171,7 @@ buildEncoderPrompt → 外部 AI → src/codec（parseStream + roleCompiler）
 
 **使用语言 × 中文歌**：
 
-- `interfaceLanguage: zh`（中文母语 / 跟随系统中文）：主行拼音注音 + 中文词解，**无 GLOSS 行**
+- `interfaceLanguage: zh`（中文母语）：主行拼音注音 + 中文词解，**无 GLOSS 行**
 - `interfaceLanguage: en`：主行拼音 + `GLOSS:` 英语行译/释义
 
 ---
@@ -179,7 +185,7 @@ buildEncoderPrompt → 外部 AI → src/codec（parseStream + roleCompiler）
 | `src/services/languageMatrix/glossSpec.ts` | zh/en 释义模板 |
 | `src/services/languageMatrix/promptContext.ts` | `[Learner_Matrix]` 块 |
 | `src/services/languageMatrix/index.ts` | 统一导出、`buildLanguageMatrixContext` |
-| `src/services/appSettings.ts` | 持久化、迁移、系统同步 |
+| `src/services/appSettings.ts` | 持久化、首次默认推断 |
 | `src/codec/prompt/buildEncoderPrompt.ts` | 四语 encoder 组装 |
 | `src/codec/` | 记录流解析 + roleCompiler |
 | `src/utils/zhLayout/zhPosterCss.ts` | 中文海报 CSS（拼音主题色） |
@@ -194,5 +200,6 @@ buildEncoderPrompt → 外部 AI → src/codec（parseStream + roleCompiler）
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v1.2 | 2026-06-18 | 移除「跟随系统语言」；未知 locale 首次默认 English；启动不再覆盖用户选择 |
 | v1.1 | 2026-06-03 | 中文目标管线：独立 Prompt/解析/CSS；GLOSS 标签；拼音主题色 |
 | v1.0 | 2026-06-03 | 初版：使用语言 × 学习目标语言；Prompt gloss 参数化；拨轮联动 |

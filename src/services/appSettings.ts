@@ -23,8 +23,6 @@ export type AppSettings = {
   defaultIncludeVocabAndGrammar: boolean;
   /** 使用语言：Prompt 释义/解析输出语言 */
   interfaceLanguage: InterfaceLanguage;
-  /** 启动时跟随 navigator.language 更新 interfaceLanguage */
-  followSystemInterfaceLanguage: boolean;
   /** 学习目标语言多选 */
   learningTargetLanguages: LearningTargetLanguage[];
   /** 拨轮当前目标：jp / ko / en / zh */
@@ -40,7 +38,6 @@ function buildDefaults(): AppSettings {
     colorTheme: 'mono',
     defaultIncludeVocabAndGrammar: true,
     interfaceLanguage: resolveSystemInterfaceLanguage(),
-    followSystemInterfaceLanguage: true,
     learningTargetLanguages: ['jp', 'ko', 'en'],
     lyricsLanguage: 'jp',
     interactionSoundsEnabled: true,
@@ -99,10 +96,6 @@ export function getAppSettings(): AppSettings {
     interfaceLanguage: isInterfaceLanguage(stored.interfaceLanguage)
       ? stored.interfaceLanguage
       : DEFAULTS.interfaceLanguage,
-    followSystemInterfaceLanguage:
-      typeof stored.followSystemInterfaceLanguage === 'boolean'
-        ? stored.followSystemInterfaceLanguage
-        : DEFAULTS.followSystemInterfaceLanguage,
     learningTargetLanguages,
     lyricsLanguage: normalizeActiveTarget(rawLyricsLanguage, learningTargetLanguages),
     interactionSoundsEnabled:
@@ -125,15 +118,6 @@ export function saveAppSettings(partial: Partial<AppSettings>): AppSettings {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
   }
   return merged;
-}
-
-/** 跟随系统语言刷新 interfaceLanguage（启动时调用） */
-export function syncInterfaceLanguageFromSystem(): AppSettings {
-  const settings = getAppSettings();
-  if (!settings.followSystemInterfaceLanguage) return settings;
-  const next = resolveSystemInterfaceLanguage();
-  if (next === settings.interfaceLanguage) return settings;
-  return saveAppSettings({ interfaceLanguage: next });
 }
 
 export function isInteractionSoundEnabled(): boolean {

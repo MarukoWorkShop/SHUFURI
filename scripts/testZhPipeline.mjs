@@ -28,7 +28,6 @@ const matrixZh = buildLanguageMatrixContext({
   colorTheme: 'mono',
   defaultIncludeVocabAndGrammar: true,
   interfaceLanguage: 'zh',
-  followSystemInterfaceLanguage: false,
   learningTargetLanguages: ['zh'],
   lyricsLanguage: 'zh',
   interactionSoundsEnabled: true,

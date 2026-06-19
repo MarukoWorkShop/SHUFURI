@@ -37,7 +37,7 @@ import type { PosterLayoutProfile, PosterPageSlice } from './utils/shufuriPoster
 import SettingsPanel from './components/SettingsPanel';
 import SettingsMenuIcon from './components/icons/SettingsMenuIcon';
 import LinkChainIcon from './components/icons/LinkChainIcon';
-import { getAppSettings, saveAppSettings, syncInterfaceLanguageFromSystem, type AppSettings, type LangCode, type LyricsLanguage } from './services/appSettings';
+import { getAppSettings, saveAppSettings, type AppSettings, type LangCode, type LyricsLanguage } from './services/appSettings';
 import { buildLanguageMatrixContext, getWheelLanguages } from './services/languageMatrix';
 import type { OcrDetectedLanguage } from './services/ocrTypes';
 import { applyColorTheme } from './utils/applyColorTheme';
@@ -203,9 +203,9 @@ export default function App() {
   );
 
   useEffect(() => {
-    const synced = syncInterfaceLanguageFromSystem();
-    setAppSettings(synced);
-    applyColorTheme(synced.colorTheme);
+    const settings = getAppSettings();
+    setAppSettings(settings);
+    applyColorTheme(settings.colorTheme);
   }, []);
   /** 排版管线语言（大模型声明 / 自动检测，与波轮解耦） */
   const [lang, setLang] = useState<LangCode | undefined>(undefined);

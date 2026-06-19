@@ -1,7 +1,7 @@
 # SHUFURI 产品需求文档（PRD）
 
-**版本**：v1.1  
-**更新日期**：2026-06-03  
+**版本**：v1.2  
+**更新日期**：2026-06-18  
 **产品定位**：个人字音排版与数字活页工具  
 **技术栈**：Vite + React（Web）/ iOS WebView 壳（Capacitor 桥接）
 
@@ -200,14 +200,56 @@ IndexedDB `saved-lyrics`：title, artist, bodyHtml, rawLyrics, pageHtmls, layout
 
 ---
 
-## 11. 设置
+## 11. 学习卡（Study Cards）
+
+从记录流 `V|` / `G|` 区段提取词汇与语法点，存入独立 IndexedDB `japanese-kana-app-study-cards`，在首页抽屉浏览、导出 Anki TSV。
+
+### 11.1 触发时机
+
+| 时机 | 行为 |
+|------|------|
+| 粘贴并排版 | 从 raw 提取词卡，绑定当前 `bundleId`（未保存时为 `session-*`） |
+| 保存歌词本 | `session-*` 迁移为项目 `id`，再同步词卡 |
+| 从歌词本打开 | 以项目 `id` 为 `bundleId` 重新同步 |
+
+受设置「附词解与语法」控制；raw 无 `V|`/`G|` 行时不写入。
+
+### 11.2 全局去重（重点）
+
+**目标**：同一学习语种下，同一词条只保留一张词卡；重复导入同一首歌或不同歌含相同词时，词卡库不增殖。
+
+| 规则 | 说明 |
+|------|------|
+| 去重键 `dedupeKey` | `` `${lang}\|${kind}\|${canonicalTerm}` `` |
+| `lang` | 排版管线语言：`jp` / `ko` / `en` / `zh` |
+| `kind` | `vocab` 与 `grammar` **分开**去重（同形可同时各一张） |
+| `canonicalTerm` — 词汇 | `V\|` 第 1 列 `sourceRaw`：`trim` → jp/zh 走 `normalizeRubyMarkupText` → Unicode NFC |
+| `canonicalTerm` — 语法 | 语法标题**括号前原形**（如 `は（助词）` → `は`），再同样规范化 |
+| 命中已有键 | **保留库中已有卡**（`id` / `createdAt` 不变），跳过新 draft |
+| 同批写入 | 同一 `dedupeKey` 仅写第一张，其余 skip |
+| 按 bundle 替换 | 同步时先删除该 `bundleId` 下旧卡，再对剩余库做全局去重后插入 |
+
+**刻意不做**：按歌名/项目隔离去重（两首歌同词仍合并为一张）；多来源 `sourceLabel` 拼接（v2 可选）。
+
+### 11.3 存储与迁移
+
+- Object store：`study-cards`；字段含 `dedupeKey`
+- 索引：`bundleId`、`createdAt`、`dedupeKey`（**unique**）
+- DB 版本升级（v1→v2）：为存量卡回填 `dedupeKey`；同键多条时保留 **`createdAt` 最早** 的一条，其余删除
+
+### 11.4 导出
+
+- Anki TSV：`buildAnkiImportTsv`；去重后同语种同词不会重复出现在导出列表
+
+---
+
+## 12. 设置
 
 | 项 | 默认 |
 |----|------|
 | 配色主题 mono/blue/red | mono |
 | 默认导出规格 | B5 |
-| **语言矩阵 — 使用语言** | 跟随系统（zh / en） |
-| **语言矩阵 — 跟随系统语言** | 开 |
+| **语言矩阵 — 释义语言** | 首次安装按系统 locale 推断（`zh*`→中文，`en*`→English，**其他→English**）；用户手动切换后持久化，启动不覆盖 |
 | **语言矩阵 — 学习目标语言** | JAP + KOR + ENG |
 | 附词解与语法 | 开 |
 | 交互音效 | 开 |
@@ -216,14 +258,14 @@ IndexedDB `saved-lyrics`：title, artist, bodyHtml, rawLyrics, pageHtmls, layout
 
 ---
 
-## 12. Native 桥接
+## 13. Native 桥接
 
 命令：`ping` / `set_content` / `export_pdf` / `export_png`  
 能力：剪贴板、相册、触觉、回前台监听
 
 ---
 
-## 13. 已知限制
+## 14. 已知限制
 
 | 项 | 状态 |
 |----|------|
@@ -234,22 +276,23 @@ IndexedDB `saved-lyrics`：title, artist, bodyHtml, rawLyrics, pageHtmls, layout
 
 ---
 
-## 14. 关键文件
+## 15. 关键文件
 
 | 区域 | 路径 |
 |------|------|
 | 主控 | `src/App.tsx` |
 | 口令 | `src/codec/prompt/buildEncoderPrompt.ts` |
 | 解析 | `src/codec/` |
-| 分页 | `src/utils/furiganaLayout/paginateFuriganaHtml.ts` |
-| 排版 CSS | `src/utils/furiganaLayout/furiganaPosterShared.ts` |
+| 分页 | `src/utils/shufuriPoster/paginateShufuriPosterHtml.ts` |
+| 排版 CSS | `src/utils/shufuriPoster/shufuriPosterShared.ts` |
+| **学习卡** | `src/studyCards/`、`src/services/studyCardsStore.ts` |
 | 主题 | `src/styles/theme.css` |
 | 设计规范 | `docs/DESIGN_SYSTEM.md` |
 | **语言矩阵** | `docs/LANGUAGE_MATRIX.md` |
 
 ---
 
-## 15. 成功指标（建议）
+## 16. 成功指标（建议）
 
 - 口令→排版一次解析成功率
 - 分页溢出告警率

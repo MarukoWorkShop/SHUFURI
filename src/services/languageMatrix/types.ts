@@ -9,8 +9,6 @@ export type LearningTargetLanguage = 'jp' | 'ko' | 'en' | 'zh';
 /** 语言矩阵 — 设置与 Prompt 的单一真相源 */
 export type LanguageMatrix = {
   interfaceLanguage: InterfaceLanguage;
-  /** 启动时是否用 navigator.language 刷新 interfaceLanguage */
-  followSystemInterfaceLanguage: boolean;
   /** 至少 1 项 */
   learningTargetLanguages: LearningTargetLanguage[];
 };
