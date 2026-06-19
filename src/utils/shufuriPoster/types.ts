@@ -1,6 +1,39 @@
 /** 排版模式：打印 B5、手机竖屏 9:16、或 1:1 方形 */
 export type PosterLayoutProfile = 'clipPosterPrint' | 'mobilePoster' | 'squarePoster';
 
+/** 海报渲染/分页选项（注音可见性 + 用户密度倍率） */
+export type PosterRenderOptions = {
+  showRuby?: boolean;
+  userFontScale?: number;
+  userLineHeightScale?: number;
+};
+
+export const PREVIEW_FONT_SCALE_MIN = 0.88;
+export const PREVIEW_FONT_SCALE_MAX = 1.12;
+export const PREVIEW_LINE_SCALE_MIN = 0.88;
+export const PREVIEW_LINE_SCALE_MAX = 1.15;
+
+export type PreviewTypography = {
+  fontScale: number;
+  lineHeightScale: number;
+};
+
+export const DEFAULT_PREVIEW_TYPOGRAPHY: PreviewTypography = {
+  fontScale: 1,
+  lineHeightScale: 1,
+};
+
+export function buildPosterRenderOptions(
+  showRuby: boolean,
+  typography: PreviewTypography,
+): PosterRenderOptions {
+  return {
+    showRuby,
+    userFontScale: typography.fontScale,
+    userLineHeightScale: typography.lineHeightScale,
+  };
+}
+
 /** 分页结果：正文 HTML 片段 + 可选防孤行行距缩放 */
 export type PosterPageSlice = {
   html: string;

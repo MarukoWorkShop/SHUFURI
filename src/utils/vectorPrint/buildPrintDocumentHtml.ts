@@ -1,4 +1,4 @@
-import type { PosterLayoutProfile, PosterPageSlice } from '../shufuriPoster/types.ts';
+import type { PosterLayoutProfile, PosterPageSlice, PosterRenderOptions } from '../shufuriPoster/types.ts';
 import { buildPosterTitleInnerHtml } from '../shufuriPoster/posterTitle.ts';
 import { sanitizeShufuriPosterHtml } from '../../components/ShufuriPosterPreview.tsx';
 import { buildVectorPrintInnerCss } from './buildVectorPrintInnerCss';
@@ -33,6 +33,7 @@ function buildSinglePrintPageHtml(
   title: string,
   artist: string | undefined,
   showTitle: boolean,
+  showRuby: boolean,
 ): string {
   const safeBody = sanitizeShufuriPosterHtml(slice.html);
   const titleBlock = showTitle
@@ -42,9 +43,10 @@ function buildSinglePrintPageHtml(
   const exportScale = slice.spacingScale * EXPORT_HTML2CANVAS_SCALE_FUDGE;
   const scaleAttr =
     slice.spacingScale !== 1 ? ` data-spacing-scale="${exportScale}"` : '';
+  const rubyAttr = showRuby ? '' : ' data-ruby-visible="false"';
 
   return `<section class="print-page"${scaleAttr}>
-  <div class="fv-html-poster-root">
+  <div class="fv-html-poster-root"${rubyAttr}>
     ${titleBlock}
     <div class="fv-body-h">${safeBody}</div>
     <div class="fv-poster-page-no" aria-hidden="true">${pageNo}</div>
@@ -60,19 +62,27 @@ export async function buildPrintDocumentHtml(
   artist?: string,
   language: LyricsLanguage = 'jp',
   lang?: LangCode,
+  renderOptions?: PosterRenderOptions,
 ): Promise<string> {
   if (pageSlices.length === 0) {
     throw new Error('没有可导出的页面');
   }
 
+  const showRuby = renderOptions?.showRuby ?? true;
   const colorTheme = getAppSettings().colorTheme;
   const spec = printPageSpec(layoutProfile);
   const fontFaceCss = await getPrintFontFaceCss();
-  const baseCss = buildVectorPrintInnerCss(layoutProfile, spec, {
-    spacingScale: EXPORT_HTML2CANVAS_SCALE_FUDGE,
+  const cssCommon = {
     language,
     lang,
     colorTheme,
+    showRuby,
+    userFontScale: renderOptions?.userFontScale,
+    userLineHeightScale: renderOptions?.userLineHeightScale,
+  };
+  const baseCss = buildVectorPrintInnerCss(layoutProfile, spec, {
+    spacingScale: EXPORT_HTML2CANVAS_SCALE_FUDGE,
+    ...cssCommon,
   });
 
   const spacingScales = [...new Set(pageSlices.map((s) => s.spacingScale * EXPORT_HTML2CANVAS_SCALE_FUDGE))].filter((s) => s !== EXPORT_HTML2CANVAS_SCALE_FUDGE);
@@ -80,9 +90,7 @@ export async function buildPrintDocumentHtml(
     .map((scale) => {
       const inner = buildVectorPrintInnerCss(layoutProfile, spec, {
         spacingScale: scale,
-        language,
-        lang,
-        colorTheme,
+        ...cssCommon,
       });
       return scopePrintCss(inner, `.print-page[data-spacing-scale="${scale}"]`);
     })
@@ -90,7 +98,7 @@ export async function buildPrintDocumentHtml(
 
   const n = pageSlices.length;
   const pagesHtml = pageSlices
-    .map((slice, i) => buildSinglePrintPageHtml(slice, i, n, title, artist, i === 0))
+    .map((slice, i) => buildSinglePrintPageHtml(slice, i, n, title, artist, i === 0, showRuby))
     .join('\n');
 
   return `<!DOCTYPE html>

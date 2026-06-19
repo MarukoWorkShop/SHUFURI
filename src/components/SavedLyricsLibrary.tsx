@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import {
   deleteSavedLyricsProject,
@@ -14,6 +14,7 @@ type SavedLyricsLibraryProps = {
 
 const DRAWER_MS = 400;
 const UNLATCH_MS = 100;
+const DISMISS_DRAG_THRESHOLD_PX = 72;
 
 function formatDrawerDate(ts: number): string {
   const d = new Date(ts);
@@ -40,6 +41,10 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
   const [deleting, setDeleting] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
   const unlatchTimerRef = useRef<number | null>(null);
+  const dismissDragStartYRef = useRef(0);
+  const dismissDragStartOffsetRef = useRef(0);
+  const [dismissDragY, setDismissDragY] = useState(0);
+  const [dismissDragging, setDismissDragging] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -95,6 +100,61 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
       setSelectedIds(new Set());
     }, DRAWER_MS);
   }, [drawerOpen, closing]);
+
+  useEffect(() => {
+    if (drawerActive) return;
+    setDismissDragY(0);
+    setDismissDragging(false);
+  }, [drawerActive]);
+
+  const onDismissHandlePointerDown = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      if (closing || !drawerActive) return;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      dismissDragStartYRef.current = e.clientY;
+      dismissDragStartOffsetRef.current = dismissDragY;
+      setDismissDragging(true);
+    },
+    [closing, drawerActive, dismissDragY],
+  );
+
+  const onDismissHandlePointerMove = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      if (!dismissDragging) return;
+      const dy = e.clientY - dismissDragStartYRef.current;
+      setDismissDragY(Math.max(0, dismissDragStartOffsetRef.current + dy));
+    },
+    [dismissDragging],
+  );
+
+  const onDismissHandlePointerUp = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      if (!dismissDragging) return;
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+      const dy = e.clientY - dismissDragStartYRef.current;
+      const finalY = Math.max(0, dismissDragStartOffsetRef.current + dy);
+      setDismissDragging(false);
+      setDismissDragY(0);
+      if (finalY >= DISMISS_DRAG_THRESHOLD_PX) {
+        closeDrawer();
+      }
+    },
+    [dismissDragging, closeDrawer],
+  );
+
+  const onDismissHandlePointerCancel = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      if (!dismissDragging) return;
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+      setDismissDragging(false);
+      setDismissDragY(0);
+    },
+    [dismissDragging],
+  );
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -162,15 +222,31 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
     await reload();
   };
 
+  const drawerDragStyle =
+    drawerActive && (dismissDragging || dismissDragY > 0)
+      ? { transform: `translate(-50%, ${dismissDragY}px)` }
+      : undefined;
+
   const drawerPortal =
     drawerVisible &&
     createPortal(
       <div
-        className={`saved-library-drawer${drawerActive ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}
+        className={`saved-library-drawer${drawerActive ? ' is-open' : ''}${closing ? ' is-closing' : ''}${dismissDragging ? ' is-dismiss-dragging' : ''}`}
+        style={drawerDragStyle}
         role="dialog"
         aria-modal="true"
         aria-label="我的歌词本"
       >
+        <div
+          className="saved-library-drawer__dismiss-handle"
+          onPointerDown={onDismissHandlePointerDown}
+          onPointerMove={onDismissHandlePointerMove}
+          onPointerUp={onDismissHandlePointerUp}
+          onPointerCancel={onDismissHandlePointerCancel}
+          aria-label="下拉收起"
+        >
+          <div className="saved-library-drawer__binding" aria-hidden />
+        </div>
         <header className="saved-library-drawer__header">
           <span className="saved-library-title">我的歌词本</span>
           <div className="saved-library-drawer__header-aside">

@@ -58,8 +58,15 @@ export interface ResolverContext {
   lang: LangCode;
   spacingScale?: number;
   colorTheme?: ColorTheme;
+  showRuby?: boolean;
+  userFontScale?: number;
+  userLineHeightScale?: number;
   /** @deprecated 仅 resolveLang 过渡用 */
   language?: LyricsLanguage;
+}
+
+export function supportsPosterRubyToggle(lang: LangCode): boolean {
+  return lang === 'jp' || lang === 'zh';
 }
 
 export function resolveLangFromOptions(options: {
@@ -105,16 +112,20 @@ function baseToken(
 }
 
 export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypography {
-  const spacingScale = ctx.spacingScale ?? 1;
+  const pageSpacing = ctx.spacingScale ?? 1;
+  const fontScale = pageSpacing * (ctx.userFontScale ?? 1);
+  const lineScale = pageSpacing * (ctx.userLineHeightScale ?? 1);
   const lang = ctx.lang;
-  const scale = (n: number) => n * spacingScale;
-  const scaleEm = (n: number) => `${scale(n)}em`;
-  const cjkFsMul = cjkFontScale(spacingScale);
-  const cjkLs = cjkLetterSpacingEm(spacingScale);
+  const scaleLine = (n: number) => n * lineScale;
+  const scaleEmLine = (n: number) => `${scaleLine(n)}em`;
+  const cjkFsMul = cjkFontScale(fontScale);
+  const cjkLs = cjkLetterSpacingEm(fontScale);
   const d = dimForFuriganaPoster(ctx.profile);
   const isMobile = ctx.profile === 'mobilePoster';
   const scaleBody = d.elasticFontBase / POSTER_ELASTIC_FONT_BASE_PX;
-  const isCompact = lang === 'ko' || lang === 'en';
+  const showRuby = ctx.showRuby ?? true;
+  const rubyAffectsLayout = supportsPosterRubyToggle(lang) && showRuby;
+  const isCompact = lang === 'ko' || lang === 'en' || !rubyAffectsLayout;
   const isZhPipeline = lang === 'zh';
   const isEnglish = lang === 'en';
 
@@ -131,8 +142,8 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   const zhLyricsLhBase = isCompact
     ? (d.compactZhLineHeightBase ?? (isMobile ? 1.15 : 1.2))
     : (isMobile ? 1.3 : (d.zhLineHeightBase ?? 1.35));
-  const jpLh = scale(jpLhBase);
-  const zhLyricsLh = scale(zhLyricsLhBase);
+  const jpLh = scaleLine(jpLhBase);
+  const zhLyricsLh = scaleLine(zhLyricsLhBase);
   const koLh = jpLh;
 
   const titleFont = resolvePosterTitleFont(lang);
@@ -141,16 +152,16 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   const jpStudyFont = isEnglish ? EN_FONT_FAMILY : KOZMIN_PRO_REGULAR_FAMILY;
 
   const layout: LayoutSpacingTokens = {
-    groupMb: scaleEm(isMobile ? 1.5 : 1.35),
-    lyricsJpZhGap: scaleEm(isMobile ? 0.06 : 0.04),
-    auxJpZhGap: scaleEm(isMobile ? 0.05 : 0.03),
-    itemEntryMb: `${itemEntryGapPx(jpLhBase, mainPx)}px`,
-    grammarDetailMb: scaleEm(isMobile ? 0.7 : 0.55),
-    grammarExMt: scaleEm(isMobile ? 0.65 : 0.5),
-    grammarTitleMt: scaleEm(isMobile ? 1.15 : 1.35),
-    grammarTitleFirstMt: scaleEm(isMobile ? 0.45 : 0.55),
-    sectionTitleMt: scaleEm(isMobile ? 1 : 1.25),
-    sectionTitleFirstMt: scaleEm(isMobile ? 0.35 : 0.5),
+    groupMb: scaleEmLine(isMobile ? 1.5 : 1.35),
+    lyricsJpZhGap: scaleEmLine(isMobile ? 0.06 : 0.04),
+    auxJpZhGap: scaleEmLine(isMobile ? 0.05 : 0.03),
+    itemEntryMb: `${itemEntryGapPx(jpLh, mainPx)}px`,
+    grammarDetailMb: scaleEmLine(isMobile ? 0.7 : 0.55),
+    grammarExMt: scaleEmLine(isMobile ? 0.65 : 0.5),
+    grammarTitleMt: scaleEmLine(isMobile ? 1.15 : 1.35),
+    grammarTitleFirstMt: scaleEmLine(isMobile ? 0.45 : 0.55),
+    sectionTitleMt: scaleEmLine(isMobile ? 1 : 1.25),
+    sectionTitleFirstMt: scaleEmLine(isMobile ? 0.35 : 0.5),
     bodyBottomPadPx:
       ctx.profile === 'mobilePoster' ? 64 : ctx.profile === 'squarePoster' ? 48 : 32,
     titleMbPx: d.titleToBodyGap,
@@ -171,8 +182,8 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
     const pinyinColor = resolvePinyinAccentColor(ctx.colorTheme);
     const cnFs = zhMainPx;
     const glossFs = auxPx;
-    const lyricsAuxGapEm = (isMobile ? 0.06 : 0.04) * spacingScale;
-    const rubyGapEm = CN_RUBY_GAP_EM * spacingScale;
+    const lyricsAuxGapEm = (isMobile ? 0.06 : 0.04) * lineScale;
+    const rubyGapEm = CN_RUBY_GAP_EM * fontScale;
     const bulletLegPx = Math.round(LANG_WHEEL_INDICATOR_LEG_PX * scaleBody);
     const bulletBasePx = Math.round(LANG_WHEEL_INDICATOR_BASE_PX * scaleBody);
     zhLayout = {
@@ -184,7 +195,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
       glossLh: zhLyricsLh,
       lyricsAuxGapEm,
       rubyGapEm,
-      vocabItemMbEm: ZH_VOCAB_ITEM_MB_EM * spacingScale,
+      vocabItemMbEm: ZH_VOCAB_ITEM_MB_EM * lineScale,
       bulletLegPx,
       bulletBasePx,
       grammarItemMbPx: Math.round(cnFs * jpLh * 1.2),
@@ -326,11 +337,11 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   return {
     lang,
     profile: ctx.profile,
-    spacingScale,
+    spacingScale: pageSpacing,
     roles,
     layout,
     zhLayout,
-    flags: { isMobile, isZhPipeline, isCompact, isEnglish },
+    flags: { isMobile, isZhPipeline, isCompact, isEnglish, showRuby },
     cjkLetterSpacing: cjkLs,
     vocabEmphasisColor: VOCAB_EMPHASIS_COLOR,
   };

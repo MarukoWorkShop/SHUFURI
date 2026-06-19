@@ -87,6 +87,7 @@ export interface ResolvedTypography {
     isZhPipeline: boolean;
     isCompact: boolean;
     isEnglish: boolean;
+    showRuby: boolean;
   };
   cjkLetterSpacing: string;
   vocabEmphasisColor: string;

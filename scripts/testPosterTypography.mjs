@@ -1,4 +1,5 @@
 import { resolvePosterTypography } from '../src/utils/posterTypography/fontResolver.ts';
+import { compilePosterCss } from '../src/utils/posterTypography/cssCompiler.ts';
 import {
   LYRIC_PRIMARY_WEIGHT,
   LYRIC_SECONDARY_WEIGHT,
@@ -128,3 +129,36 @@ assert(
 );
 
 console.log('testPosterTypography: OK');
+
+// --- showRuby + preview density ---
+const jpRubyOn = resolvePosterTypography({ profile: 'mobilePoster', lang: 'jp', spacingScale: 1, showRuby: true });
+const jpRubyOff = resolvePosterTypography({ profile: 'mobilePoster', lang: 'jp', spacingScale: 1, showRuby: false });
+assert(jpRubyOn.flags.showRuby === true, 'showRuby on flag');
+assert(jpRubyOff.flags.showRuby === false, 'showRuby off flag');
+assert(jpRubyOff.flags.isCompact === true, 'jp hide ruby uses compact layout');
+assert(jpRubyOff.layout.jpLh < jpRubyOn.layout.jpLh, 'hide ruby tightens jp line height');
+
+const scaledFont = resolvePosterTypography({
+  profile: 'clipPosterPrint',
+  lang: 'jp',
+  spacingScale: 1,
+  userFontScale: 1.1,
+  userLineHeightScale: 1,
+});
+const scaledLine = resolvePosterTypography({
+  profile: 'clipPosterPrint',
+  lang: 'jp',
+  spacingScale: 1,
+  userFontScale: 1,
+  userLineHeightScale: 1.1,
+});
+const printBase = resolvePosterTypography({ profile: 'clipPosterPrint', lang: 'jp', spacingScale: 1 });
+assert(scaledFont.layout.mainPx > printBase.layout.mainPx, 'userFontScale grows mainPx');
+assert(scaledLine.layout.jpLh > printBase.layout.jpLh, 'userLineHeightScale grows jpLh');
+
+const resolvedOff = resolvePosterTypography({ profile: 'mobilePoster', lang: 'jp', showRuby: false });
+const cssOff = compilePosterCss(resolvedOff, { unit: 'px', showRuby: false, includeFontFaces: false });
+assert(cssOff.includes('data-ruby-visible="false"'), 'ruby hide CSS targets data attribute');
+assert(cssOff.includes('display: none'), 'ruby hide CSS hides rt');
+
+console.log('testPosterTypography (ruby + density): OK');

@@ -1,7 +1,7 @@
 import { normalizeLyricsBodyHtml } from '../../services/lyricsHtml';
 import { resolvePosterPipelineLang } from './inferPosterLang';
 import { paginateShufuriPosterBodyHtml } from './paginateShufuriPosterHtml';
-import type { PosterLayoutProfile, PosterPageSlice } from './types';
+import type { PosterLayoutProfile, PosterPageSlice, PosterRenderOptions } from './types';
 import type { LyricsLanguage, LangCode } from '../../services/appSettings';
 
 /** 根据正文 HTML 与排版配置生成分页（与 AI 生成解耦） */
@@ -13,6 +13,7 @@ export function buildPosterPagesFromBody(
   language: LyricsLanguage = 'jp',
   lang?: LangCode,
   titleMarkupHtml?: string,
+  renderOptions?: PosterRenderOptions,
 ): PosterPageSlice[] {
   const normalized = normalizeLyricsBodyHtml(bodyHtml);
   if (!normalized.trim()) {
@@ -28,6 +29,7 @@ export function buildPosterPagesFromBody(
     language,
     pipelineLang,
     titleMarkupHtml,
+    renderOptions,
   );
 }
 

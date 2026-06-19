@@ -30,7 +30,22 @@ export type CompilePosterCssOptions = {
   spec?: PrintPageSpec;
   viewMode?: 'screen' | 'edit';
   includeFontFaces?: boolean;
+  showRuby?: boolean;
 };
+
+function compileRubyVisibilityCss(showRuby: boolean): string {
+  if (showRuby) return '';
+  return `
+  .fv-html-poster-root[data-ruby-visible="false"] ruby rt,
+  .fv-html-poster-root[data-ruby-visible="false"] ruby rp {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+  }`;
+}
 
 function size(px: number, unit: 'px' | 'mm', spec?: PrintPageSpec): string {
   if (unit === 'px') return `${px}px`;
@@ -666,8 +681,10 @@ export function compilePosterCss(
     : '';
   const pageNo = compilePageNumberCss(resolved, unit, spec);
   const cjkNoBreak = buildCjkNoBreakClassCss();
+  const showRuby = options.showRuby ?? resolved.flags.showRuby;
+  const rubyVisibility = compileRubyVisibilityCss(showRuby);
 
-  return `${fontFaces}${printShell}${bodyRules}${zhRules}${pageNo}${cjkNoBreak}`;
+  return `${fontFaces}${printShell}${bodyRules}${zhRules}${pageNo}${cjkNoBreak}${rubyVisibility}`;
 }
 
 export function compileEditCssOverrides(): string {
