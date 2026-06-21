@@ -1,3 +1,4 @@
+import type { LyricLine } from '../codec/types';
 import type { LangCode } from '../services/appSettings';
 import { parseStream } from '../codec/parseStream';
 import { resolveExampleRef } from '../codec/resolveExampleRef';
@@ -42,7 +43,30 @@ function grammarTitleParts(title: string): { orig: string; zh?: string } {
 
 export function rawLyricsHasStudyCardSections(raw: string): boolean {
   const trimmed = cleanDoubaoPaste(raw.trim());
-  return /^(V|G)\|/m.test(trimmed);
+  for (const line of trimmed.split(/\r\n|\n|\r/)) {
+    const t = line.trim();
+    if (t.startsWith('V|') || t.startsWith('G|')) return true;
+  }
+  return false;
+}
+
+function safeLyricLineCitation(
+  lyricLineNo: string,
+  lyrics: LyricLine[],
+): { primary?: string; translation?: string } {
+  const ref = lyricLineNo.trim();
+  if (!ref || !/^\d+$/.test(ref)) return {};
+  const index = Number.parseInt(ref, 10);
+  if (index < 1) return {};
+  try {
+    const ex = resolveExampleRef(ref, '', lyrics);
+    return {
+      primary: ex.primary?.trim() || undefined,
+      translation: ex.translation?.trim() || undefined,
+    };
+  } catch {
+    return {};
+  }
 }
 
 export function extractStudyCardsFromRaw(raw: string, meta: ExtractStudyCardsMeta): StudyCardDraft[] {
@@ -54,7 +78,8 @@ export function extractStudyCardsFromRaw(raw: string, meta: ExtractStudyCardsMet
   let document;
   try {
     document = parseStream(trimmed);
-  } catch {
+  } catch (err) {
+    console.warn('[study-cards] parseStream failed:', err);
     return [];
   }
 
@@ -73,10 +98,10 @@ export function extractStudyCardsFromRaw(raw: string, meta: ExtractStudyCardsMet
     let exTrans: string | undefined;
     let useRuby = lang === 'jp' || lang === 'zh';
 
-    if (row.exampleRef) {
-      const ex = resolveExampleRef(row.exampleRef, row.exampleTrans, document.lyrics);
-      exOrig = ex.primary?.trim() || undefined;
-      exTrans = ex.translation?.trim() || undefined;
+    if (row.lyricLineNo) {
+      const cited = safeLyricLineCitation(row.lyricLineNo, document.lyrics);
+      exOrig = cited.primary;
+      exTrans = cited.translation;
     }
 
     cards.push({
@@ -111,10 +136,10 @@ export function extractStudyCardsFromRaw(raw: string, meta: ExtractStudyCardsMet
     let exTrans: string | undefined;
     const useRuby = lang === 'jp' || lang === 'zh';
 
-    if (row.exampleRef) {
-      const ex = resolveExampleRef(row.exampleRef, row.exampleTrans, document.lyrics);
-      exOrig = ex.primary?.trim() || undefined;
-      exTrans = ex.translation?.trim() || undefined;
+    if (row.lyricLineNo) {
+      const cited = safeLyricLineCitation(row.lyricLineNo, document.lyrics);
+      exOrig = cited.primary;
+      exTrans = cited.translation;
     }
 
     const meaning = row.detail?.trim() || zh || orig;

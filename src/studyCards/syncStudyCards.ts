@@ -34,9 +34,17 @@ export async function trySyncStudyCardsFromRaw(options: SyncStudyCardsOptions): 
       artist: options.artist,
       lang: options.lang,
     });
-    if (!drafts.length) return 0;
+    if (!drafts.length) {
+      console.warn('[study-cards] no drafts extracted (empty terms or parse failure)');
+      return 0;
+    }
 
-    const { written } = await replaceStudyCardsForBundle(options.bundleId, drafts);
+    const { written, skipped } = await replaceStudyCardsForBundle(options.bundleId, drafts);
+    if (written === 0 && skipped > 0) {
+      console.warn(
+        `[study-cards] ${skipped} card(s) skipped by global dedupe; bundle=${options.bundleId}`,
+      );
+    }
     return written;
   } catch (err) {
     console.warn('[study-cards] sync skipped:', err);
@@ -66,8 +74,8 @@ export function scheduleStudyCardsSync(
   options: SyncStudyCardsOptions,
   onUpdated?: () => void,
 ): void {
-  void trySyncStudyCardsFromRaw(options).then((count) => {
-    if (count > 0) onUpdated?.();
+  void trySyncStudyCardsFromRaw(options).then(() => {
+    onUpdated?.();
   });
 }
 

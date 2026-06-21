@@ -18,16 +18,22 @@ export type VocabRow = {
   seq: number;
   term: string;
   meaning: string;
-  exampleRef: string;
-  exampleTrans: string;
+  /** 1-based L line where term appears (study cards / 出典) */
+  lyricLineNo: string;
+  /** Hand-written teaching example (poster only; NOT copy from L) */
+  pedagogicalExample: string;
+  pedagogicalTranslation: string;
 };
 
 export type GrammarRow = {
   seq: number;
   label: string;
   detail: string;
-  exampleRef: string;
-  exampleTrans: string;
+  /** 1-based L line illustrating grammar (study cards / 出典) */
+  lyricLineNo: string;
+  /** Hand-written teaching example (poster only) */
+  pedagogicalExample: string;
+  pedagogicalTranslation: string;
 };
 
 export type StreamDocument = {
@@ -51,6 +57,8 @@ export type ParsedStreamLyrics = {
   artist?: string;
   lang?: LangCode;
   document: StreamDocument;
+  /** 流未闭合等可恢复解析时的用户提示 */
+  streamWarning?: string;
 };
 
 export type CompileOptions = {

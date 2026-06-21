@@ -1,12 +1,12 @@
-import { playKataClickSound } from './kataClickSound';
+import { playLogitechClickSoundEffect } from './logitechClickSound';
 
-/** @deprecated 使用 playKataClickSound；保留别名供抽屉等场景 */
+/** @deprecated 使用 playLogitechClickSoundEffect；保留别名供抽屉等场景 */
 export function playDrawerOpenSound(): void {
-  playKataClickSound();
+  playLogitechClickSoundEffect();
 }
 
 export function playDrawerCloseSound(): void {
-  playKataClickSound();
+  playLogitechClickSoundEffect();
 }
 
-export { playKataClickSound } from './kataClickSound';
+export { playLogitechClickSoundEffect } from './logitechClickSound';

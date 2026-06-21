@@ -1,7 +1,6 @@
 import { escapeHtml } from '../utils/escapeHtml';
 import { applyRubyMarkup } from '../utils/rubyMarkup';
 import { applyZhRubyMarkup } from '../utils/zhLayout/zhRubyMarkup';
-import { resolveExampleRef } from './resolveExampleRef';
 import { resolvePosterClass, usesPlainHtml, usesRubyMarkup } from './masterHandbook';
 import type { CompileOptions, StreamDocument } from './types';
 import type { PosterTextRole } from './masterHandbook';
@@ -66,14 +65,15 @@ function buildVocabularySection(doc: StreamDocument, opts?: CompileOptions): str
       const meaning = row.meaning
         ? ` <span class="${resolvePosterClass('vocabMeaning', lang, opts)}">${escapeHtml(row.meaning)}</span>`
         : '';
-      const ex = resolveExampleRef(row.exampleRef, row.exampleTrans, doc.lyrics);
+      const exPrimary = row.pedagogicalExample;
+      const exTrans = row.pedagogicalTranslation;
       const exPrimaryClass = resolvePosterClass('vocabExamplePrimary', lang, opts);
       const exSecondaryClass = resolvePosterClass('vocabExampleSecondary', lang, opts);
-      const exOrig = ex.primary
-        ? taggedLine(exPrimaryClass, renderText(ex.primary, 'vocabExamplePrimary', lang))
+      const exOrig = exPrimary
+        ? taggedLine(exPrimaryClass, renderText(exPrimary, 'vocabExamplePrimary', lang))
         : '';
-      const exZh = ex.translation
-        ? taggedLine(exSecondaryClass, escapeHtml(ex.translation))
+      const exZh = exTrans
+        ? taggedLine(exSecondaryClass, escapeHtml(exTrans))
         : '';
       const termHtml = `<span class="${resolvePosterClass('vocabTerm', lang, opts)}">${renderText(row.term, 'vocabTerm', lang)}</span>`;
       return `<div class="lyrics-vocab-item"><p class="vocab-line1">${termHtml}${meaning}</p>${exOrig}${exZh}</div>`;
@@ -103,14 +103,15 @@ function buildGrammarSection(doc: StreamDocument, opts?: CompileOptions): string
       const detail = row.detail
         ? `<p class="${resolvePosterClass('grammarDetail', lang, opts)}">${escapeHtml(row.detail)}</p>`
         : '';
-      const ex = resolveExampleRef(row.exampleRef, row.exampleTrans, doc.lyrics);
+      const exPrimary = row.pedagogicalExample;
+      const exTrans = row.pedagogicalTranslation;
       const exPrimaryClass = resolvePosterClass('grammarExamplePrimary', lang, opts);
       const exSecondaryClass = resolvePosterClass('grammarExampleSecondary', lang, opts);
-      const exOrig = ex.primary
-        ? taggedLine(exPrimaryClass, renderText(ex.primary, 'grammarExamplePrimary', lang))
+      const exOrig = exPrimary
+        ? taggedLine(exPrimaryClass, renderText(exPrimary, 'grammarExamplePrimary', lang))
         : '';
-      const exZh = ex.translation
-        ? taggedLine(exSecondaryClass, escapeHtml(ex.translation))
+      const exZh = exTrans
+        ? taggedLine(exSecondaryClass, escapeHtml(exTrans))
         : '';
       return `<div class="lyrics-grammar-item"><h3 class="grammar-point-title">${title}</h3>${detail}${exOrig}${exZh}</div>`;
     })

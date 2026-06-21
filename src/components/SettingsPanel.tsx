@@ -122,23 +122,36 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
           <section className="app-settings__section">
             <p className="app-settings__label">语言矩阵</p>
             <p className="app-settings__sublabel">使用语言</p>
-            <div className="app-settings__segmented">
+            <div
+              className={`app-settings__lang-toggle${settings.interfaceLanguage === 'en' ? ' is-en' : ''}`}
+              role="group"
+              aria-label="使用语言"
+            >
+              <span className="app-settings__lang-toggle__thumb" aria-hidden="true" />
               <button
                 type="button"
-                className={`app-settings__segment${settings.interfaceLanguage === 'zh' ? ' is-active' : ''}`}
+                className={`app-settings__lang-toggle__option${settings.interfaceLanguage === 'zh' ? ' is-active' : ''}`}
+                aria-pressed={settings.interfaceLanguage === 'zh'}
                 onClick={() => patch({ interfaceLanguage: 'zh' as InterfaceLanguage })}
               >
                 中文
               </button>
               <button
                 type="button"
-                className={`app-settings__segment${settings.interfaceLanguage === 'en' ? ' is-active' : ''}`}
+                className={`app-settings__lang-toggle__option${settings.interfaceLanguage === 'en' ? ' is-active' : ''}`}
+                aria-pressed={settings.interfaceLanguage === 'en'}
                 onClick={() => patch({ interfaceLanguage: 'en' as InterfaceLanguage })}
               >
                 English
               </button>
             </div>
-            <p className="app-settings__hint">决定词解、翻译、语法解析在 Prompt 中的输出语言（中文 / English）</p>
+            <p className="app-settings__lang-toggle-status" aria-live="polite">
+              当前释义语言：
+              <strong>
+                {settings.interfaceLanguage === 'zh' ? '中文' : 'English'}
+              </strong>
+            </p>
+            <p className="app-settings__hint">词解、翻译、语法解析在 Prompt 中的输出语言</p>
 
             <p className="app-settings__sublabel app-settings__sublabel--targets">学习目标语言</p>
             <div className="app-settings__lang-chips">
@@ -183,7 +196,6 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
                 onChange={(e) => patch({ interactionSoundsEnabled: e.target.checked })}
               />
             </label>
-            <p className="app-settings__hint">开启时，按键与拨轮定住附带轻震与 Logitech 点按声</p>
           </section>
 
           <footer className="app-settings__footer">

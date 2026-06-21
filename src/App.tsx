@@ -67,6 +67,7 @@ import {
   clipboardContentHash,
   getStructuredLyricsCardMeta,
   isStructuredLyricsClipboardText,
+  prepareStructuredLyricsClipboardText,
   type StructuredLyricsCardFallbacks,
 } from './utils/clipboardStructuredLyrics';
 import { useClipboardStructuredLyrics } from './hooks/useClipboardHasContent';
@@ -77,6 +78,7 @@ import {
   createStudyCardsBundleId,
   scheduleStudyCardsSync,
   tryMigrateStudyCardsBundle,
+  trySyncStudyCardsFromRaw,
 } from './studyCards/syncStudyCards';
 
 type Mode = 'input' | 'edit' | 'export';
@@ -816,9 +818,10 @@ export default function App() {
         title: nextTitle,
         artist: nextArtist,
         lang: nextLang,
+        includeVocabAndGrammar: appSettings.defaultIncludeVocabAndGrammar,
       });
     },
-    [enterEditWithLayout, syncStudyCardsFromRaw],
+    [enterEditWithLayout, syncStudyCardsFromRaw, appSettings.defaultIncludeVocabAndGrammar],
   );
 
   const handleLayoutChange = useCallback(
@@ -1039,6 +1042,7 @@ export default function App() {
         pageHtmls,
         layoutProfile,
         lang,
+        includeVocabAndGrammar: appSettings.defaultIncludeVocabAndGrammar,
         ...(cleanedTitleMarkup ? { titleMarkupHtml: cleanedTitleMarkup } : {}),
       });
       setSavedProjectId(saved.id);
@@ -1047,11 +1051,18 @@ export default function App() {
         await tryMigrateStudyCardsBundle(sessionBundleId, saved.id);
       }
       studyCardsBundleIdRef.current = saved.id;
-      syncStudyCardsFromRaw(lyrics, saved.id, {
+      const written = await trySyncStudyCardsFromRaw({
+        rawLyrics: lyrics,
+        bundleId: saved.id,
         title: resolveExportTitle(title),
         artist: artist.trim() || undefined,
         lang,
+        includeVocabAndGrammar: appSettings.defaultIncludeVocabAndGrammar,
       });
+      bumpStudyCardsRefresh();
+      if (written > 0) {
+        appToast.show(`已同步 ${written} 张学习卡`, 2400);
+      }
       setLibraryRefreshKey((k) => k + 1);
       appToast.show('已保存到我的歌词库', 2400);
       hapticSuccess();
@@ -1075,7 +1086,9 @@ export default function App() {
     lyricsLanguage,
     lang,
     posterRenderOpts,
-    syncStudyCardsFromRaw,
+    appSettings.defaultIncludeVocabAndGrammar,
+    bumpStudyCardsRefresh,
+    trySyncStudyCardsFromRaw,
   ]);
 
   const isWorkspaceMode = mode === 'edit' || mode === 'export';
@@ -1084,92 +1097,92 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <AppToastContext.Provider value={appToast.show}>
-    <div
-      className={`app app-screen${mode === 'input' ? ' app--home' : ''}${mode === 'edit' ? ' app--edit' : ''}${mode === 'export' ? ' app--export app--preview' : ''}`}
-    >
-      <OfflineBanner online={network.online} loading={network.loading} />
+      <AppToastContext.Provider value={appToast.show}>
+        <div
+          className={`app app-screen${mode === 'input' ? ' app--home' : ''}${mode === 'edit' ? ' app--edit' : ''}${mode === 'export' ? ' app--export app--preview' : ''}`}
+        >
+          <OfflineBanner online={network.online} loading={network.loading} />
 
-      <header
-        className={`app-header app-brand-bar app-screen__header${isWorkspaceMode ? ' app-header--compact' : ''}`}
-      >
-        <div className="app-brand-bar__inner">
-          <div className="app-brand-bar__top">
-            {mode === 'input' && (
-              <div className="app-chain-btn-wrapper">
-                <button
-                  ref={chainBtnRef}
-                  type="button"
-                  className={`app-chain-btn${hasMusicLink ? ' has-link' : ''}`}
-                  aria-label={hasMusicLink ? '已检测到音乐链接' : '暂无音乐链接'}
-                  onClick={async () => {
-                    if (!hasMusicLink) {
-                      setChainTipVisible((prev) => !prev);
-                    } else {
-                      // 有链接：重新粘贴最近一次检测到的歌曲信息
-                      // 安全校验：当前剪贴板若是 AI 结构化歌词，禁止粘贴到输入字段
-                      try {
-                        const currentClipText = await postClipboardRead();
-                        if (currentClipText && isStructuredLyricsClipboardText(currentClipText)) {
-                          // 剪贴板已是 AI 歌词 → 不污染字段
-                          console.log('[LinkChain] 剪贴板为结构化歌词，拒绝恢复');
-                          return;
-                        }
-                      } catch { /* 读取失败则允许恢复 */ }
-                      // 恢复历史数据
-                      if (lastDetectedShareRef.current) {
-                        const d = lastDetectedShareRef.current;
-                        setShareOcrData((prev) => ({ ...prev, ...d }));
-                        if (d.detectedLanguage) {
-                          const mappedLang = ocrLangToLyricsLanguage(d.detectedLanguage);
-                          if (mappedLang) {
-                            setAppSettings((prev) => ({ ...prev, lyricsLanguage: mappedLang }));
-                            saveAppSettings({ lyricsLanguage: mappedLang });
+          <header
+            className={`app-header app-brand-bar app-screen__header${isWorkspaceMode ? ' app-header--compact' : ''}`}
+          >
+            <div className="app-brand-bar__inner">
+              <div className="app-brand-bar__top">
+                {mode === 'input' && (
+                  <div className="app-chain-btn-wrapper">
+                    <button
+                      ref={chainBtnRef}
+                      type="button"
+                      className={`app-chain-btn${hasMusicLink ? ' has-link' : ''}`}
+                      aria-label={hasMusicLink ? '已检测到音乐链接' : '暂无音乐链接'}
+                      onClick={async () => {
+                        if (!hasMusicLink) {
+                          setChainTipVisible((prev) => !prev);
+                        } else {
+                          // 有链接：重新粘贴最近一次检测到的歌曲信息
+                          // 安全校验：当前剪贴板若是 AI 结构化歌词，禁止粘贴到输入字段
+                          try {
+                            const currentClipText = await postClipboardRead();
+                            if (currentClipText && isStructuredLyricsClipboardText(currentClipText)) {
+                              // 剪贴板已是 AI 歌词 → 不污染字段
+                              console.log('[LinkChain] 剪贴板为结构化歌词，拒绝恢复');
+                              return;
+                            }
+                          } catch { /* 读取失败则允许恢复 */ }
+                          // 恢复历史数据
+                          if (lastDetectedShareRef.current) {
+                            const d = lastDetectedShareRef.current;
+                            setShareOcrData((prev) => ({ ...prev, ...d }));
+                            if (d.detectedLanguage) {
+                              const mappedLang = ocrLangToLyricsLanguage(d.detectedLanguage);
+                              if (mappedLang) {
+                                setAppSettings((prev) => ({ ...prev, lyricsLanguage: mappedLang }));
+                                saveAppSettings({ lyricsLanguage: mappedLang });
+                              }
+                            }
                           }
                         }
-                      }
-                    }
-                  }}
-                >
-                  <LinkChainIcon />
-                </button>
+                      }}
+                    >
+                      <LinkChainIcon />
+                    </button>
+                  </div>
+                )}
+                <div className="app-brand-stack">
+                  <p className="app-brand">SHUFURI</p>
+                  <p className="app-brand-tagline">优雅简洁的日语释音与排版助手</p>
+                </div>
+                {mode === 'input' && (
+                  <div className="app-header-buttons">
+                    <button
+                      type="button"
+                      className="app-settings-btn"
+                      aria-label="设置"
+                      onClick={() => setSettingsOpen(true)}
+                    >
+                      <SettingsMenuIcon />
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-            <div className="app-brand-stack">
-              <p className="app-brand">SHUFURI</p>
-              <p className="app-brand-tagline">优雅简洁的日语释音与排版助手</p>
             </div>
-            {mode === 'input' && (
-              <div className="app-header-buttons">
-                <button
-                  type="button"
-                  className="app-settings-btn"
-                  aria-label="设置"
-                  onClick={() => setSettingsOpen(true)}
-                >
-                  <SettingsMenuIcon />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+          </header>
 
-      {/* 链条 tooltip：position:fixed + 边界检测，避免被屏幕边缘截断 */}
-      {chainTipVisible && mode === 'input' && chainBtnRef.current && (
-        <ChainLinkTooltip anchorRect={chainBtnRef.current.getBoundingClientRect()} />
-      )}
+          {/* 链条 tooltip：position:fixed + 边界检测，避免被屏幕边缘截断 */}
+          {chainTipVisible && mode === 'input' && chainBtnRef.current && (
+            <ChainLinkTooltip anchorRect={chainBtnRef.current.getBoundingClientRect()} />
+          )}
 
-      <SettingsPanel
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        onChange={handleSettingsChange}
-      />
+          <SettingsPanel
+            open={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            onChange={handleSettingsChange}
+          />
 
-      <div className="app-screen__body">
-        <main className={`app-main${isWorkspaceMode ? ' app-main--preview' : ''}`}>
-          {mode === 'input' && (
-            <div className="home-body">
+          <div className="app-screen__body">
+            <main className={`app-main${isWorkspaceMode ? ' app-main--preview' : ''}`}>
+              {mode === 'input' && (
+                <div className="home-body">
                   <HtmlPasteInput
                     key={inputResetKey}
                     includeVocabAndGrammar={appSettings.defaultIncludeVocabAndGrammar}
@@ -1190,154 +1203,155 @@ export default function App() {
                   />
                   <SavedLyricsLibrary onOpen={openProject} refreshKey={libraryRefreshKey} />
                   <StudyCardsLibrary refreshKey={studyCardsRefreshKey} />
-            </div>
-          )}
-
-          {mode === 'edit' && (
-            <div className="edit-area">
-              <InkToolbox
-                open={inkToolboxOpen}
-                canUndo={canUndoInkEdit}
-                showRuby={showRubyAnnotations}
-                rubySupported={rubyToggleSupported}
-                onToggle={() => setInkToolboxOpen((v) => !v)}
-                onUndo={handleInkUndo}
-                onShowRubyChange={handleShowRubyChange}
-              />
-              <div className="edit-toolbar">
-                <button type="button" className="btn-secondary" onClick={handleReset}>
-                  ← 重新输入
-                </button>
-                <div className="toolbar-actions">
-                  <button
-                    type="button"
-                    className="btn-export btn-export-save"
-                    onClick={() => void handleSave()}
-                    disabled={saving || !bodyHtml.trim()}
-                  >
-                    {saving ? '保存中…' : '保存'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-export btn-export-primary"
-                    onClick={() => void enterExportFlow()}
-                    disabled={!bodyHtml.trim()}
-                  >
-                    导出
-                  </button>
                 </div>
-              </div>
+              )}
 
-              <div ref={editCanvasRef} className="edit-canvas-scroll">
-                <InkFineTuneEditor
-                  containerRef={editCanvasRef}
-                  focusGroupIndex={inkFocusGroupIndex}
-                  editTarget={inkEditTarget}
-                  popoverClosing={inkPopoverClosing}
-                  draftKanji={inkDraftKanji}
-                  draftKana={inkDraftKana}
-                  draftZh={inkDraftZh}
-                  draftTitle={inkDraftTitle}
-                  draftArtist={inkDraftArtist}
-                  interaction="click"
-                  onOpenTarget={handleInkOpenTarget}
-                  onClose={closeInkPopover}
-                  onKanjiChange={setInkDraftKanji}
-                  onKanaChange={setInkDraftKana}
-                  onZhChange={setInkDraftZh}
-                  onTitleChange={setInkDraftTitle}
-                  onArtistChange={setInkDraftArtist}
-                  onConfirm={() => void handleInkConfirm()}
-                >
-                  <ShufuriPosterEditCanvas
-                    title={title}
-                    artist={artist}
-                    bodyHtml={bodyHtml}
-                    layoutProfile={EDIT_LAYOUT}
-                    displayScale={editScale}
-                    titleMarkupHtml={titleMarkupHtml}
-                    lang={lang}
-                    language={lyricsLanguage}
-                    colorTheme={appSettings.colorTheme}
+              {mode === 'edit' && (
+                <div className="edit-area">
+                  <InkToolbox
+                    open={inkToolboxOpen}
+                    canUndo={canUndoInkEdit}
                     showRuby={showRubyAnnotations}
+                    rubySupported={rubyToggleSupported}
+                    onToggle={() => setInkToolboxOpen((v) => !v)}
+                    onUndo={handleInkUndo}
+                    onShowRubyChange={handleShowRubyChange}
                   />
-                </InkFineTuneEditor>
-              </div>
-            </div>
-          )}
+                  <div className="edit-toolbar">
+                    <button type="button" className="btn-secondary" onClick={handleReset}>
+                      ← 重新输入
+                    </button>
+                    <div className="toolbar-actions">
+                      <button
+                        type="button"
+                        className="btn-export btn-export-save"
+                        onClick={() => void handleSave()}
+                        disabled={saving || !bodyHtml.trim()}
+                      >
+                        {saving ? '保存中…' : '保存'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-export btn-export-primary"
+                        onClick={() => void enterExportFlow()}
+                        disabled={!bodyHtml.trim()}
+                      >
+                        导出
+                      </button>
+                    </div>
+                  </div>
 
-          {mode === 'export' && (
-            <ExportPreviewPanel
-              pages={pages}
-              title={title}
-              artist={artist}
-              layoutProfile={layoutProfile}
-              displayScale={exportScale}
-              exporting={exporting}
-              saving={saving}
-              repaginating={repaginating}
-              showRuby={showRubyAnnotations}
-              rubySupported={rubyToggleSupported}
-              previewTypography={previewTypography}
-              previewPagesRef={exportPagesRef}
-              onBackToEdit={handleBackToEdit}
-              onLayoutChange={(profile) => void handleLayoutChange(profile)}
-              onSave={() => void handleSave()}
-              onExportPdf={() => void handleExportPdf()}
-              onShowRubyChange={handleShowRubyChange}
-              onPreviewTypographyChange={setPreviewTypography}
-              onPreviewTypographyCommit={scheduleRebuildExportPages}
-              language={lyricsLanguage}
-              lang={lang}
-              renderOptions={posterRenderOpts}
-              captureRef={(index) => (el) => {
-                pageRefs.current[index] = el;
-              }}
-            />
-          )}
+                  <div ref={editCanvasRef} className="edit-canvas-scroll">
+                    <InkFineTuneEditor
+                      containerRef={editCanvasRef}
+                      focusGroupIndex={inkFocusGroupIndex}
+                      editTarget={inkEditTarget}
+                      popoverClosing={inkPopoverClosing}
+                      draftKanji={inkDraftKanji}
+                      draftKana={inkDraftKana}
+                      draftZh={inkDraftZh}
+                      draftTitle={inkDraftTitle}
+                      draftArtist={inkDraftArtist}
+                      interaction="click"
+                      onOpenTarget={handleInkOpenTarget}
+                      onClose={closeInkPopover}
+                      onKanjiChange={setInkDraftKanji}
+                      onKanaChange={setInkDraftKana}
+                      onZhChange={setInkDraftZh}
+                      onTitleChange={setInkDraftTitle}
+                      onArtistChange={setInkDraftArtist}
+                      onConfirm={() => void handleInkConfirm()}
+                    >
+                      <ShufuriPosterEditCanvas
+                        title={title}
+                        artist={artist}
+                        bodyHtml={bodyHtml}
+                        layoutProfile={EDIT_LAYOUT}
+                        displayScale={editScale}
+                        titleMarkupHtml={titleMarkupHtml}
+                        lang={lang}
+                        language={lyricsLanguage}
+                        colorTheme={appSettings.colorTheme}
+                        showRuby={showRubyAnnotations}
+                      />
+                    </InkFineTuneEditor>
+                  </div>
+                </div>
+              )}
 
-        </main>
-      </div>
-      {/* 剪贴板检测：从 AI App 返回时检测结构化歌词 */}
-      <ClipboardDetectCard
-        songTitle={clipboardDetectedSong}
-        artist={clipboardDetectedArtist}
-        language={clipboardDetectedLang}
-        visible={clipboardCardVisible}
-        onRenderLayout={() => {
-          setClipboardCardVisible(false);
-          // 从剪贴板读取全文并进入排版预览
-          void (async () => {
-            try {
-              const text = await postClipboardRead();
-              if (text && isStructuredLyricsClipboardText(text)) {
-                const { preparePasteForLayout } = await import('./services/lyricsHtml');
-                const prepared = preparePasteForLayout(text);
-                await handleLayoutFromHtml(
-                  prepared.bodyHtml,
-                  prepared.title || '',
-                  text,
-                  prepared.artist,
-                  prepared.lang,
-                );
+              {mode === 'export' && (
+                <ExportPreviewPanel
+                  pages={pages}
+                  title={title}
+                  artist={artist}
+                  layoutProfile={layoutProfile}
+                  displayScale={exportScale}
+                  exporting={exporting}
+                  saving={saving}
+                  repaginating={repaginating}
+                  showRuby={showRubyAnnotations}
+                  rubySupported={rubyToggleSupported}
+                  previewTypography={previewTypography}
+                  previewPagesRef={exportPagesRef}
+                  onBackToEdit={handleBackToEdit}
+                  onLayoutChange={(profile) => void handleLayoutChange(profile)}
+                  onSave={() => void handleSave()}
+                  onExportPdf={() => void handleExportPdf()}
+                  onShowRubyChange={handleShowRubyChange}
+                  onPreviewTypographyChange={setPreviewTypography}
+                  onPreviewTypographyCommit={scheduleRebuildExportPages}
+                  language={lyricsLanguage}
+                  lang={lang}
+                  renderOptions={posterRenderOpts}
+                  captureRef={(index) => (el) => {
+                    pageRefs.current[index] = el;
+                  }}
+                />
+              )}
+
+            </main>
+          </div>
+          {/* 剪贴板检测：从 AI App 返回时检测结构化歌词 */}
+          <ClipboardDetectCard
+            songTitle={clipboardDetectedSong}
+            artist={clipboardDetectedArtist}
+            language={clipboardDetectedLang}
+            visible={clipboardCardVisible}
+            onRenderLayout={() => {
+              setClipboardCardVisible(false);
+              // 从剪贴板读取全文并进入排版预览
+              void (async () => {
+                try {
+                  const text = await postClipboardRead();
+                  if (text && isStructuredLyricsClipboardText(text)) {
+                    const cleaned = prepareStructuredLyricsClipboardText(text);
+                    const { preparePasteForLayout } = await import('./services/lyricsHtml');
+                    const prepared = preparePasteForLayout(cleaned);
+                    await handleLayoutFromHtml(
+                      prepared.bodyHtml,
+                      prepared.title || '',
+                      cleaned,
+                      prepared.artist,
+                      prepared.lang,
+                    );
+                  }
+                } catch {
+                  // 静默失败
+                }
+              })();
+            }}
+            onDismiss={() => {
+              // 标记当前内容为「已消费」，防止下次回到前台时重复弹窗
+              if (prevClipboardHashRef.current) {
+                consumedClipboardRef.current.add(prevClipboardHashRef.current);
               }
-            } catch {
-              // 静默失败
-            }
-          })();
-        }}
-        onDismiss={() => {
-          // 标记当前内容为「已消费」，防止下次回到前台时重复弹窗
-          if (prevClipboardHashRef.current) {
-            consumedClipboardRef.current.add(prevClipboardHashRef.current);
-          }
-          setClipboardCardVisible(false);
-        }}
-      />
+              setClipboardCardVisible(false);
+            }}
+          />
 
-      <AppToast message={appToast.message} placement="fixed" />
-    </div>
-    </AppToastContext.Provider>
+          <AppToast message={appToast.message} placement="fixed" />
+        </div>
+      </AppToastContext.Provider>
     </ErrorBoundary>
   );
 }

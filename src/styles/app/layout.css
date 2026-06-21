@@ -335,7 +335,7 @@ html:has(.app--export) {
 .fv-poster-preview-frame {
   background: var(--color-bg-elevated);
   box-shadow: var(--shadow-sm);
-  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .fv-poster-preview-frame .fv-html-poster-root {

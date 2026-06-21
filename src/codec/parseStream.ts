@@ -25,8 +25,28 @@ function parseLyric(fields: string[]): LyricLine {
 }
 
 function parseVocab(fields: string[]): VocabRow {
-  const [, seqRaw = '', term = '', meaning = '', exampleRef = '', exampleTrans = ''] =
-    normalizeCodecRubyFields(fields);
+  const normalized = normalizeCodecRubyFields(fields);
+  const [, seqRaw = '', term = '', meaning = ''] = normalized;
+  let lyricLineNo = '';
+  let pedagogicalExample = '';
+  let pedagogicalTranslation = '';
+
+  if (normalized.length >= 7) {
+    lyricLineNo = normalized[4]?.trim() ?? '';
+    pedagogicalExample = normalized[5]?.trim() ?? '';
+    pedagogicalTranslation = normalized[6]?.trim() ?? '';
+  } else {
+    const legacyRef = normalized[4]?.trim() ?? '';
+    const legacyTrans = normalized[5]?.trim() ?? '';
+    if (/^\d+$/.test(legacyRef)) {
+      lyricLineNo = legacyRef;
+      pedagogicalTranslation = legacyTrans;
+    } else {
+      pedagogicalExample = legacyRef;
+      pedagogicalTranslation = legacyTrans;
+    }
+  }
+
   const seq = Number.parseInt(seqRaw, 10);
   if (!Number.isFinite(seq) || seq < 1) {
     throw new Error(`V 行序号无效：${seqRaw}`);
@@ -35,14 +55,35 @@ function parseVocab(fields: string[]): VocabRow {
     seq,
     term: term.trim(),
     meaning: meaning.trim(),
-    exampleRef: exampleRef.trim(),
-    exampleTrans: exampleTrans.trim(),
+    lyricLineNo,
+    pedagogicalExample,
+    pedagogicalTranslation,
   };
 }
 
 function parseGrammar(fields: string[]): GrammarRow {
-  const [, seqRaw = '', label = '', detail = '', exampleRef = '', exampleTrans = ''] =
-    normalizeCodecRubyFields(fields);
+  const normalized = normalizeCodecRubyFields(fields);
+  const [, seqRaw = '', label = '', detail = ''] = normalized;
+  let lyricLineNo = '';
+  let pedagogicalExample = '';
+  let pedagogicalTranslation = '';
+
+  if (normalized.length >= 7) {
+    lyricLineNo = normalized[4]?.trim() ?? '';
+    pedagogicalExample = normalized[5]?.trim() ?? '';
+    pedagogicalTranslation = normalized[6]?.trim() ?? '';
+  } else {
+    const legacyRef = normalized[4]?.trim() ?? '';
+    const legacyTrans = normalized[5]?.trim() ?? '';
+    if (/^\d+$/.test(legacyRef)) {
+      lyricLineNo = legacyRef;
+      pedagogicalTranslation = legacyTrans;
+    } else {
+      pedagogicalExample = legacyRef;
+      pedagogicalTranslation = legacyTrans;
+    }
+  }
+
   const seq = Number.parseInt(seqRaw, 10);
   if (!Number.isFinite(seq) || seq < 1) {
     throw new Error(`G 行序号无效：${seqRaw}`);
@@ -51,8 +92,9 @@ function parseGrammar(fields: string[]): GrammarRow {
     seq,
     label: label.trim(),
     detail: detail.trim(),
-    exampleRef: exampleRef.trim(),
-    exampleTrans: exampleTrans.trim(),
+    lyricLineNo,
+    pedagogicalExample,
+    pedagogicalTranslation,
   };
 }
 
@@ -81,7 +123,7 @@ export function parseStream(raw: string): StreamDocument {
       sawOpen = true;
       continue;
     }
-    if (line === '@9') {
+    if (line === '@9' || line.startsWith('@9|')) {
       closed = true;
       break;
     }
