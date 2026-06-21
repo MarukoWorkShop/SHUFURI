@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { hapticButton } from '../hooks/useHaptics';
 import { isInteractionSoundEnabled, type LyricsLanguage } from '../services/appSettings';
-import { playKataClickSound } from '../utils/kataClickSound';
+import { playLogitechClickSoundEffect } from '../utils/logitechClickSound';
 import './LanguageWheel.css';
 
 export type { LyricsLanguage as LangCode };
@@ -31,7 +31,7 @@ function langIndex(code: LyricsLanguage, languages: readonly LyricsLanguage[]): 
 function triggerWheelSnapFeedback(soundEnabled: boolean): void {
   if (!soundEnabled) return;
   hapticButton();
-  playKataClickSound();
+  playLogitechClickSoundEffect();
 }
 
 type Props = {

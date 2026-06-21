@@ -1,6 +1,6 @@
-import { playClickSampleSound } from './uiSampleSound';
+import { playKataWavSound } from './uiSampleSound';
 
-/** 全局点按音效：Logitech click.wav */
+/** 全局按键点按音效（kata.wav） */
 export function playKataClickSound(): void {
-  playClickSampleSound();
+  playKataWavSound();
 }

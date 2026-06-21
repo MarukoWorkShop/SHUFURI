@@ -47,7 +47,7 @@ const enPrompt = buildEncoderPrompt('A', 'B', {
     activeTarget: 'en',
   },
 });
-assert(enPrompt.includes('G 第 3 列标签格式'), 'en prompt grammar label format');
+assert(enPrompt.includes('G column 3 label format'), 'en prompt grammar label format');
 assert(/\nG\|1\|/.test(enPrompt), 'en prompt G sample row');
 
 console.log('testGrammarStudyTermCss: OK');

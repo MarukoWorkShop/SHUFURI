@@ -69,9 +69,30 @@ export default function ShufuriPosterEditCanvas({
   );
 
   const { width: w } = getShufuriPosterCanvasDimensions(layoutProfile);
-  const scaledW = w * displayScale;
+  const targetW = w * displayScale;
+  const frameRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const [renderScale, setRenderScale] = useState(displayScale);
   const [scaledH, setScaledH] = useState<number | undefined>();
+
+  useLayoutEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) {
+      return;
+    }
+    const updateFrame = () => {
+      const actualW = frame.clientWidth;
+      if (actualW > 0 && w > 0) {
+        setRenderScale(actualW / w);
+      } else {
+        setRenderScale(displayScale);
+      }
+    };
+    updateFrame();
+    const ro = new ResizeObserver(updateFrame);
+    ro.observe(frame);
+    return () => ro.disconnect();
+  }, [displayScale, w, layoutProfile]);
 
   useLayoutEffect(() => {
     const el = rootRef.current;
@@ -80,7 +101,7 @@ export default function ShufuriPosterEditCanvas({
     }
     const update = () => {
       const natural = Math.max(el.scrollHeight, el.offsetHeight);
-      setScaledH(natural * displayScale);
+      setScaledH(natural * renderScale);
     };
     update();
     const ro = new ResizeObserver(update);
@@ -89,12 +110,12 @@ export default function ShufuriPosterEditCanvas({
       void document.fonts.ready.then(update);
     }
     return () => ro.disconnect();
-  }, [displayScale, safeBody, title, artist, layoutProfile, safeTitleMarkup]);
+  }, [renderScale, safeBody, title, artist, layoutProfile, safeTitleMarkup]);
 
   const scaledFrameStyle: CSSProperties = {
-    width: scaledW,
-    minHeight: scaledH,
+    width: targetW,
     maxWidth: '100%',
+    minHeight: scaledH,
     position: 'relative',
     overflow: 'visible',
     flexShrink: 0,
@@ -105,12 +126,12 @@ export default function ShufuriPosterEditCanvas({
     top: 0,
     left: 0,
     width: w,
-    transform: displayScale === 1 ? undefined : `scale(${displayScale})`,
+    transform: renderScale === 1 ? undefined : `scale(${renderScale})`,
     transformOrigin: 'top left',
   };
 
   return (
-    <div className="fv-poster-preview-frame fv-edit-canvas-frame" style={scaledFrameStyle}>
+    <div ref={frameRef} className="fv-poster-preview-frame fv-edit-canvas-frame" style={scaledFrameStyle}>
       <div style={scaleWrapperStyle}>
         <div
           ref={rootRef}

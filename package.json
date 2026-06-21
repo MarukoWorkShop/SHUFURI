@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "cap:add:ios": "npx cap add ios",
     "cap:add:android": "npx cap add android",
-    "cap:sync": "npm run build && npx cap sync",
+    "cap:sync": "npm run build && npx cap sync && node scripts/patchIosLaunchScreen.mjs",
     "cap:open:ios": "npx cap open ios",
     "cap:open:android": "npx cap open android",
     "cap:run:ios": "npm run build && npx cap run ios",

@@ -94,6 +94,8 @@ function ShufuriPosterSinglePage({
   );
   const { width: w, height: h } = getShufuriPosterCanvasDimensions(layoutProfile);
   const pad = getShufuriCanvasInsets(layoutProfile);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [renderScale, setRenderScale] = useState(displayScale);
   const innerCss = useMemo(
     () =>
       buildShufuriPosterInnerCss(layoutProfile, {
@@ -112,10 +114,28 @@ function ShufuriPosterSinglePage({
     [layoutProfile],
   );
 
-  const scaledW = w * displayScale;
-  const scaledH = h * displayScale;
+  const targetW = w * displayScale;
 
   const bodyRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) {
+      return;
+    }
+    const update = () => {
+      const actualW = frame.clientWidth;
+      if (actualW > 0 && w > 0) {
+        setRenderScale(actualW / w);
+      } else {
+        setRenderScale(displayScale);
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(frame);
+    return () => ro.disconnect();
+  }, [displayScale, w, layoutProfile]);
 
   useLayoutEffect(() => {
     const bodyEl = bodyRef.current;
@@ -316,8 +336,9 @@ function ShufuriPosterSinglePage({
   /* ---- 长按保存 end ---- */
 
   const scaledFrameStyle: CSSProperties = {
-    width: scaledW,
-    height: scaledH,
+    width: targetW,
+    maxWidth: '100%',
+    aspectRatio: `${w} / ${h}`,
     position: 'relative',
     overflow: 'hidden',
     flexShrink: 0,
@@ -329,12 +350,13 @@ function ShufuriPosterSinglePage({
     left: 0,
     width: w,
     height: h,
-    transform: displayScale === 1 ? undefined : `scale(${displayScale})`,
+    transform: renderScale === 1 ? undefined : `scale(${renderScale})`,
     transformOrigin: 'top left',
   };
 
   return (
     <div
+      ref={frameRef}
       className={`fv-poster-preview-frame${saving ? ' fv-poster-preview-frame--saving' : ''}`}
       style={scaledFrameStyle}
       onTouchStart={onTouchStartPage}

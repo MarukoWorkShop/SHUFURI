@@ -225,6 +225,7 @@ export default function PosterLayoutWheel({ value, onChange, soundEnabled }: Pro
                 }}
                 className="paper-wheel__item"
                 role="option"
+                data-no-press-feedback
                 aria-label={item.ariaLabel}
                 aria-selected={item.profile === value}
                 onClick={() => scrollToIndex(i, true)}

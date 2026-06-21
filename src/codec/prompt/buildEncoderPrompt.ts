@@ -18,13 +18,13 @@ export function buildEncoderPrompt(
 ): string {
   const t = title.trim().replace(/^《|》$/g, '');
   if (!t) {
-    throw new Error('歌名为必填项，外部 AI 需要歌名才能查找歌词');
+    throw new Error('Title is required for external AI lyric lookup');
   }
   const a = artist.trim() || DEFAULT_ARTIST;
   const matrix = options.matrix;
   const lang = matrix.activeTarget;
   if (lang !== 'jp' && lang !== 'ko' && lang !== 'en' && lang !== 'zh') {
-    throw new Error(`无效的目标语言：${String(lang)}`);
+    throw new Error(`Invalid target language: ${String(lang)}`);
   }
 
   const gloss = getGlossSpec(matrix.interfaceLanguage);
