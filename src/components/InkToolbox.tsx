@@ -1,10 +1,12 @@
 import SquarePenIcon from './icons/SquarePenIcon';
 import Undo2Icon from './icons/Undo2Icon';
+import PosterRubyToggleButton from './PosterRubyToggleButton';
 import './InkToolbox.css';
 
 type Props = {
   open: boolean;
   canUndo: boolean;
+  inkEditActive?: boolean;
   showRuby: boolean;
   rubySupported: boolean;
   onToggle: () => void;
@@ -15,6 +17,7 @@ type Props = {
 export default function InkToolbox({
   open,
   canUndo,
+  inkEditActive = false,
   showRuby,
   rubySupported,
   onToggle,
@@ -35,23 +38,19 @@ export default function InkToolbox({
       <div className="ink-toolbox__panel" role="toolbar" aria-label="编辑工具">
         <button
           type="button"
-          className="ink-toolbox__tool is-active"
+          className={`ink-toolbox__tool${inkEditActive ? ' is-active' : ''}`}
           aria-label="铅笔编辑"
-          aria-pressed
+          aria-pressed={inkEditActive}
           tabIndex={-1}
         >
           <SquarePenIcon className="ink-toolbox__icon" />
         </button>
-        <button
-          type="button"
-          className={`ink-toolbox__tool ink-toolbox__tool--ruby${showRuby ? ' is-active' : ''}`}
-          aria-label={showRuby ? '隐藏注音' : '显示注音'}
-          aria-pressed={showRuby}
+        <PosterRubyToggleButton
+          className="ink-toolbox__tool"
+          showRuby={showRuby}
           disabled={!rubySupported}
           onClick={() => onShowRubyChange(!showRuby)}
-        >
-          <span className="ink-toolbox__ruby-label">注音</span>
-        </button>
+        />
         <button
           type="button"
           className="ink-toolbox__tool ink-toolbox__tool--undo"

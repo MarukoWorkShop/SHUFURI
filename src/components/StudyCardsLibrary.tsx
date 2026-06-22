@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { deleteStudyCard, deleteStudyCards, listStudyCards } from '../services/studyCardsStore';
+import { deleteStudyCard, deleteStudyCards, listStudyCards, subscribeStudyCardsStore } from '../services/studyCardsStore';
 import type { StudyCard } from '../studyCards/types';
 import type { LangCode } from '../services/appSettings';
 import { shareAnkiDeckTsv } from '../studyCards/shareAnkiDeck';
 import StudyCardDetailOverlay from './StudyCardDetailOverlay';
 import './StudyCardsLibrary.css';
 
-type Props = {
-  refreshKey?: number;
-};
+type Props = Record<string, never>;
 
 const DRAWER_MS = 400;
 const UNLATCH_MS = 100;
@@ -35,7 +33,7 @@ function langFilterLabel(filter: LangFilter): string {
   return langTagLabel(filter);
 }
 
-export default function StudyCardsLibrary({ refreshKey = 0 }: Props) {
+export default function StudyCardsLibrary(_props: Props) {
   const [items, setItems] = useState<StudyCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -70,7 +68,13 @@ export default function StudyCardsLibrary({ refreshKey = 0 }: Props) {
 
   useEffect(() => {
     void reload();
-  }, [reload, refreshKey]);
+  }, [reload]);
+
+  useEffect(() => {
+    return subscribeStudyCardsStore(() => {
+      void reload();
+    });
+  }, [reload]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('study-cards-drawer-open', drawerActive);

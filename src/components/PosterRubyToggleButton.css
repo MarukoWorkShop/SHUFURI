@@ -1,0 +1,45 @@
+.poster-ruby-toggle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-fg-disabled);
+  box-shadow: none;
+  cursor: pointer;
+  transition:
+    color var(--ui-transition),
+    background var(--ui-transition),
+    opacity var(--ui-transition);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.poster-ruby-toggle:hover:not(.is-active):not(:disabled) {
+  color: var(--color-fg-muted);
+  background: color-mix(in srgb, var(--color-fg) 6%, transparent);
+}
+
+.poster-ruby-toggle.is-active {
+  color: var(--ui-bg);
+  background: var(--color-accent);
+}
+
+.poster-ruby-toggle:disabled {
+  color: var(--color-fg-faint);
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.poster-ruby-toggle__label {
+  font-family: var(--ui-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}

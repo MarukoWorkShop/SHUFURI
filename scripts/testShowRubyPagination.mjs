@@ -3,9 +3,20 @@
  * 运行: npx tsx scripts/testShowRubyPagination.mjs
  */
 import { readFileSync } from 'fs';
+import { Window } from 'happy-dom';
 import { compileDocument } from '../src/codec/compileDocument.ts';
 import { normalizeLyricsBodyHtml } from '../src/services/lyricsHtml.ts';
 import { paginateShufuriPosterBodyHtml } from '../src/utils/shufuriPoster/paginateShufuriPosterHtml.ts';
+
+const window = new Window({ url: 'http://localhost/' });
+const { document, Node, Element, HTMLElement, Text } = window;
+globalThis.window = window;
+globalThis.document = document;
+globalThis.Node = Node;
+globalThis.Element = Element;
+globalThis.HTMLElement = HTMLElement;
+globalThis.Text = Text;
+globalThis.getComputedStyle = window.getComputedStyle.bind(window);
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
@@ -71,3 +82,5 @@ console.log('testShowRubyPagination: OK', {
   withoutRuby: withoutRuby.length,
   dense: dense.length,
 });
+
+await window.happyDOM.close();

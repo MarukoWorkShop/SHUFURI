@@ -35,6 +35,15 @@ export default defineConfig(({ mode }) => {
     envPrefix: 'VITE_',
     build: {
       assetsDir: 'assets',
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('printFontBase64.generated')) {
+              return 'print-fonts';
+            }
+          },
+        },
+      },
     },
     server: {
       host: true,

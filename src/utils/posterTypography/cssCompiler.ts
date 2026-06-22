@@ -8,7 +8,7 @@ import {
   getPosterJapaneseFontsFaceCss,
   getPosterKoreanFontFaceCss,
 } from '../shufuriPoster/fonts.ts';
-import { dimForFuriganaPoster } from '../shufuriPoster/dimensions.ts';
+import { dimForProfile } from '../shufuriPoster/dimensions.ts';
 import {
   buildCjkNoBreakClassCss,
   buildCjkWrapCss,
@@ -642,7 +642,7 @@ function compilePageNumberCss(
   spec?: PrintPageSpec,
 ): string {
   if (unit === 'px') return '';
-  const d = dimForFuriganaPoster(r.profile);
+  const d = dimForProfile(r.profile);
   const pageNoBottomPx =
     r.profile === 'mobilePoster'
       ? Math.round(d.pageBottomDefault * 0.42)

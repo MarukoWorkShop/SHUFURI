@@ -132,7 +132,7 @@ export default function HtmlPasteInput({
               id="title-input"
               value={songTitle}
               onChange={(e) => setSongTitle(e.target.value)}
-              placeholder="秋樱"
+              placeholder="歌曲名称"
               required
               aria-required="true"
             />
@@ -145,7 +145,7 @@ export default function HtmlPasteInput({
               id="artist-input"
               value={artist}
               onChange={(e) => setArtist(e.target.value)}
-              placeholder="山口百惠"
+              placeholder="歌手信息（可选）"
             />
           </label>
         </div>

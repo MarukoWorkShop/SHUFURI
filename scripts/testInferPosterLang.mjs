@@ -1,6 +1,7 @@
 import {
   inferPosterLangFromBodyHtml,
   resolvePosterPipelineLang,
+  resolvePosterRubyToggleSupported,
 } from '../src/utils/shufuriPoster/inferPosterLang.ts';
 
 function assert(cond, msg) {
@@ -24,8 +25,8 @@ assert(
   'plain jp-line → en',
 );
 assert(
-  inferPosterLangFromBodyHtml('<p class="jp-line"><ruby>') === undefined,
-  'ruby jp-line not en',
+  inferPosterLangFromBodyHtml('<p class="jp-line"><ruby>紅<rt>べに</rt></ruby>') === 'jp',
+  'ruby jp-line → jp',
 );
 
 assert(
@@ -39,6 +40,20 @@ assert(
 assert(
   resolvePosterPipelineLang(undefined, '<p class="jp-line">x</p>', 'en') === 'en',
   'wheel fallback en',
+);
+
+const jpRubyBody = '<p class="jp-line"><ruby>紅<rt>べに</rt></ruby></p>';
+assert(
+  resolvePosterRubyToggleSupported('en', jpRubyBody, 'jp') === true,
+  'declared en + jp wheel + ruby → ruby toggle on',
+);
+assert(
+  resolvePosterRubyToggleSupported('en', jpRubyBody, 'en') === false,
+  'declared en + en wheel + ruby → ruby toggle off',
+);
+assert(
+  resolvePosterRubyToggleSupported('jp', jpRubyBody, 'jp') === true,
+  'declared jp → ruby toggle on',
 );
 
 console.log('testInferPosterLang: OK');

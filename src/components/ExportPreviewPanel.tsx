@@ -1,73 +1,53 @@
-import { useState, type RefObject } from 'react';
+import { useState } from 'react';
 import ShufuriPosterPreview from './ShufuriPosterPreview';
 import PosterLayoutWheel from './PosterLayoutWheel';
-import AudioLinesIcon from './icons/AudioLinesIcon';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
-import type { PosterLayoutProfile, PosterPageSlice, PosterRenderOptions } from '../utils/shufuriPoster/types';
+import PosterRubyToggleButton from './PosterRubyToggleButton';
+import {
+  usePosterDocumentContext,
+  usePosterTypographyContext,
+} from '../context/PosterWorkspaceContext';
 import {
   PREVIEW_FONT_SCALE_MAX,
   PREVIEW_FONT_SCALE_MIN,
   PREVIEW_LINE_SCALE_MAX,
   PREVIEW_LINE_SCALE_MIN,
-  type PreviewTypography,
 } from '../utils/shufuriPoster/types';
-import type { LyricsLanguage, LangCode } from '../services/appSettings';
-
-type Props = {
-  pages: PosterPageSlice[];
-  title: string;
-  artist?: string;
-  layoutProfile: PosterLayoutProfile;
-  displayScale: number;
-  exporting: boolean;
-  saving: boolean;
-  repaginating: boolean;
-  showRuby: boolean;
-  rubySupported: boolean;
-  previewTypography: PreviewTypography;
-  previewPagesRef: RefObject<HTMLDivElement | null>;
-  onBackToEdit: () => void;
-  onLayoutChange: (profile: PosterLayoutProfile) => void;
-  onSave: () => void;
-  onExportPdf: () => void;
-  onShowRubyChange: (show: boolean) => void;
-  onPreviewTypographyChange: (next: PreviewTypography) => void;
-  onPreviewTypographyCommit: () => void;
-  captureRef: (index: number) => (el: HTMLDivElement | null) => void;
-  language?: LyricsLanguage;
-  lang?: LangCode;
-  renderOptions: PosterRenderOptions;
-};
 
 function formatPercent(scale: number): string {
   return `${Math.round(scale * 100)}%`;
 }
 
-export default function ExportPreviewPanel({
-  pages,
-  title,
-  artist,
-  layoutProfile,
-  displayScale,
-  exporting,
-  saving,
-  repaginating,
-  showRuby,
-  rubySupported,
-  previewTypography,
-  previewPagesRef,
-  onBackToEdit,
-  onLayoutChange,
-  onSave,
-  onExportPdf,
-  onShowRubyChange,
-  onPreviewTypographyChange,
-  onPreviewTypographyCommit,
-  captureRef,
-  language = 'jp',
-  lang,
-  renderOptions,
-}: Props) {
+export default function ExportPreviewPanel() {
+  const {
+    pages,
+    title,
+    artist,
+    layoutProfile,
+    exportScale,
+    exporting,
+    saving,
+    lyricsLanguage,
+    lang,
+    exportPagesRef,
+    handleBackToEdit,
+    handleLayoutChange,
+    handleSave,
+    handleExportPdf,
+    capturePageRef,
+  } = usePosterDocumentContext();
+
+  const {
+    showRubyAnnotations,
+    rubyToggleSupported,
+    previewTypography,
+    repaginating,
+    posterRenderOpts,
+    handleShowRubyChange,
+    setPreviewTypography,
+    scheduleRebuildExportPages,
+  } = usePosterTypographyContext();
+
   const densityDisabled = exporting || saving || repaginating;
   const [densityOpen, setDensityOpen] = useState(false);
 
@@ -79,13 +59,13 @@ export default function ExportPreviewPanel({
             type="button"
             className="preview-back-btn"
             aria-label="返回编辑"
-            onClick={onBackToEdit}
+            onClick={handleBackToEdit}
           >
             <ArrowLeftIcon className="preview-back-btn__icon" />
           </button>
           <PosterLayoutWheel
             value={layoutProfile}
-            onChange={(profile) => onLayoutChange(profile)}
+            onChange={(profile) => void handleLayoutChange(profile)}
           />
         </div>
 
@@ -113,81 +93,78 @@ export default function ExportPreviewPanel({
           hidden={!densityOpen}
         >
           <div className="preview-toolbar-density">
-            <button
-              type="button"
-              className={`preview-pronunciation-btn${showRuby ? ' is-on' : ''}`}
-              aria-label={showRuby ? '隐藏发音标注' : '显示发音标注'}
-              aria-pressed={showRuby}
-              disabled={!rubySupported || densityDisabled}
-              onClick={() => onShowRubyChange(!showRuby)}
-            >
-              <AudioLinesIcon className="preview-pronunciation-btn__icon" />
-            </button>
-
-            <label className="preview-density-control preview-density-control--vertical">
-              <span className="preview-density-control__label">字号</span>
-              <input
-                type="range"
-                className="preview-density-control__range preview-density-control__range--vertical"
-                min={PREVIEW_FONT_SCALE_MIN}
-                max={PREVIEW_FONT_SCALE_MAX}
-                step={0.02}
-                value={previewTypography.fontScale}
-                disabled={densityDisabled}
-                onChange={(e) =>
-                  onPreviewTypographyChange({
-                    ...previewTypography,
-                    fontScale: Number(e.target.value),
-                  })
-                }
-                onPointerUp={onPreviewTypographyCommit}
-                onTouchEnd={onPreviewTypographyCommit}
+            <div className="preview-toolbar-density__row">
+              <PosterRubyToggleButton
+                showRuby={showRubyAnnotations}
+                disabled={!rubyToggleSupported || densityDisabled}
+                onClick={() => handleShowRubyChange(!showRubyAnnotations)}
               />
-              <span className="preview-density-control__value">
-                {formatPercent(previewTypography.fontScale)}
-              </span>
-            </label>
 
-            <label className="preview-density-control preview-density-control--vertical">
-              <span className="preview-density-control__label">行距</span>
-              <input
-                type="range"
-                className="preview-density-control__range preview-density-control__range--vertical"
-                min={PREVIEW_LINE_SCALE_MIN}
-                max={PREVIEW_LINE_SCALE_MAX}
-                step={0.02}
-                value={previewTypography.lineHeightScale}
-                disabled={densityDisabled}
-                onChange={(e) =>
-                  onPreviewTypographyChange({
-                    ...previewTypography,
-                    lineHeightScale: Number(e.target.value),
-                  })
+              <label className="preview-density-control preview-density-control--horizontal">
+                <span className="preview-density-control__label">字号</span>
+                <input
+                  type="range"
+                  className="preview-density-control__range"
+                  min={PREVIEW_FONT_SCALE_MIN}
+                  max={PREVIEW_FONT_SCALE_MAX}
+                  step={0.02}
+                  value={previewTypography.fontScale}
+                  disabled={densityDisabled}
+                  onChange={(e) =>
+                    setPreviewTypography({
+                      ...previewTypography,
+                      fontScale: Number(e.target.value),
+                    })
+                  }
+                  onPointerUp={scheduleRebuildExportPages}
+                  onTouchEnd={scheduleRebuildExportPages}
+                />
+                <span className="preview-density-control__value">
+                  {formatPercent(previewTypography.fontScale)}
+                </span>
+              </label>
+
+              <label className="preview-density-control preview-density-control--horizontal">
+                <span className="preview-density-control__label">行距</span>
+                <input
+                  type="range"
+                  className="preview-density-control__range"
+                  min={PREVIEW_LINE_SCALE_MIN}
+                  max={PREVIEW_LINE_SCALE_MAX}
+                  step={0.02}
+                  value={previewTypography.lineHeightScale}
+                  disabled={densityDisabled}
+                  onChange={(e) =>
+                    setPreviewTypography({
+                      ...previewTypography,
+                      lineHeightScale: Number(e.target.value),
+                    })
+                  }
+                  onPointerUp={scheduleRebuildExportPages}
+                  onTouchEnd={scheduleRebuildExportPages}
+                />
+                <span className="preview-density-control__value">
+                  {formatPercent(previewTypography.lineHeightScale)}
+                </span>
+              </label>
+
+              <button
+                type="button"
+                className="preview-density-reset"
+                disabled={
+                  densityDisabled ||
+                  (previewTypography.fontScale === 1 && previewTypography.lineHeightScale === 1)
                 }
-                onPointerUp={onPreviewTypographyCommit}
-                onTouchEnd={onPreviewTypographyCommit}
-              />
-              <span className="preview-density-control__value">
-                {formatPercent(previewTypography.lineHeightScale)}
-              </span>
-            </label>
+                onClick={() => {
+                  setPreviewTypography({ fontScale: 1, lineHeightScale: 1 });
+                  scheduleRebuildExportPages();
+                }}
+              >
+                重置
+              </button>
 
-            <button
-              type="button"
-              className="preview-density-reset"
-              disabled={
-                densityDisabled ||
-                (previewTypography.fontScale === 1 && previewTypography.lineHeightScale === 1)
-              }
-              onClick={() => {
-                onPreviewTypographyChange({ fontScale: 1, lineHeightScale: 1 });
-                onPreviewTypographyCommit();
-              }}
-            >
-              重置
-            </button>
-
-            {repaginating && <span className="preview-repaginate-hint">排版中…</span>}
+              {repaginating && <span className="preview-repaginate-hint">排版中…</span>}
+            </div>
           </div>
         </div>
 
@@ -198,7 +175,7 @@ export default function ExportPreviewPanel({
             <button
               type="button"
               className="btn-export btn-export-save"
-              onClick={onSave}
+              onClick={() => void handleSave()}
               disabled={saving}
             >
               {saving ? '保存中…' : '保存'}
@@ -206,7 +183,7 @@ export default function ExportPreviewPanel({
             <button
               type="button"
               className="btn-export btn-export-pdf"
-              onClick={onExportPdf}
+              onClick={() => void handleExportPdf()}
               disabled={exporting}
             >
               {exporting ? '导出中…' : '导出 PDF'}
@@ -215,17 +192,17 @@ export default function ExportPreviewPanel({
         </div>
       </div>
 
-      <div ref={previewPagesRef} className="preview-pages-fit">
+      <div ref={exportPagesRef} className="preview-pages-fit">
         <ShufuriPosterPreview
           title={title}
           artist={artist}
           pageSlices={pages}
           layoutProfile={layoutProfile}
-          displayScale={displayScale}
-          language={language}
+          displayScale={exportScale}
+          language={lyricsLanguage}
           lang={lang}
-          renderOptions={renderOptions}
-          captureRef={captureRef}
+          renderOptions={posterRenderOpts}
+          captureRef={capturePageRef}
         />
       </div>
     </div>

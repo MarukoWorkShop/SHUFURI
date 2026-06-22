@@ -1,10 +1,8 @@
 const LOGITECH_CLICK_SOUND_URL = '/assets/sounds/logitech-click.wav';
-const KATA_SOUND_URL = '/assets/sounds/kata.wav';
 
 type SoundCache = { audio?: HTMLAudioElement };
 
 const logitechCache: SoundCache = {};
-const kataCache: SoundCache = {};
 
 function playCachedSample(cache: SoundCache, url: string, volume: number): void {
   if (typeof window === 'undefined') return;
@@ -26,9 +24,4 @@ function playCachedSample(cache: SoundCache, url: string, volume: number): void 
 /** 语言拨轮 / Archive / Study Cards 点按（Logitech click.wav） */
 export function playLogitechClickSound(): void {
   playCachedSample(logitechCache, LOGITECH_CLICK_SOUND_URL, 0.55);
-}
-
-/** 全局按键点按（kata.wav） */
-export function playKataWavSound(): void {
-  playCachedSample(kataCache, KATA_SOUND_URL, 0.72);
 }
