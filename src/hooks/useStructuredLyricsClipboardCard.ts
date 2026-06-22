@@ -101,11 +101,18 @@ export function useStructuredLyricsClipboardCard({
             prepared.lang,
           );
         }
-      } catch {
-        // 静默失败
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : '粘贴解析失败';
+        if (msg.includes('缺少 @9') || msg.includes('流未闭合')) {
+          showToast('解析失败：缺少 @9 闭合行，请让 AI 在末尾单独输出 @9');
+        } else if (msg.includes('未知行类型')) {
+          showToast('解析失败：含非记录流行（请删除 @9 后的说明文字）');
+        } else {
+          showToast(`解析失败：${msg}`);
+        }
       }
     })();
-  }, [onRenderLayout]);
+  }, [onRenderLayout, showToast]);
 
   const handleClipboardDismiss = useCallback(() => {
     if (prevClipboardHashRef.current) {

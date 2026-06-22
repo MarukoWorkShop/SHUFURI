@@ -2,7 +2,6 @@ import { useCallback, useRef, useState } from 'react';
 import type { LangCode, LyricsLanguage } from '../services/appSettings';
 import { exportPosterPdf } from '../utils/exportPosterPdf';
 import {
-  exportPosterPdfFromPageHtmls,
   exportPosterPngFromPageHtmls,
   posterPdfExportFilename,
 } from '../utils/pdfExport';
@@ -105,11 +104,10 @@ export function usePosterExport({
       const renderOpts = buildPosterRenderOptions(showRubyRef.current, previewTypographyRef.current);
 
       if (exportType === 'export_pdf') {
-        await exportPosterPdfFromPageHtmls(
+        await exportPosterPdf(
           currentPages,
           currentTitle,
           currentProfile,
-          baseFilename,
           currentArtist,
           lyricsLanguage,
           lang,

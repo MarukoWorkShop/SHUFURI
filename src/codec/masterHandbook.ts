@@ -32,7 +32,7 @@ const VOCAB_TERM: Record<LangCode, string> = {
   jp: 'vocab-word',
   ko: 'vocab-word-ko',
   en: 'vocab-word',
-  zh: 'vocab-word',
+  zh: 'vocab-word-cn',
 };
 
 const VOCAB_EX_PRIMARY: Record<LangCode, string> = {
@@ -79,6 +79,7 @@ export function resolvePosterClass(
       return 'vocab-ex-zh';
     case 'grammarTitlePrimary':
       if (contentLang === 'ko') return 'grammar-title-ko';
+      if (contentLang === 'zh') return 'grammar-title-cn';
       return 'grammar-title-ja';
     case 'grammarTitleSecondary':
       if (contentLang === 'en') return 'grammar-title-gloss';
@@ -100,9 +101,7 @@ export function usesRubyMarkup(role: PosterTextRole, contentLang: LangCode): boo
     return (
       role === 'lyricPrimary' ||
       role === 'vocabTerm' ||
-      role === 'vocabExamplePrimary' ||
-      role === 'grammarTitlePrimary' ||
-      role === 'grammarExamplePrimary'
+      role === 'grammarTitlePrimary'
     );
   }
   return (

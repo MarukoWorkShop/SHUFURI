@@ -9,6 +9,11 @@ import { parseStream } from '../src/codec/parseStream.ts';
 import { resolveExampleRef } from '../src/codec/resolveExampleRef.ts';
 import { compileDocument } from '../src/codec/compileDocument.ts';
 import { stripMarkdownFences } from '../src/codec/stripStreamEnvelope.ts';
+import {
+  autoAppendStreamCloseIfNeeded,
+  normalizeStreamInput,
+  truncateAfterStreamClose,
+} from '../src/codec/repairStreamEnvelope.ts';
 
 const encPath = new URL('./fixtures/akizakura-enc.txt', import.meta.url);
 const enc = readFileSync(encPath, 'utf8');
@@ -49,6 +54,35 @@ assert(/lyrics-vocab-item[\s\S]*?vocab-ex-zh[\s\S]*?回忆浮上心头/.test(com
 assert(!/lyrics-vocab-item[\s\S]*?ゆれます/.test(compiled.bodyHtml), 'vocab item not lyric line 4');
 assert(compiled.bodyHtml.includes('只要在身边就好'), 'poster grammar pedagogical translation');
 assert(compiled.title === '秋樱', 'title');
+
+const qwenNoClose = `@0
+H|잔나비|주저하는 연인들을 위해|ko
+L|1|나는 읽기 쉬운 마음이야|我是一颗很容易被读懂的心
+@1
+V|1|훑다|扫视、翻阅|2|책을 훑어보다|浏览书籍
+@2
+G|1|grammar（语法）|说明|1|example|例句`;
+const qwenFixed = normalizeStreamInput(qwenNoClose);
+assert(qwenFixed.endsWith('@9'), 'auto-append @9 for qwen-style paste');
+assert(parseStream(qwenNoClose).closed, 'parse qwen without @9 after repair');
+
+const withPostscript = `@0
+H|a|b|ko
+L|1|hello|你好
+@9
+以上是根据歌曲整理的内容`;
+assert(!truncateAfterStreamClose(withPostscript).includes('以上'), 'truncate after @9');
+assert(parseStream(withPostscript).closed, 'parse with postscript after @9');
+
+const partialWithProse = `@0
+H|a|b|ko
+L|1|hello|你好
+
+希望对您有帮助`;
+assert(!autoAppendStreamCloseIfNeeded(partialWithProse).includes('@9'), 'no append when prose tail');
+
+const doubaoIntact = enc.trim();
+assert(normalizeStreamInput(doubaoIntact) === doubaoIntact, 'doubao fixture unchanged');
 
 console.log('OK');
 

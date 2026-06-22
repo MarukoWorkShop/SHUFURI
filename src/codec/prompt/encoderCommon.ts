@@ -148,11 +148,52 @@ G|index|grammar_label|detail|lyric_line_no|pedagogical_example|pedagogical_trans
 [Wire_Schema]
 @0
 H|artist|title|lang
-  · 3 | (4 columns)
+  · 3 | (4 columns); col3 = prompt song title (metadata only — NOT a substitute for L|1)
 L|line_no(1-based)|target_main_line(ruby)|translation_or_gloss
+  · col2 MUST start at 1 and be contiguous 1..N (no skipping L|1)
 ${lColRules}
   · 3 | (4 columns)${vocab}
 @9`;
+}
+
+export function buildZhRubyLyricsBlock(): string {
+  return `
+[Zh_ruby — L column 3 and V column 3 (headword) ONLY]
+- Format: {汉字:拼音} micro-syntax (colon in prompt; pipe also accepted)
+- EVERY CJK character in lyric lines MUST have ruby — no bare Hanzi (Latin/digits/punctuation exempt)
+- Emit ONLY back-to-back {字:拼音} tokens plus spaces/punctuation/Latin — NEVER bare CJK between tokens
+- Prefer per-character {字:zì} tokens; multi-char words may use {词:pín yīn} when syllable count matches Hanzi count
+- Forbidden: skipping ruby for "common" characters or only annotating headwords
+- Forbidden alternating pattern (Qwen/Tongyi failure — causes doubled Hanzi on screen):
+  · WRONG: {藤:téng}蔓{蔓:màn}植{植:zhí}物{物:wù} → displays as 藤蔓蔓植植物物
+  · WRONG: Japanese-style base+brace: 藤{蔓:màn} or 蔓{蔓:màn}
+  · WRONG: repeating the same Hanzi outside and inside consecutive tokens: {A:py}B{B:py}
+- CORRECT: L|1|{藤:téng}{蔓:màn}{植:zhí}{物:wù}|translation
+- Ruby reading MUST be pinyin (Latin letters + tone marks/numbers) — NEVER another CJK character in the reading slot
+- Self-check per L row: mentally delete every {…:…} token — remaining col3 must contain ZERO CJK characters`;
+}
+
+export function buildZhGrammarLabelBlock(): string {
+  return `
+[Zh_grammar — G column 3 (grammar_label)]
+- Plain Hanzi + gloss in parentheses — NO {汉字:拼音} ruby tokens in grammar_label
+- Format: source_term (English gloss in parentheses) — same as jp/ko/en grammar samples
+- Examples: 像 (simile marker) | 满了 (resultative complement) | 在 (progressive marker)
+- col4 (detail) = English explanation; parentheses in col3 hold the short English gloss only
+- FORBIDDEN in col3: {满:了} (reading slot must never be another Hanzi — causes 满 with 了 above 满)
+- FORBIDDEN: {为:为}, {像:像}, {在:在} — never repeat Hanzi as the "reading"
+- FORBIDDEN: applying L-line full-line ruby rules to G col3
+- If you need two characters (e.g. 满 + 了), write plain text: 满了 (resultative complement) — not {满:了}`;
+}
+
+export function buildZhPedagogicalExampleBlock(): string {
+  return `
+[Zh_pedagogical — V/G column 6 (pedagogical_example)]
+- Plain Hanzi only — NO {汉字:拼音} ruby in pedagogical_example (poster hides example pinyin)
+- If you ever emit ruby in col6 by mistake: use contiguous {字:拼音} only — NEVER {A:py}B{B:py} alternating
+- MUST write a NEW teaching sentence — NEVER copy any L line verbatim or reuse a lyric fragment
+- lyric_line_no (col 5) cites the line where the term appears; col 6 must differ from that L line text
+- pedagogical_translation (col 7) glosses col 6 only`;
 }
 
 export function buildIntegrityCheck(includeVocab: boolean): string {
@@ -163,6 +204,66 @@ export function buildIntegrityCheck(includeVocab: boolean): string {
 [Integrity]
 - Retrieve complete official lyrics; line numbers MUST be contiguous 1..N.
 - Stream MUST end with @9; missing @9 counts as failure.${extra}`;
+}
+
+export function buildStreamCloseBlock(): string {
+  return `
+[Stream_Close — REQUIRED]
+- The absolute LAST line of your entire output MUST be exactly: @9
+- After @9 output NOTHING: no summary, no 「希望对您有帮助」, no markdown fence, no blank explanation
+- Missing @9 = entire output rejected by the app (100% failure)
+- If token budget is tight: shorten V/G or omit @1/@2 entirely, but NEVER omit @9
+- Self-check before send: scroll to bottom — last non-empty line MUST be @9`;
+}
+
+export function buildHeaderLyricsSeparationBlock(artist: string, title: string): string {
+  return `
+[H_metadata vs L_lyrics — NO deduplication]
+- H|artist|title|lang is METADATA only:
+  · col2 = artist "${artist}" (from prompt)
+  · col3 = song title "${title}" (from prompt) — NEVER substitute the first lyric line
+  · col4 = lang code
+- L|line_no|main|translation is LYRICS only:
+  · col2 = contiguous 1-based index; MUST include L|1 and run 1..N with no gaps or renumbering
+  · col3 = official sung lyric text; col4 = translation/gloss
+- CRITICAL: when H|col3 and L|1|col3 text are identical, emit BOTH rows (two separate records) — NEVER skip L|1 because H already contains the same string
+- "Both rows" means H and L|1 records — NOT doubling each Hanzi character inside L col3
+- NEVER copy L|1 into H|col3 when it differs from prompt title "${title}"
+- Context/OCR First_Line (if present) is the opening lyric → belongs in L|1 col3 when official; it does NOT replace H|col3 unless it equals the prompt title
+- Self-check before send: H|col3 is exactly "${title}"; L|1 exists; line numbers are 1..N contiguous`;
+}
+
+/** When H title equals L|1 lyric text, both H and L|1 rows are required (not per-character doubling). */
+export function buildTitleLyricOverlapSampleBlock(): string {
+  return `
+[Sample — H title equals L|1 text; both H and L|1 rows required]
+@0
+H|示例歌手|同文歌名|ko
+L|1|同文歌名|When H col3 equals L|1 col3, still emit L|1 — do NOT skip L|1 (this is NOT doubling each character)
+L|2|다음 가사 줄|next line translation
+@9`;
+}
+
+export function buildSourceIntegrityBlock(artist: string, title: string): string {
+  return `
+[Source_Integrity — NO hallucination]
+- Target song: "${artist} - ${title}" (exact artist + title from the prompt)
+- Use the complete OFFICIAL published lyrics only — same song, same artist, same language
+- Do NOT invent, guess, paraphrase from memory, or merge lines from other songs/versions/covers
+- Do NOT split one official line into two L rows or merge two official lines into one L row
+- L indices MUST be contiguous 1..N matching the authoritative full lyric text
+- If unsure of any line: omit that L row rather than fabricate (incomplete + @9 beats wrong lyrics)
+- H|col3 = metadata title; L|col3 = lyric text — separate roles even when strings match`;
+}
+
+export function buildModelComplianceBlock(): string {
+  return `
+[Model_Compliance]
+- Output RAW record stream only — first line MUST be @0 (or H| after any strip)
+- Forbidden: \`\`\` code fences, HTML, bullet lists, JSON, explanatory preface/epilogue
+- Tongyi/Qwen/通义千问: @9 is non-negotiable; verify last line before sending
+- Tongyi/Qwen zh L col3: contiguous {字:拼音} tokens only — never {A:py}B{B:py}; zero bare CJK after removing all tokens
+- Doubao/other models: same rules — no postscript after @9`;
 }
 
 export type SampleLang = 'jp' | 'ko' | 'en' | 'zh';
@@ -225,11 +326,11 @@ G|1|from (source)|indicates origin|1|a letter from home|a letter from home
 [Sample]
 @0
 H|周杰伦|晴天|zh
-L|1|{故:gù}事的小{黄:huáng}花|small yellow flowers of the story
+L|1|{故:gù}{事:shì}{的:de}{小:xiǎo}{黄:huáng}{花:huā}|small yellow flowers of the story
 @1
-V|1|{黄:huáng}花|small yellow flower|1|路边开着小{黄:huáng}花|little yellow flowers by the road
+V|1|{黄:huáng}{花:huā}|small yellow flower|1|路边开着小黄花|little yellow flowers by the road
 @2
-G|1|的 (possessive)|marks possession|1|我的{故:gù}事|my story
+G|1|的 (possessive)|marks possession|1|这是老师的书|this is the teacher's book
 @9`;
     }
   }
@@ -273,11 +374,11 @@ G|1|from（从）|表示来源|1|a letter from home|一封来自家的信
 [Sample]
 @0
 H|周杰伦|晴天|zh
-L|1|{故:gù}事的小{黄:huáng}花|故事的小黄花
+L|1|{故:gù}{事:shì}{的:de}{小:xiǎo}{黄:huáng}{花:huā}|故事的小黄花
 @1
-V|1|{黄:huáng}花|小黄花|1|路边开着小{黄:huáng}花|路边开着小黄花
+V|1|{黄:huáng}{花:huā}|小黄花|1|路边开着小黄花|路边开着小黄花
 @2
-G|1|的（的）|表示领属或修饰|1|我的{故:gù}事|我的故事
+G|1|的（的）|表示领属或修饰|1|这是老师的书|这是老师的书
 @9`;
   }
 }

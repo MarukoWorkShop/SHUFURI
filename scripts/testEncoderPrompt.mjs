@@ -66,6 +66,37 @@ const jpZhInterface = buildEncoderPrompt('歌手', '歌名', {
 assert(jpZhInterface.includes('秋樱绽放了'), 'zh interface jp pedagogical trans');
 assert(jpZhInterface.includes('Simplified Chinese line translation'), 'zh interface jp line rule');
 
+const compliancePrompt = buildEncoderPrompt('歌手', '歌名', {
+  includeVocabAndGrammar: true,
+  matrix: { ...matrixZh, activeTarget: 'ko' },
+});
+assert(compliancePrompt.includes('Stream_Close'), 'stream close block');
+assert(compliancePrompt.includes('Source_Integrity'), 'source integrity block');
+assert(compliancePrompt.includes('NO hallucination'), 'anti-hallucination');
+assert(compliancePrompt.includes('Model_Compliance'), 'model compliance block');
+assert(compliancePrompt.includes('Tongyi/Qwen'), 'qwen hint');
+assert(compliancePrompt.includes('H_metadata vs L_lyrics'), 'H vs L separation block');
+assert(compliancePrompt.includes('NEVER skip L|1'), 'no skip L1 rule');
+assert(compliancePrompt.includes('同文歌名'), 'title-equals-L1 sample');
+assert(compliancePrompt.includes('do NOT skip L|1'), 'overlap sample clarifies L|1');
+assert(compliancePrompt.includes('contiguous 1..N'), 'contiguous L indices in wire schema');
+assert(compliancePrompt.includes(`H|col3 is exactly "歌名"`), 'self-check uses prompt title');
+
+const zhPrompt = buildEncoderPrompt('周杰伦', '威廉古堡', {
+  includeVocabAndGrammar: true,
+  matrix: { ...matrixZh, activeTarget: 'zh' },
+});
+assert(zhPrompt.includes('[Zh_ruby'), 'zh ruby block');
+assert(zhPrompt.includes('Forbidden alternating pattern'), 'zh alternating forbidden');
+assert(zhPrompt.includes('{藤:téng}{蔓:màn}{植:zhí}{物:wù}'), 'zh correct ruby sample');
+assert(zhPrompt.includes('ZERO CJK characters'), 'zh zero bare hanzi self-check');
+assert(zhPrompt.includes('NO {汉字:拼音} ruby in pedagogical_example'), 'zh no example ruby');
+assert(zhPrompt.includes('NEVER copy any L line verbatim'), 'zh no lyric copy in examples');
+assert(zhPrompt.includes('never {A:py}B{B:py}'), 'zh qwen compliance hint');
+assert(zhPrompt.includes('[Zh_grammar'), 'zh grammar label block');
+assert(zhPrompt.includes('FORBIDDEN in col3: {满:了}'), 'zh grammar anti-sample');
+assert(zhPrompt.includes('NO {汉字:拼音} ruby tokens in grammar_label'), 'zh grammar no ruby');
+
 console.log('OK');
 
 function assert(cond, label) {

@@ -217,7 +217,6 @@ function ShufuriPosterSinglePage({
         {
           format: native ? 'jpeg' : 'png',
           jpegQuality: 0.92,
-          prepareVisible: false,
         },
         language,
         lang,

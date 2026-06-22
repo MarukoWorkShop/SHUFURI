@@ -1,4 +1,4 @@
-/** 首屏加载动画：React 挂载后淡出并移除 #app-boot */
+/** 首页就绪后淡出并移除 #app-boot（由 HomeScreen 在字体加载后调用） */
 export function hideAppBootLoader(): void {
   const boot = document.getElementById('app-boot');
   if (!boot) return;

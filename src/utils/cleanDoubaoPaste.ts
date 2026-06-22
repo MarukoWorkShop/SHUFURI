@@ -2,7 +2,8 @@
  * 清理从豆包粘贴的污染文本，并定位 @0 记录流起点。
  */
 
-import { stripMarkdownFences, trimToStreamStart } from '../codec/stripStreamEnvelope';
+import { stripMarkdownFences } from '../codec/stripStreamEnvelope';
+import { normalizeStreamInput } from '../codec/repairStreamEnvelope';
 
 const STREAM_OPEN_RE = /^@0\s*$/;
 const STREAM_HEADER_RE = /^H\|/;
@@ -55,5 +56,5 @@ export function cleanDoubaoPaste(raw: string): string {
   const tail = lines.slice(start);
 
   const cleaned = tail.filter((line) => !isPythonTrace(line)).join('\n').trim();
-  return trimToStreamStart(cleaned);
+  return normalizeStreamInput(cleaned);
 }

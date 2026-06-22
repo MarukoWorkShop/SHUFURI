@@ -13,6 +13,11 @@ export type {
 export { splitStreamColumns } from './splitStreamColumns';
 export { normalizeCodecRuby, normalizeCodecRubyFields } from './normalizeCodecRuby';
 export { stripMarkdownFences, trimToStreamStart } from './stripStreamEnvelope';
+export {
+  autoAppendStreamCloseIfNeeded,
+  normalizeStreamInput,
+  truncateAfterStreamClose,
+} from './repairStreamEnvelope';
 export { isStreamCodecText, isLegacyStructuredLyricsText } from './detect';
 export { resolveExampleRef } from './resolveExampleRef';
 export { parseStream, extractStreamHeader, extractStreamLang } from './parseStream';

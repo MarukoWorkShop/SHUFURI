@@ -250,6 +250,7 @@ export default function PosterWorkspaceProvider({
     exportPagesRef,
     mode === 'export',
     `${pages.length}:${savedProjectId ?? 'new'}:${layoutProfile}`,
+    exportCtrl.exporting || saving,
   );
 
   const capturePageRef = useCallback(

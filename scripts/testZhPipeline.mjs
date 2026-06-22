@@ -12,7 +12,7 @@ const ZH_SAMPLE_ZH = `@0
 H|周杰伦|威廉古堡|zh
 L|1|{森:sēn}林{里:lǐ}的{城堡:chéngbǎo}|
 @1
-V|1|{城堡:chéngbǎo}|大型防御性建筑|1|{古老:gǔlǎo}的{城堡:chéngbǎo}矗立在山顶。
+V|1|{城堡:chéngbǎo}|大型防御性建筑|1|那座古老的城堡矗立在山顶|古老的城堡矗立在山顶
 @9`;
 
 const ZH_SAMPLE_EN = `@0
@@ -52,7 +52,10 @@ assert(promptEn.includes('gloss'), 'en interface zh song must mention gloss');
 const parsed = compileDocument(ZH_SAMPLE_ZH, { interfaceLanguage: 'zh' });
 assert(parsed.lang === 'zh', 'parsed lang must be zh');
 assert(parsed.bodyHtml.includes('cn-line'), 'must emit cn-line');
+assert(parsed.bodyHtml.includes('vocab-word-cn'), 'zh vocab uses vocab-word-cn class');
 assert(parsed.bodyHtml.includes('<ruby>'), 'must emit ruby markup');
+assert(parsed.bodyHtml.includes('古老的城堡'), 'pedagogical example plain hanzi');
+assert(!/<p class="vocab-ex-cn"><ruby>/.test(parsed.bodyHtml), 'vocab example has no ruby');
 assert(!parsed.bodyHtml.includes('gloss-line'), 'zh interface sample has no gloss line');
 
 const parsedEn = compileDocument(ZH_SAMPLE_EN, { interfaceLanguage: 'en' });
@@ -62,6 +65,18 @@ const bulkHtml = applyZhRubyMarkup('{爬满了伯爵的坟墓|pá mǎn le bó ju
 const rubyCount = (bulkHtml.match(/<ruby>/g) || []).length;
 assert(rubyCount >= 1, 'bulk ruby markup');
 assert(expandZhRubyForTest('森', 'sēn').includes('sēn'), 'expand zh ruby');
+assert(!expandZhRubyForTest('满', '了').includes('<rt>'), 'hanzi-only reading skips ruby');
+assert(expandZhRubyForTest('满', '了').includes('满'), 'hanzi-only reading keeps base');
+
+const grammarBad = compileDocument(
+  `@0
+H|测试|语法|zh
+@1
+G|1|{满:了} (resultative complement)|indicates completion|2|爬满了坟墓|crawled all over
+@9`,
+  { interfaceLanguage: 'en' },
+);
+assert(!grammarBad.bodyHtml.includes('<rt>了</rt>'), 'grammar label rejects hanzi ruby reading');
 
 const bulkParsed = compileDocument(ZH_SAMPLE_BULK, { interfaceLanguage: 'zh' });
 assert(bulkParsed.bodyHtml.includes('cn-line'), 'bulk zh line compiled');

@@ -1,18 +1,25 @@
 import type { LangCode } from '../services/appSettings';
 import { cleanDoubaoPaste } from './cleanDoubaoPaste';
 import { isLegacyStructuredLyricsText, isStreamCodecText } from '../codec';
+import { parseStream } from '../codec/parseStream';
 import { extractStreamHeader, extractStreamLang } from '../codec/parseStream';
 
 export function prepareStructuredLyricsClipboardText(raw: string): string {
   return cleanDoubaoPaste(raw.trim());
 }
 
-/** 剪贴板内容是否为可排版的记录流 */
+/** 剪贴板内容是否为可排版的记录流（归一化后须能完整解析） */
 export function isStructuredLyricsClipboardText(raw: string): boolean {
   const trimmed = prepareStructuredLyricsClipboardText(raw);
   if (!trimmed.length) return false;
   if (isLegacyStructuredLyricsText(trimmed)) return false;
-  return isStreamCodecText(trimmed);
+  if (!isStreamCodecText(trimmed)) return false;
+  try {
+    parseStream(trimmed);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export type StructuredLyricsCardFallbacks = {

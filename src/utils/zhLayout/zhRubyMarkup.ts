@@ -40,6 +40,13 @@ function assignReadings(hanziCount: number, reading: string): string[] {
 /** 字距挂在外层 slot，避免 WebKit 在 ruby 上使用 margin/inline-block 导致 rt 左移一格 */
 export const ZH_CHAR_SLOT_CLASS = 'zh-char-slot';
 
+/** 读音槽若全是汉字，说明模型误把汉字当拼音（如 {满:了}、{为:为}） */
+function isHanziOnlyReading(reading: string): boolean {
+  const trimmed = reading.trim();
+  if (!trimmed) return false;
+  return [...trimmed.replace(/\s+/g, '')].every(isHanzi);
+}
+
 function singleRuby(base: string, reading: string): string {
   const ruby = `<ruby>${escapeHtml(base)}<rt>${escapeHtml(reading)}</rt></ruby>`;
   return `<span class="${ZH_CHAR_SLOT_CLASS}">${ruby}</span>`;
@@ -47,6 +54,10 @@ function singleRuby(base: string, reading: string): string {
 
 /** 将多字 {词|读音} 拆为单字 <ruby>，避免 WebKit 整词 rt 拉伸错位 */
 function expandToAtomicRubies(base: string, reading: string): string {
+  if (isHanziOnlyReading(reading)) {
+    return escapeHtml(base);
+  }
+
   const chars = [...base];
   if (chars.length <= 1) {
     return singleRuby(base, reading);
@@ -90,6 +101,12 @@ export function applyZhRubyMarkup(text: string): string {
   }
   out += escapeHtml(normalized.slice(last));
   return out;
+}
+
+/** 教学例句：去掉 {汉字|拼音}，只保留汉字（海报不显示例句拼音） */
+export function stripZhRubyToPlain(text: string): string {
+  const normalized = normalizeRubyMarkupText(text);
+  return normalized.replace(RUBY_TOKEN_RE, '$1');
 }
 
 /** @internal */

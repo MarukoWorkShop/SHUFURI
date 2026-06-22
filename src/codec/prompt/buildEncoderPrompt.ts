@@ -5,7 +5,16 @@ import { buildEnEncoderPrompt } from './encoderEn';
 import { buildJpEncoderPrompt } from './encoderJp';
 import { buildKoEncoderPrompt } from './encoderKo';
 import { buildZhEncoderPrompt } from './encoderZh';
-import { buildOcrHintBlock, fillEncoderMeta, type EncoderPromptOptions } from './encoderCommon';
+import {
+  buildHeaderLyricsSeparationBlock,
+  buildModelComplianceBlock,
+  buildOcrHintBlock,
+  buildSourceIntegrityBlock,
+  buildStreamCloseBlock,
+  buildTitleLyricOverlapSampleBlock,
+  fillEncoderMeta,
+  type EncoderPromptOptions,
+} from './encoderCommon';
 
 export type { EncoderPromptOptions };
 
@@ -45,7 +54,17 @@ export function buildEncoderPrompt(
       body = buildJpEncoderPrompt(a, t, gloss, options);
   }
 
-  return fillEncoderMeta(body + ocr, a, t);
+  return fillEncoderMeta(
+    body
+      + buildHeaderLyricsSeparationBlock(a, t)
+      + buildTitleLyricOverlapSampleBlock()
+      + buildSourceIntegrityBlock(a, t)
+      + buildStreamCloseBlock()
+      + buildModelComplianceBlock()
+      + ocr,
+    a,
+    t,
+  );
 }
 
 /** @deprecated 使用 buildEncoderPrompt */

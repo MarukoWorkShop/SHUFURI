@@ -7,6 +7,9 @@ import {
   buildLyricsLine4Rule,
   buildVocabGrammarIncludeRule,
   buildWireSchema,
+  buildZhPedagogicalExampleBlock,
+  buildZhGrammarLabelBlock,
+  buildZhRubyLyricsBlock,
   type EncoderPromptOptions,
 } from './encoderCommon';
 
@@ -24,7 +27,10 @@ Encode "${artist} - ${title}" as a zh record stream. Retrieve the complete offic
 ${buildLearnerGlossBlock(gloss, options.matrix)}
 [Lang: zh]
 - H column 3 MUST be zh.
-- L column 3: {Hanzi:pinyin} ruby; Latin / punctuation unchanged.
+- L column 3: full-line {Hanzi:pinyin} ruby on every CJK character (see [Zh_ruby]); contiguous tokens only — never bare Hanzi between tokens
+${buildZhRubyLyricsBlock()}
+${buildZhGrammarLabelBlock()}
+${buildZhPedagogicalExampleBlock()}
 ${buildLyricsLine4Rule(gloss, iface, 'zh')}
 ${buildVocabGrammarIncludeRule(include, iface)}
 ${buildStrictRaw(include)}

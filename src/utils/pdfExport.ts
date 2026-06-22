@@ -6,22 +6,24 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { ensurePosterFontsLoaded } from './shufuriPoster/fonts';
 import type { PosterLayoutProfile, PosterPageSlice } from './shufuriPoster/types';
-import { isNativeWebView, postShareImage } from './nativeBridge';
+import { isNativeWebView, postShareImage, sharePosterPdfBlob } from './nativeBridge';
 import {
   mountPosterExportPage,
-  mountPosterExportPages,
   getPosterExportCanvasSize,
 } from './posterExportMount';
 
 /** CSS 像素（96dpi）→ jsPDF 毫米 */
 const CSS_PX_TO_MM = 25.4 / 96;
 
-/** html2canvas 栅格倍率（大图自动降采样，避免空白或内存溢出） */
-const PDF_HTML2CANVAS_SCALE = 3;
-/** JPEG 写入 PDF 时的压缩模式，与 shufu life paperExport 栅格化一致 */
-const JPEG_ADD_COMPRESSION: 'FAST' | 'NONE' = 'FAST';
-/** JPEG 质量（体积与锐度折中） */
-const PDF_JPEG_QUALITY = 0.95;
+/** 目标打印栅格 DPI（相对 CSS 96dpi：有效 DPI ≈ scale × 96） */
+const TARGET_PRINT_DPI = 300;
+const MIN_PDF_RASTER_SCALE = Math.ceil(TARGET_PRINT_DPI / 96);
+/** 单页栅格像素上限，防止 iOS WebView OOM */
+const MAX_RASTER_PIXELS = 24_000_000;
+/** JPEG 写入 PDF：NONE 减少块压缩带来的文字锯齿 */
+const JPEG_ADD_COMPRESSION: 'FAST' | 'NONE' = 'NONE';
+/** JPEG 质量 */
+const PDF_JPEG_QUALITY = 0.98;
 const MIN_PDF_BYTES = 512;
 
 type Html2CanvasOpts = Parameters<typeof html2canvas>[1];
@@ -104,13 +106,12 @@ export async function preloadImagesInElementForPdf(el: HTMLElement): Promise<voi
 }
 
 /**
- * 自适应栅格倍率：大尺寸画布（手机 1080×1920）降为 2× 以避免 canvas 超限；
- * B5 打印画布（600×852）使用 3× 高清栅格。
+ * 自适应栅格倍率：优先满足 TARGET_PRINT_DPI，并按单页像素上限降级。
  */
 function pickRasterScale(width: number, height: number): number {
-  const maxDim = Math.max(width, height);
-  if (maxDim > 1500) return 2;
-  return PDF_HTML2CANVAS_SCALE;
+  const pagePixels = width * height;
+  const maxScaleByMemory = Math.floor(Math.sqrt(MAX_RASTER_PIXELS / pagePixels));
+  return Math.max(1, Math.min(MIN_PDF_RASTER_SCALE, maxScaleByMemory));
 }
 
 /**
@@ -167,6 +168,8 @@ function forceCanvasSize(
   const ctx = fixed.getContext('2d')!;
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, expectedW, expectedH);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   // 从 source 左上角裁剪出 expectedW × expectedH，不做任何缩放
   const srcW = Math.min(source.width, expectedW);
   const srcH = Math.min(source.height, expectedH);
@@ -192,17 +195,14 @@ const QUICK_SAVE_JPEG_QUALITY = 0.9;
 export type QuickSaveImageOptions = {
   format?: 'jpeg' | 'png';
   jpegQuality?: number;
-  /** 是否在栅格化前把离屏 DOM 移入视口（长按保存应 false，避免全屏白屏卡顿感） */
-  prepareVisible?: boolean;
   maxScale?: number;
 };
 
-/** 长按保存专用栅格倍率：大画布强制 1× */
 function pickQuickSaveRasterScale(width: number, height: number): number {
   const pixels = width * height;
   if (pixels >= 1_800_000) return 1;
   if (pixels >= 450_000) return 2;
-  return PDF_HTML2CANVAS_SCALE;
+  return MIN_PDF_RASTER_SCALE;
 }
 
 /** 单页面栅格化超时（毫秒），极端情况 html2canvas 可能挂起 */
@@ -267,6 +267,14 @@ export function posterPdfExportFilename(baseName: string, layoutProfile: PosterL
   else if (layoutProfile === 'squarePoster') sizeTag = 'square';
   const safeBase = baseName.replace(/[/\\?*:|"]/g, '_').slice(0, 110) || 'poster';
   return `${safeBase}_${sizeTag}`;
+}
+
+function resolveExportPdfFilename(filename: string, layoutProfile: PosterLayoutProfile): string {
+  const safe = filename.replace(/[/\\?*:|"]/g, '_').slice(0, 120) || 'poster';
+  if (/(?:^|_)(wide|narrow|square)$/.test(safe)) {
+    return safe;
+  }
+  return posterPdfExportFilename(safe, layoutProfile);
 }
 
 /** Web：触发浏览器下载 PDF Blob */
@@ -394,6 +402,9 @@ export async function exportPosterLayoutPdfFromFlatPages(
     const hMm = canvasHeightPx * CSS_PX_TO_MM;
     const canvas = await rasterizePosterLayoutPageRoot(pageRoot);
     addCanvasToPdfPage(pdf, canvas, wMm, hMm, i === 0);
+    if (i < pages.length - 1) {
+      await yieldBetweenExportPages();
+    }
   }
 
   const blob = pdf.output('blob') as Blob;
@@ -501,7 +512,7 @@ export async function exportPosterPdfFromPageHtmls(
     throw new Error('没有可导出的页面');
   }
 
-  const exportFilename = posterPdfExportFilename(filename, layoutProfile);
+  const exportFilename = resolveExportPdfFilename(filename, layoutProfile);
   const saveHandle = await pickPdfSaveHandle(exportFilename);
   const hasNativePicker = Boolean(
     (window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker,
@@ -511,60 +522,54 @@ export async function exportPosterPdfFromPageHtmls(
   }
 
   await ensurePosterFontsLoaded();
-  const mounts = mountPosterExportPages(
-    document,
-    pageSlices,
-    title,
-    layoutProfile,
-    artist,
-    language,
-    lang,
-    renderOptions,
-  );
   const { width, height } = getPosterExportCanvasSize(layoutProfile);
+  const wMm = width * CSS_PX_TO_MM;
+  const hMm = height * CSS_PX_TO_MM;
+  const n = pageSlices.length;
 
-  // 【闪烁修复】在栅格化前才将所有页面的 backdrop 移入可见区域
-  for (const mount of mounts) {
-    mount.prepare();
-  }
+  const pdf = new jsPDF({
+    orientation: hMm >= wMm ? 'portrait' : 'landscape',
+    unit: 'mm',
+    format: [wMm, hMm],
+    hotfixes: ['px_scaling'],
+  });
 
-  try {
-    const flatPages = mounts.map((mount) => ({
-      pageRoot: mount.root,
-      canvasWidthPx: width,
-      canvasHeightPx: height,
-    }));
-
-    const first = flatPages[0]!;
-    const wMm0 = first.canvasWidthPx * CSS_PX_TO_MM;
-    const hMm0 = first.canvasHeightPx * CSS_PX_TO_MM;
-    const pdf = new jsPDF({
-      orientation: hMm0 >= wMm0 ? 'portrait' : 'landscape',
-      unit: 'mm',
-      format: [wMm0, hMm0],
-      hotfixes: ['px_scaling'],
-    });
-
-    for (let i = 0; i < flatPages.length; i++) {
-      const { pageRoot, canvasWidthPx, canvasHeightPx } = flatPages[i]!;
-      const wMm = canvasWidthPx * CSS_PX_TO_MM;
-      const hMm = canvasHeightPx * CSS_PX_TO_MM;
-      const canvas = await rasterizePosterLayoutPageRoot(pageRoot);
-      addCanvasToPdfPage(pdf, canvas, wMm, hMm, i === 0);
+  for (let i = 0; i < n; i++) {
+      const slice = pageSlices[i]!;
+      const mount = mountPosterExportPage(document, {
+        title,
+        artist,
+        showTitle: i === 0,
+        bodyFragmentHtml: slice.html,
+        pageIndex: i,
+        pageCount: n,
+        layoutProfile,
+        spacingScale: slice.spacingScale ?? 1,
+        language,
+        lang,
+        renderOptions,
+      });
+      mount.prepare();
+      try {
+        const canvas = await rasterizePosterLayoutPageRoot(mount.root);
+        addCanvasToPdfPage(pdf, canvas, wMm, hMm, i === 0);
+      } finally {
+        mount.dispose();
+      }
+      if (i < n - 1) {
+        await yieldBetweenExportPages();
+      }
     }
 
     const blob = pdf.output('blob') as Blob;
     assertValidPdfBlob(blob);
     if (saveHandle) {
       await writeBlobToFileHandle(saveHandle, blob);
+    } else if (isNativeWebView()) {
+      await sharePosterPdfBlob(blob, exportFilename);
     } else {
       await deliverPosterPdfBlob(blob, exportFilename);
     }
-  } finally {
-    for (const mount of mounts) {
-      mount.dispose();
-    }
-  }
 }
 
 /**
@@ -586,7 +591,6 @@ export async function rasterizePageHtmlToBlob(
 ): Promise<{ blob: Blob; mimeType: 'image/jpeg' | 'image/png' }> {
   const format = options.format ?? 'jpeg';
   const jpegQuality = options.jpegQuality ?? QUICK_SAVE_JPEG_QUALITY;
-  const prepareVisible = options.prepareVisible ?? false;
   const { width, height } = getPosterExportCanvasSize(layoutProfile);
   const scale = options.maxScale ?? pickQuickSaveRasterScale(width, height);
 
@@ -604,7 +608,7 @@ export async function rasterizePageHtmlToBlob(
     lang,
     renderOptions,
   });
-  mount.prepare({ visible: prepareVisible });
+  mount.prepare();
   try {
     await waitForLayoutStable(mount.root);
     await waitForImagesInElement(mount.root);
@@ -650,7 +654,7 @@ export async function rasterizePageHtmlToDataUrl(
     pageCount,
     layoutProfile,
     spacingScale,
-    { format: 'jpeg', jpegQuality: QUICK_SAVE_JPEG_QUALITY, prepareVisible: false },
+    { format: 'jpeg', jpegQuality: QUICK_SAVE_JPEG_QUALITY },
   );
   return await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -713,10 +717,9 @@ export async function exportPosterPngFromPageHtmls(
       n,
       layoutProfile,
       slice.spacingScale ?? 1,
-      {
-        format: native ? 'jpeg' : 'png',
-        prepareVisible: false,
-      },
+        {
+          format: native ? 'jpeg' : 'png',
+        },
       language,
       lang,
       renderOptions,

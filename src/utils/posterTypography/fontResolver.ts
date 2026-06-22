@@ -286,13 +286,13 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   });
 
   roles.studyTerm = baseToken({
-    fontFamily: jpStudyFont,
+    fontFamily: isZhPipeline ? ZH_FONT_FAMILY : jpStudyFont,
     fontSize: mainPx,
     fontWeight: isEnglish ? LYRIC_PRIMARY_WEIGHT : lyricPrimaryWeight,
     lineHeight: lang === 'ko' || lang === 'en' ? koLh : jpLh,
     color: VOCAB_EMPHASIS_COLOR,
-    letterSpacing: cjkLs,
-    wrap: 'cjk',
+    letterSpacing: isZhPipeline ? '0' : cjkLs,
+    wrap: isZhPipeline ? 'latin' : 'cjk',
   });
 
   roles.studyAux = baseToken({
@@ -306,7 +306,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   });
 
   roles.studyExample = baseToken({
-    fontFamily: jpStudyFont,
+    fontFamily: isZhPipeline ? ZH_FONT_FAMILY : jpStudyFont,
     fontSize: auxPx,
     fontWeight: lyricPrimaryWeight,
     lineHeight: lang === 'ko' || lang === 'en' ? koLh : jpLh,

@@ -1,6 +1,6 @@
 import { escapeHtml } from '../utils/escapeHtml';
 import { applyRubyMarkup } from '../utils/rubyMarkup';
-import { applyZhRubyMarkup } from '../utils/zhLayout/zhRubyMarkup';
+import { applyZhRubyMarkup, stripZhRubyToPlain } from '../utils/zhLayout/zhRubyMarkup';
 import { resolvePosterClass, usesPlainHtml, usesRubyMarkup } from './masterHandbook';
 import type { CompileOptions, StreamDocument } from './types';
 import type { PosterTextRole } from './masterHandbook';
@@ -27,7 +27,13 @@ function renderText(
   lang: StreamDocument['header']['lang'],
 ): string {
   if (!text.trim()) return '';
-  if (lang === 'zh' && usesRubyMarkup(role, lang)) return applyZhRubyMarkup(text);
+  if (lang === 'zh') {
+    if (role === 'vocabExamplePrimary' || role === 'grammarExamplePrimary') {
+      return escapeHtml(stripZhRubyToPlain(text));
+    }
+    if (usesRubyMarkup(role, lang)) return applyZhRubyMarkup(text);
+    return escapeHtml(text);
+  }
   if (usesPlainHtml(role, lang)) return escapeHtml(text);
   if (usesRubyMarkup(role, lang)) return applyRubyMarkup(text);
   return escapeHtml(text);

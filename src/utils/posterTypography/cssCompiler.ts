@@ -86,6 +86,8 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
   ${scoped('.cn-line *:not(rt):not(rp):not(' + ZH_CHAR_SLOT + ')')},
   ${zhVocab('.vocab-word-cn')},
   ${zhVocab('.vocab-word-cn *:not(rt):not(rp):not(' + ZH_CHAR_SLOT + ')')},
+  ${zhVocab('.vocab-word')},
+  ${zhVocab('.vocab-word *:not(rt):not(rp):not(' + ZH_CHAR_SLOT + ')')},
   ${zhGrammar('.grammar-title-cn')},
   ${zhGrammar('.grammar-title-cn *:not(rt):not(rp):not(' + ZH_CHAR_SLOT + ')')} {
     font-family: ${ZH_FONT_FAMILY} !important;
@@ -110,6 +112,7 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
   }
   ${scoped('.cn-line')},
   ${zhVocab('.vocab-word-cn')},
+  ${zhVocab('.vocab-word')},
   ${zhVocab('.vocab-ex-cn')},
   ${zhGrammar('.grammar-title-cn')},
   ${zhGrammar('.grammar-ex-cn')} {
@@ -161,18 +164,16 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
   }
   ${scoped('.cn-line ' + ZH_CHAR_SLOT)},
   ${zhVocab('.vocab-word-cn ' + ZH_CHAR_SLOT)},
-  ${zhVocab('.vocab-ex-cn ' + ZH_CHAR_SLOT)},
-  ${zhGrammar('.grammar-title-cn ' + ZH_CHAR_SLOT)},
-  ${zhGrammar('.grammar-ex-cn ' + ZH_CHAR_SLOT)} {
+  ${zhVocab('.vocab-word ' + ZH_CHAR_SLOT)},
+  ${zhGrammar('.grammar-title-cn ' + ZH_CHAR_SLOT)} {
     display: inline-block;
     margin-right: ${gap(zh.rubyGapEm)};
     vertical-align: bottom;
   }
   ${scoped('.cn-line ruby')},
   ${zhVocab('.vocab-word-cn ruby')},
-  ${zhVocab('.vocab-ex-cn ruby')},
-  ${zhGrammar('.grammar-title-cn ruby')},
-  ${zhGrammar('.grammar-ex-cn ruby')} {
+  ${zhVocab('.vocab-word ruby')},
+  ${zhGrammar('.grammar-title-cn ruby')} {
     font-family: ${ZH_FONT_FAMILY} !important;
     font-weight: ${LYRIC_PRIMARY_WEIGHT} !important;
     ruby-position: over;
@@ -180,11 +181,18 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
     ruby-align: center;
     letter-spacing: 0 !important;
   }
+  ${zhVocab('.vocab-ex-cn ruby')},
+  ${zhGrammar('.grammar-ex-cn ruby')} {
+    font-family: ${ZH_FONT_FAMILY} !important;
+    font-weight: ${LYRIC_PRIMARY_WEIGHT} !important;
+    ruby-position: unset;
+    -webkit-ruby-position: unset;
+    letter-spacing: ${r.cjkLetterSpacing} !important;
+  }
   ${scoped('.cn-line ruby rt')},
   ${zhVocab('.vocab-word-cn ruby rt')},
-  ${zhVocab('.vocab-ex-cn ruby rt')},
-  ${zhGrammar('.grammar-title-cn ruby rt')},
-  ${zhGrammar('.grammar-ex-cn ruby rt')} {
+  ${zhVocab('.vocab-word ruby rt')},
+  ${zhGrammar('.grammar-title-cn ruby rt')} {
     font-family: ${ZH_FONT_FAMILY} !important;
     font-size: ${zh.rtEm}em !important;
     font-weight: ${LYRIC_PRIMARY_WEIGHT} !important;
@@ -193,6 +201,10 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
     color: ${zh.pinyinColor} !important;
     line-height: 1.1 !important;
     user-select: none;
+  }
+  ${zhVocab('.vocab-ex-cn ruby rt')},
+  ${zhGrammar('.grammar-ex-cn ruby rt')} {
+    display: none !important;
   }
   ${scoped('.gloss-line')},
   ${scoped('.gloss-line *')} {
@@ -502,12 +514,26 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   ${bodySel} .vocab-line1 .vocab-word *:not(rt):not(rp),
   ${bodySel} h3.grammar-point-title .grammar-title-ja,
   ${bodySel} h3.grammar-point-title .grammar-title-ja *:not(rt):not(rp) {
-    font-family: ${studyTerm.fontFamily} !important;
+    font-family: ${F.isZhPipeline ? ZH_FONT_FAMILY : studyTerm.fontFamily} !important;
     font-size: ${mainFs} !important;
-    font-weight: ${studyTerm.fontWeight} !important;
+    font-weight: ${F.isZhPipeline ? LYRIC_PRIMARY_WEIGHT : studyTerm.fontWeight} !important;
     color: ${studyTerm.color} !important;
-    line-height: ${studyTermLh} !important;
+    line-height: ${F.isZhPipeline ? L.zhLyricsLh : studyTermLh} !important;
+    ${F.isZhPipeline ? latinWrap : cjkWrap}
   }
+  ${F.isZhPipeline ? `
+  ${bodySel} .vocab-line1 .vocab-word-cn,
+  ${bodySel} .vocab-line1 .vocab-word-cn *:not(rt):not(rp):not(.${ZH_CHAR_SLOT_CLASS}),
+  ${bodySel} h3.grammar-point-title .grammar-title-cn,
+  ${bodySel} h3.grammar-point-title .grammar-title-cn *:not(rt):not(rp):not(.${ZH_CHAR_SLOT_CLASS}) {
+    font-family: ${ZH_FONT_FAMILY} !important;
+    font-size: ${mainFs} !important;
+    font-weight: ${LYRIC_PRIMARY_WEIGHT} !important;
+    color: #0a0a0a !important;
+    line-height: ${L.zhLyricsLh} !important;
+    letter-spacing: 0 !important;
+    ${latinWrap}
+  }` : ''}
   ${bodySel} .vocab-line1 .vocab-word-ko,
   ${bodySel} .vocab-line1 .vocab-word-ko *,
   ${bodySel} h3.grammar-point-title .grammar-title-ko,

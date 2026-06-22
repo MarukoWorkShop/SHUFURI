@@ -25,6 +25,15 @@ const PAGE_NUMBER_FONT_FAMILY = ZH_FONT_FAMILY;
  */
 const EXPORT_HTML2CANVAS_SCALE_FUDGE = 0.98;
 
+/** 导出 backdrop 完全移出左缘：画布宽 + 视口宽 + 余量（-200vw 不足以隐藏 1080px 手机竖屏画布） */
+function getExportBackdropOffscreenLeft(canvasW: number): number {
+  const vw =
+    typeof window !== 'undefined'
+      ? Math.ceil(window.visualViewport?.width ?? window.innerWidth ?? canvasW)
+      : canvasW;
+  return -(canvasW + vw + 64);
+}
+
 function sanitizeFragmentHtml(html: string): string {
   let s = html.replace(/\r\n/g, '\n');
   s = s.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
@@ -40,8 +49,8 @@ function formatPosterPageNo(current: number, total: number): string {
 
 export type PosterExportPageMount = {
   root: HTMLDivElement;
-  /** 在栅格化前调用；visible:false 时保持离屏，避免长按保存时全屏白屏 */
-  prepare: (opts?: { visible?: boolean }) => void;
+  /** 栅格化前触发布局；导出 DOM 始终离屏，不会移入视口 */
+  prepare: () => void;
   dispose: () => void;
 };
 
@@ -79,22 +88,23 @@ export function mountPosterExportPage(
   const pad = getShufuriCanvasInsets(layoutProfile);
   const rootStyle = buildShufuriPosterRootStyle(layoutProfile);
 
-  // 全屏白色 backdrop：为 html2canvas 提供干净的渲染表面，同时视觉上隐藏导出 DOM。
+  // 离屏 backdrop：为 html2canvas 提供白底，尺寸与画布一致，永不移入视口。
   // 关键约束：
-  // 1) 不能使用 clip-path / opacity:0 / visibility:hidden / z-index:-1
+  // 1) 不能使用 clip-path / opacity:0 / visibility:hidden / z-index:-1 on shell
   //    —— html2canvas 会直接裁切或忽略不可见内容，导致栅格化全空白。
-  // 2) position:fixed 用于 backdrop 遮罩没问题，html2canvas 以 shell（position:relative）
-  //    为渲染 target，其坐标在 backdrop 的 absolute 坐标系内，不受 viewport 影响。
-  //
-  // 【闪烁修复】初始将 backdrop 移出视口（left: -99999vw），避免挂载时的白屏闪现。
-  // 调用方在准备好栅格化前调用 prepare() 将其移回可见位置。
+  // 2) 禁止 100vw 全屏遮罩或 prepare 时移入视口 —— 会触发视口/缩放重算与全屏白闪。
+  // 3) left 须 ≤ -(canvasW + viewportW)：translateX(-200vw) 无法盖住 1080px 画布，会漏出左侧大字。
   const backdrop = doc.createElement('div');
+  backdrop.setAttribute('aria-hidden', 'true');
   backdrop.style.position = 'fixed';
-  backdrop.style.left = '-99999vw'; // 初始隐藏，prepare() 时移回 0
+  backdrop.style.left = `${getExportBackdropOffscreenLeft(canvasW)}px`;
   backdrop.style.top = '0';
-  backdrop.style.width = '100vw';
-  backdrop.style.height = '100vh';
+  backdrop.style.width = `${canvasW}px`;
+  backdrop.style.height = `${canvasH}px`;
+  backdrop.style.overflow = 'hidden';
   backdrop.style.background = '#ffffff';
+  backdrop.style.pointerEvents = 'none';
+  backdrop.style.contain = 'layout style paint';
   backdrop.style.zIndex = '2147483646';
 
   const wrapper = doc.createElement('div');
@@ -175,20 +185,9 @@ export function mountPosterExportPage(
   doc.body.appendChild(backdrop);
   void shell.offsetHeight;
 
-  let prepared = false;
-
   return {
     root: shell,
-    prepare: (opts?: { visible?: boolean }) => {
-      const visible = opts?.visible ?? true;
-      if (!prepared) {
-        prepared = true;
-        if (visible) {
-          backdrop.style.left = '0';
-        }
-      } else if (visible) {
-        backdrop.style.left = '0';
-      }
+    prepare: () => {
       void shell.offsetHeight;
     },
     dispose: () => {

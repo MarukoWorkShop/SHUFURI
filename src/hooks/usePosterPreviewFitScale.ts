@@ -38,11 +38,12 @@ export function usePosterPreviewFitScale(
   containerRef: RefObject<HTMLElement | null>,
   active: boolean,
   remeasureKey: string | number = 0,
+  pauseUpdates = false,
 ): number {
   const [scale, setScale] = useState(() => estimatePosterPreviewFitScale(layoutProfile));
 
   useLayoutEffect(() => {
-    if (!active) {
+    if (!active || pauseUpdates) {
       return;
     }
 
@@ -75,7 +76,7 @@ export function usePosterPreviewFitScale(
       ro.disconnect();
       window.removeEventListener('resize', update);
     };
-  }, [layoutProfile, containerRef, active, remeasureKey]);
+  }, [layoutProfile, containerRef, active, remeasureKey, pauseUpdates]);
 
   return scale;
 }

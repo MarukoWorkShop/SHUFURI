@@ -6,8 +6,10 @@ import { useClipboardDetection } from '../../hooks/useClipboardDetection';
 import HtmlPasteInput from '../HtmlPasteInput';
 import SavedLyricsLibrary from '../SavedLyricsLibrary';
 import StudyCardsLibrary from '../StudyCardsLibrary';
-import type { RefObject, Dispatch, SetStateAction } from 'react';
+import { useLayoutEffect, type RefObject, type Dispatch, type SetStateAction } from 'react';
 import type { SavedLyricsProject } from '../../services/savedLyricsStore';
+import { ensurePosterFontsLoaded } from '../../utils/shufuriPoster/fonts';
+import { hideAppBootLoader } from '../../utils/hideAppBootLoader';
 
 type ShareOcrData = {
   title: string;
@@ -54,6 +56,19 @@ export default function HomeScreen({
   consumedClipboardRef,
   prevClipboardHashRef,
 }: Props) {
+  useLayoutEffect(() => {
+    let cancelled = false;
+    void ensurePosterFontsLoaded().then(() => {
+      if (cancelled) return;
+      requestAnimationFrame(() => {
+        if (!cancelled) hideAppBootLoader();
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useClipboardDetection({
     setShareOcrData,
     setAppSettings,

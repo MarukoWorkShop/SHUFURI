@@ -1,7 +1,7 @@
 import type { LangCode } from '../services/appSettings';
 import { splitStreamColumns } from './splitStreamColumns';
 import { normalizeCodecRubyFields } from './normalizeCodecRuby';
-import { trimToStreamStart } from './stripStreamEnvelope';
+import { normalizeStreamInput } from './repairStreamEnvelope';
 import type { GrammarRow, LyricLine, StreamDocument, StreamHeader, StreamLang, VocabRow } from './types';
 
 const VALID_LANGS = new Set<StreamLang>(['jp', 'ko', 'en', 'zh']);
@@ -99,7 +99,7 @@ function parseGrammar(fields: string[]): GrammarRow {
 }
 
 export function parseStream(raw: string): StreamDocument {
-  const text = trimToStreamStart(raw.trim());
+  const text = normalizeStreamInput(raw.trim());
   if (!text) {
     throw new Error('空文本');
   }
@@ -173,7 +173,7 @@ export function extractStreamHeader(raw: string): { artist?: string; title?: str
     const doc = parseStream(raw);
     return { artist: doc.header.artist, title: doc.header.title };
   } catch {
-    const text = trimToStreamStart(raw.trim());
+    const text = normalizeStreamInput(raw.trim());
     for (const line of text.split(/\r\n|\n|\r/)) {
       const t = line.trim();
       if (!t.startsWith('H|')) continue;
@@ -188,7 +188,7 @@ export function extractStreamLang(raw: string): LangCode | undefined {
   try {
     return parseStream(raw).header.lang;
   } catch {
-    const text = trimToStreamStart(raw.trim());
+    const text = normalizeStreamInput(raw.trim());
     for (const line of text.split(/\r\n|\n|\r/)) {
       const t = line.trim();
       if (!t.startsWith('H|')) continue;

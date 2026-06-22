@@ -175,6 +175,34 @@ export async function postShareImage(payload: Omit<ShareImagePayload, 'type' | '
   });
 }
 
+/** 多页 PDF 写入缓存并通过系统分享（打印 / 保存） */
+export async function sharePosterPdfBlob(blob: Blob, filename: string): Promise<void> {
+  const safeName = sanitizeFilename(filename);
+  const finalName = safeName.endsWith('.pdf') ? safeName : `${safeName}.pdf`;
+  const pdfBase64 = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+
+  const result = await Filesystem.writeFile({
+    path: finalName,
+    data: pdfBase64,
+    directory: Directory.Cache,
+  });
+
+  await Share.share({
+    title: finalName,
+    url: result.uri,
+    dialogTitle: `分享 ${finalName}`,
+  });
+}
+
 export async function shareTextFile(
   content: string,
   filename: string,
@@ -375,87 +403,4 @@ export function parseNetEaseMusicShare(text: string): { artist?: string; title?:
   }
 
   return {};
-}
-
-// ---- 矢量 PDF 导出 --------------------------------------------------------
-
-/**
- * Capacitor 中用 jsPDF 客户端生成 PDF，写入临时文件后分享。
- * 不再依赖 expo-print。
- */
-import { jsPDF } from 'jspdf';
-
-const CSS_PX_TO_MM = 25.4 / 96;
-
-export async function postExportVectorPdf(
-  payload: Omit<ExportVectorPdfPayload, 'type' | 'requestId'>,
-): Promise<void> {
-  // 用临时 iframe 渲染 HTML → html2canvas 栅格化 → 写入 PDF → 分享
-  const { default: html2canvas } = await import('html2canvas');
-
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.left = '-9999px';
-  iframe.style.top = '0';
-  iframe.style.width = `${payload.pageWidthMm / CSS_PX_TO_MM}px`;
-  iframe.style.height = `${payload.pageHeightMm / CSS_PX_TO_MM}px`;
-  iframe.style.border = 'none';
-  document.body.appendChild(iframe);
-
-  try {
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) throw new Error('无法创建 iframe 文档');
-    doc.open();
-    doc.write(payload.html);
-    doc.close();
-
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const canvas = await html2canvas(doc.body, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-    });
-
-    const wMm = canvas.width * CSS_PX_TO_MM / 2;
-    const hMm = canvas.height * CSS_PX_TO_MM / 2;
-    const pdf = new jsPDF({
-      orientation: hMm >= wMm ? 'portrait' : 'landscape',
-      unit: 'mm',
-      format: [wMm, hMm],
-      hotfixes: ['px_scaling'],
-    });
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    pdf.addImage(imgData, 'JPEG', 0, 0, wMm, hMm, undefined, 'FAST');
-
-    const pdfBlob = pdf.output('blob') as Blob;
-    const pdfBase64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        const comma = result.indexOf(',');
-        resolve(comma >= 0 ? result.slice(comma + 1) : result);
-      };
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(pdfBlob);
-    });
-
-    const safeName = sanitizeFilename(payload.filename);
-    const result = await Filesystem.writeFile({
-      path: `${safeName}.pdf`,
-      data: pdfBase64,
-      directory: Directory.Cache,
-    });
-
-    await Share.share({
-      title: payload.filename,
-      url: result.uri,
-      dialogTitle: `分享 ${payload.filename}.pdf`,
-    });
-  } finally {
-    document.body.removeChild(iframe);
-  }
 }
