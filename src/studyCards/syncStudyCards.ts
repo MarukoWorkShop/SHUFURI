@@ -24,9 +24,18 @@ export type SyncStudyCardsOptions = ExtractStudyCardsMeta & {
 /** 热插拔入口：从结构化 raw 同步学习卡，失败静默不影响主流程 */
 export async function trySyncStudyCardsFromRaw(options: SyncStudyCardsOptions): Promise<number> {
   try {
-    if (options.includeVocabAndGrammar === false) return 0;
-    if (!options.rawLyrics?.trim()) return 0;
-    if (!rawLyricsHasStudyCardSections(options.rawLyrics)) return 0;
+    if (options.includeVocabAndGrammar === false) {
+      console.warn('[study-cards] sync skipped: includeVocabAndGrammar disabled');
+      return 0;
+    }
+    if (!options.rawLyrics?.trim()) {
+      console.warn('[study-cards] sync skipped: rawLyrics empty');
+      return 0;
+    }
+    if (!rawLyricsHasStudyCardSections(options.rawLyrics)) {
+      console.warn('[study-cards] sync skipped: no V|/G| sections in rawLyrics');
+      return 0;
+    }
 
     const drafts = extractStudyCardsFromRaw(options.rawLyrics, {
       bundleId: options.bundleId,
@@ -35,15 +44,18 @@ export async function trySyncStudyCardsFromRaw(options: SyncStudyCardsOptions): 
       lang: options.lang,
     });
     if (!drafts.length) {
-      console.warn('[study-cards] no drafts extracted (empty terms or parse failure)');
+      console.warn('[study-cards] no drafts extracted (parse failure or empty terms)');
       return 0;
     }
 
     const { written, skipped } = await replaceStudyCardsForBundle(options.bundleId, drafts);
     if (written === 0 && skipped > 0) {
       console.warn(
-        `[study-cards] ${skipped} card(s) skipped by global dedupe; bundle=${options.bundleId}`,
+        `[study-cards] ${skipped} duplicate draft(s) in batch; bundle=${options.bundleId}`,
       );
+    }
+    if (written > 0) {
+      console.log(`[study-cards] synced ${written} card(s) to bundle=${options.bundleId}`);
     }
     return written;
   } catch (err) {

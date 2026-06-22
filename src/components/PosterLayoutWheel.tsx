@@ -7,7 +7,6 @@ import {
 } from 'react';
 import { hapticButton } from '../hooks/useHaptics';
 import { isInteractionSoundEnabled } from '../services/appSettings';
-import { playKataClickSound } from '../utils/kataClickSound';
 import type { PosterLayoutProfile } from '../utils/shufuriPoster/types';
 import './PosterLayoutWheel.css';
 
@@ -73,7 +72,6 @@ function layoutIndex(profile: PosterLayoutProfile): number {
 function triggerWheelSnapFeedback(soundEnabled: boolean): void {
   if (!soundEnabled) return;
   hapticButton();
-  playKataClickSound();
 }
 
 type Props = {

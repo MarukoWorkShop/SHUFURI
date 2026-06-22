@@ -90,7 +90,7 @@ export function createPosterMeasurer(
 
   const shell = doc.createElement('div');
   shell.className = 'fv-html-poster-root';
-  // 直接使用 buildFuriganaPosterRootStyle 的完整样式（已含带 px 单位的 width/height）
+  // 直接使用 buildShufuriPosterRootStyle 的完整样式（已含带 px 单位的 width/height）
   Object.assign(shell.style, buildShufuriPosterRootStyle(profile));
   shell.style.position = 'relative';
   shell.dataset.rubyVisible = (renderOptions?.showRuby ?? true) ? 'true' : 'false';
@@ -576,7 +576,7 @@ function isCompleteLyricsGroup(atom: HTMLElement): boolean {
 function warnPaginationIssue(message: string, atom?: HTMLElement): void {
   if (typeof console !== 'undefined' && console.warn) {
     const preview = atom?.textContent?.trim().slice(0, 60) ?? '';
-    console.warn(`[paginateFurigana] ${message}${preview ? `: "${preview}…"` : ''}`);
+    console.warn(`[paginateShufuri] ${message}${preview ? `: "${preview}…"` : ''}`);
   }
 }
 

@@ -1,12 +1,23 @@
-import {
-  filterStudyCardDraftsForInsert,
-  studyCardDedupeKey,
-} from '../studyCards/studyCardDedupeKey';
+import { studyCardDedupeKey } from '../studyCards/studyCardDedupeKey';
 import type { StudyCard, StudyCardDraft } from '../studyCards/types';
 
 const DB_NAME = 'japanese-kana-app-study-cards';
 const DB_VERSION = 2;
 const STORE_NAME = 'study-cards';
+
+const studyCardsListeners = new Set<() => void>();
+
+/** 学习卡库写入后订阅刷新（替代 refreshKey 透传） */
+export function subscribeStudyCardsStore(listener: () => void): () => void {
+  studyCardsListeners.add(listener);
+  return () => studyCardsListeners.delete(listener);
+}
+
+function notifyStudyCardsStoreChanged(): void {
+  for (const listener of studyCardsListeners) {
+    listener();
+  }
+}
 
 function createCardId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -120,25 +131,6 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-async function readExistingDedupeKeys(db: IDBDatabase): Promise<Set<string>> {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORE_NAME);
-    if (!store.indexNames.contains('dedupeKey')) {
-      resolve(new Set());
-      return;
-    }
-    const index = store.index('dedupeKey');
-    const req = index.getAllKeys();
-    req.onerror = () => reject(req.error ?? new Error('读取学习卡去重键失败'));
-    req.onsuccess = () => {
-      const keys = (req.result ?? []).map((k) => String(k));
-      resolve(new Set(keys));
-    };
-    tx.onerror = () => reject(tx.error ?? new Error('读取学习卡去重键失败'));
-  });
-}
-
 export async function listStudyCards(): Promise<StudyCard[]> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
@@ -170,6 +162,7 @@ export async function replaceStudyCardsForBundle(
   drafts: StudyCardDraft[],
 ): Promise<ReplaceStudyCardsResult> {
   const db = await openDb();
+
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
@@ -196,27 +189,57 @@ export async function replaceStudyCardsForBundle(
   });
 
   if (!drafts.length) {
+    notifyStudyCardsStoreChanged();
     return { written: 0, skipped: 0 };
   }
 
-  const db2 = await openDb();
-  const existingKeys = await readExistingDedupeKeys(db2);
-  const { toWrite, skipped } = filterStudyCardDraftsForInsert(drafts, existingKeys);
-  if (!toWrite.length) {
-    db2.close();
-    return { written: 0, skipped };
-  }
+  const remaining = await listStudyCards();
+  const cardByDedupeKey = new Map(
+    remaining.map((card) => [card.dedupeKey, card]),
+  );
 
+  const seenKeys = new Set<string>();
+  const upserts: StudyCard[] = [];
+  let skipped = 0;
   const now = Date.now();
-  await new Promise<void>((resolve, reject) => {
-    const tx = db2.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    for (const draft of toWrite) {
-      store.put({
+
+  for (const draft of drafts) {
+    const dedupeKey = studyCardDedupeKey(draft);
+    if (seenKeys.has(dedupeKey)) {
+      skipped += 1;
+      continue;
+    }
+    seenKeys.add(dedupeKey);
+
+    const existing = cardByDedupeKey.get(dedupeKey);
+    if (existing) {
+      upserts.push({
+        ...existing,
+        ...draft,
+        bundleId,
+        dedupeKey,
+      });
+    } else {
+      upserts.push({
         ...draft,
         id: createCardId(),
         createdAt: now,
-      } satisfies StudyCard);
+        dedupeKey,
+      });
+    }
+  }
+
+  if (!upserts.length) {
+    notifyStudyCardsStoreChanged();
+    return { written: 0, skipped };
+  }
+
+  const db2 = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db2.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    for (const card of upserts) {
+      store.put(card);
     }
     tx.oncomplete = () => {
       db2.close();
@@ -228,7 +251,8 @@ export async function replaceStudyCardsForBundle(
     };
   });
 
-  return { written: toWrite.length, skipped };
+  notifyStudyCardsStoreChanged();
+  return { written: upserts.length, skipped };
 }
 
 export async function deleteStudyCard(id: string): Promise<void> {
@@ -253,6 +277,7 @@ export async function deleteStudyCards(ids: string[]): Promise<void> {
       reject(tx.error ?? new Error('删除学习卡失败'));
     };
   });
+  notifyStudyCardsStoreChanged();
 }
 
 export async function migrateStudyCardsBundle(fromId: string, toId: string): Promise<void> {
@@ -267,8 +292,9 @@ export async function migrateStudyCardsBundle(fromId: string, toId: string): Pro
     }),
   );
 
-  await replaceStudyCardsForBundle(toId, drafts);
   if (fromId.startsWith('session-')) {
     await replaceStudyCardsForBundle(fromId, []);
   }
+
+  await replaceStudyCardsForBundle(toId, drafts);
 }

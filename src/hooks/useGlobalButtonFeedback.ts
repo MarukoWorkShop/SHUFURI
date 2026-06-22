@@ -28,7 +28,7 @@ function findPressableTarget(target: EventTarget | null): Element | null {
   return el;
 }
 
-/** 全局捕获 pointerdown，为所有可点击按钮触发轻震 + 点按音效 */
+/** 全局捕获 pointerdown，为所有可点击按钮触发震动反馈 */
 export function useGlobalButtonFeedback(): void {
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {

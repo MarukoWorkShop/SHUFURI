@@ -1,6 +1,6 @@
 import type { ColorTheme, LangCode, LyricsLanguage } from '../../services/appSettings';
 import type { PosterLayoutProfile } from '../shufuriPoster/types.ts';
-import { dimForFuriganaPoster, POSTER_ELASTIC_FONT_BASE_PX } from '../shufuriPoster/dimensions.ts';
+import { dimForProfile, POSTER_ELASTIC_FONT_BASE_PX } from '../shufuriPoster/dimensions.ts';
 import {
   EN_FONT_FAMILY,
   KO_FONT_FAMILY,
@@ -120,7 +120,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   const scaleEmLine = (n: number) => `${scaleLine(n)}em`;
   const cjkFsMul = cjkFontScale(fontScale);
   const cjkLs = cjkLetterSpacingEm(fontScale);
-  const d = dimForFuriganaPoster(ctx.profile);
+  const d = dimForProfile(ctx.profile);
   const isMobile = ctx.profile === 'mobilePoster';
   const scaleBody = d.elasticFontBase / POSTER_ELASTIC_FONT_BASE_PX;
   const showRuby = ctx.showRuby ?? true;

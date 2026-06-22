@@ -120,20 +120,6 @@
   opacity: 0.45;
 }
 
-.ink-toolbox__tool--ruby:disabled {
-  color: var(--color-fg-faint);
-  cursor: not-allowed;
-  opacity: 0.38;
-}
-
-.ink-toolbox__ruby-label {
-  font-family: var(--ui-font-sans);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  line-height: 1;
-}
-
 .ink-toolbox__tool--undo:not(:disabled):hover {
   color: var(--color-fg-muted);
   background: color-mix(in srgb, var(--color-fg) 6%, transparent);

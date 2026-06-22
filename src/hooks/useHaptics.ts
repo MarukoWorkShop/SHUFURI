@@ -17,13 +17,13 @@ async function loadMod() {
   }
 }
 
-/** 按钮轻触（最常用）- impact: light；Web 回退 navigator.vibrate */
+/** 按钮点按 — impact: medium；Web 回退 navigator.vibrate */
 export function hapticButton(): void {
   void (async () => {
     const mod = await loadMod();
     if (mod) {
       try {
-        await mod.Haptics.impact({ style: mod.ImpactStyle.Light });
+        await mod.Haptics.impact({ style: mod.ImpactStyle.Medium });
       } catch {
         /* noop */
       }
@@ -31,7 +31,7 @@ export function hapticButton(): void {
     }
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
       try {
-        navigator.vibrate(8);
+        navigator.vibrate(18);
       } catch {
         /* noop */
       }
