@@ -1,16 +1,24 @@
-# SHUFURI
-SHUFURI — Turn external-AI lyric output into beautiful, paginated study posters. Ruby/pinyin layout for JP &amp; Chinese, multi-language typography (KO/EN), vocab &amp; grammar notes, ink-style editing, study cards, PDF/PNG export. Local-only. Vite + React + Capacitor iOS.
-SHUFURI is a local-first lyric typography and digital binder for language learners—not a lyrics search engine or built-in AI chatbot.
+SHUFURI Privacy Policy
+Last Updated: June 21, 2026
 
-Workflow: Generate a structured prompt → paste results from ChatGPT, Kimi, Doubao, or similar → SHUFURI parses the stream, lays out ruby / pinyin, translations, vocab & grammar blocks, and paginates them into print-ready posters.
+Welcome to SHUFURI (the "App"), a local-first typography and linguistic tech-stationery application designed for independent language learners and typography enthusiasts.
 
-Highlights
+Our philosophy is rooted in "Use-and-Go" utility and absolute privacy. Therefore, our data privacy policy is simple: We do not collect, store, or share any of your personal data.
 
-Multi-language pipelines: Japanese (furigana), Korean, English, Chinese (pinyin)
-Poster layouts: B5 print, phone portrait, 1:1 square; smart pagination with overflow repair
-Ink fine-tuning: Double-tap to edit ruby, Chinese lines, and titles on the canvas
-Study cards: Extract vocab/grammar into a local library; export to Anki
-Export: PDF and PNG; native iOS shell with deep links to AI apps
-Privacy: Projects stored in IndexedDB on device; no cloud sync, no bundled copyrighted lyrics
-Stack: Vite, React, Capacitor (iOS), IndexedDB.
+1. Zero Data Collection
+Linguistic Streams & Layouts: All text parsing, phonetic ruby annotations (such as {base:reading} micro-syntax), and typographic page calculations happen 100% locally on your device. We do not have servers, and we never upload your texts, lyrics, or generated study cards.
 
+Clipboard Data: The App may access your clipboard only when you explicitly trigger the paste function on the input screen to decode your stream. This data is processed transiently in the device memory and is never saved or transmitted.
+
+Device Information: We do not track your device ID, IP address, or location.
+
+2. Third-Party Services
+No Analytics: The App does not integrate any third-party analytics SDKs, tracking pixels, or advertising platforms.
+
+External AI Clipboard (User-Driven): When you manually copy external encrypted data streams into the App, that transaction is handled entirely by you. The App remains a pure offline rendering container.
+
+3. Children's Privacy
+Since we collect absolutely zero personal data, the App is inherently compliant with the Children's Online Privacy Protection Act (COPPA) and GDPR.
+
+4. Contact Us
+If you have any questions about this privacy policy, please contact the developer directly within the open-source repository or developer channel.
