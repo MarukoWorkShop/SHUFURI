@@ -1,4 +1,5 @@
 SHUFURI Privacy Policy
+
 Last Updated: June 21, 2026
 
 Welcome to SHUFURI (the "App"), a local-first typography and linguistic tech-stationery application designed for independent language learners and typography enthusiasts.
