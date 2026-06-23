@@ -10,7 +10,7 @@
     "generate:icons": "node scripts/generateAppIcons.mjs",
     "build:web": "npm run generate:print-font && tsc -b && vite build",
     "build": "npm run build:web",
-    "test:codec": "node scripts/testInferPosterLang.mjs && tsx scripts/testStreamCodec.mjs && tsx scripts/testPaginateCodecBody.mjs && tsx scripts/testMatchLyricCitation.mjs && tsx scripts/testUserAkizakuraPaste.mjs && tsx scripts/testShowRubyPagination.mjs",
+    "test:codec": "node scripts/testInferPosterLang.mjs && tsx scripts/testStreamCodec.mjs && tsx scripts/testPaginateCodecBody.mjs && tsx scripts/testMatchLyricCitation.mjs && tsx scripts/testUserAkizakuraPaste.mjs && tsx scripts/testShowRubyPagination.mjs && tsx scripts/testEncoderPrompt.mjs && tsx scripts/testEncoderPromptMatrix.mjs && tsx scripts/testPedagogicalLint.mjs && tsx scripts/testDeepSeekPrompt.mjs && tsx scripts/testZhPipeline.mjs && tsx scripts/testQwenPasteRepair.mjs",
     "verify": "npm run build && npm run test:codec",
     "preview": "vite preview",
     "cap:add:ios": "npx cap add ios",

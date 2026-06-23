@@ -1,14 +1,5 @@
 import type { GlossSpec } from '../../services/languageMatrix/glossSpec';
-import {
-  buildStrictRaw,
-  buildFullSampleBlock,
-  buildIntegrityCheck,
-  buildLearnerGlossBlock,
-  buildLyricsLine4Rule,
-  buildVocabGrammarIncludeRule,
-  buildWireSchema,
-  type EncoderPromptOptions,
-} from './encoderCommon';
+import { buildLearnerGlossBlock, buildVocabGrammarIncludeRule, type EncoderPromptOptions } from './encoderCommon';
 
 export function buildKoEncoderPrompt(
   artist: string,
@@ -20,14 +11,10 @@ export function buildKoEncoderPrompt(
   const iface = options.matrix.interfaceLanguage;
   return `[Role: Sequence_Encoder]
 [Task]
-Encode "${artist} - ${title}" as a ko record stream. Retrieve the complete official Korean lyrics.
+Encode "${artist} - ${title}" as a ko record stream.
 ${buildLearnerGlossBlock(gloss, options.matrix)}
 [Lang: ko]
-- H column 3 MUST be ko.
-- L column 3: Korean only; NO reading annotations in parentheses.
-${buildLyricsLine4Rule(gloss, iface, 'ko')}
-${buildVocabGrammarIncludeRule(include, iface)}
-${buildStrictRaw(include)}
-${buildWireSchema(include, iface)}
-${buildIntegrityCheck(include)}${buildFullSampleBlock('ko', include, iface)}`;
+- H col3 = song title from prompt; H col4 (lang code) MUST be ko
+- L col3: Korean only; NO reading annotations in parentheses
+${buildVocabGrammarIncludeRule(include, iface)}`;
 }

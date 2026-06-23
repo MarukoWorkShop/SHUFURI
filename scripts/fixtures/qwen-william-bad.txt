@@ -1,0 +1,7 @@
+@0
+H|周杰伦|威廉古堡|zh
+L|1|{藤:téng}蔓{蔓:màn}植{植:zhí}物{物:wù}|vines and plants
+L|2|{爬:pá}满{满:mǎn}了{了:le}伯{伯:bó}爵{爵:jué}的{的:de}坟{坟:fén}墓{墓:mù}|crawling all over the count's grave
+@1
+G|1|{满:了} (resultative complement)|indicates completion|2|爬满了伯爵的坟墓|crawled all over the grave
+@9

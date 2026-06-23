@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { buildEncoderPrompt } from '../codec/prompt/buildEncoderPrompt';
+import { buildEncoderPrompt, resolveEncoderModelHint } from '../codec/prompt/buildEncoderPrompt';
+import type { EncoderPromptOptions } from '../codec/prompt/buildEncoderPrompt';
 import type { LyricsLanguage } from '../services/appSettings';
 import type { LanguageMatrixContext } from '../services/languageMatrix/types';
-import { postClipboardWrite } from '../utils/nativeBridge';
+import { postClipboardWrite, openAiApp } from '../utils/nativeBridge';
+import type { AiAppInfo } from '../bridge/deepLinkPlugin';
 import { useAppToast } from '../context/AppToastContext';
 import ArrowRightIcon from './icons/ArrowRightIcon';
 import AiAppActionSheet from './AiAppActionSheet';
@@ -62,45 +64,65 @@ export default function HtmlPasteInput({
     onFormMetaChange?.({ title: songTitle, artist });
   }, [songTitle, artist, onFormMetaChange]);
 
-  const handleCopyPrompt = useCallback(() => {
-    const title = songTitle.trim();
-    if (!title) return;
+  const buildPrompt = useCallback(
+    (modelHint?: EncoderPromptOptions['modelHint']) => {
+      const title = songTitle.trim();
+      const promptArtist = artist.trim() || '佚名';
 
-    const promptArtist = artist.trim() || '佚名';
+      const effectiveTarget: LyricsLanguage =
+        language ??
+        (ocrDetectedLanguage === 'ko'
+          ? 'ko'
+          : ocrDetectedLanguage === 'jp'
+            ? 'jp'
+            : ocrDetectedLanguage === 'zh'
+              ? 'zh'
+              : matrix.activeTarget);
 
-    const effectiveTarget: LyricsLanguage =
-      language ??
-      (ocrDetectedLanguage === 'ko'
-        ? 'ko'
-        : ocrDetectedLanguage === 'jp'
-          ? 'jp'
-          : ocrDetectedLanguage === 'zh'
-            ? 'zh'
-            : matrix.activeTarget);
-
-    const prompt = buildEncoderPrompt(promptArtist, title, {
+      return buildEncoderPrompt(promptArtist, title, {
+        includeVocabAndGrammar,
+        matrix: { ...matrix, activeTarget: effectiveTarget },
+        modelHint,
+        ocrContext: ocrContext
+          ? {
+              songTitle: ocrContext.songTitle,
+              artist: ocrContext.artist,
+              album: ocrContext.album,
+              production: ocrContext.production,
+              firstLyricLine: ocrContext.firstLyricLine,
+              rawTexts: ocrContext.rawTexts,
+              detectedLanguage: ocrDetectedLanguage,
+            }
+          : ocrDetectedLanguage
+            ? { detectedLanguage: ocrDetectedLanguage }
+            : undefined,
+      });
+    },
+    [
+      songTitle,
+      artist,
       includeVocabAndGrammar,
-      matrix: { ...matrix, activeTarget: effectiveTarget },
-      ocrContext: ocrContext
-        ? {
-            songTitle: ocrContext.songTitle,
-            artist: ocrContext.artist,
-            album: ocrContext.album,
-            production: ocrContext.production,
-            firstLyricLine: ocrContext.firstLyricLine,
-            rawTexts: ocrContext.rawTexts,
-            detectedLanguage: ocrDetectedLanguage,
-          }
-        : ocrDetectedLanguage
-          ? { detectedLanguage: ocrDetectedLanguage }
-          : undefined,
-    });
+      language,
+      matrix,
+      ocrDetectedLanguage,
+      ocrContext,
+    ],
+  );
 
-    const writeClipboard = postClipboardWrite
-      ? postClipboardWrite(prompt).catch(() => navigator.clipboard.writeText(prompt))
-      : navigator.clipboard.writeText(prompt);
+  const writePromptToClipboard = useCallback(
+    (prompt: string) =>
+      postClipboardWrite
+        ? postClipboardWrite(prompt).catch(() => navigator.clipboard.writeText(prompt))
+        : navigator.clipboard.writeText(prompt),
+    [],
+  );
 
-    writeClipboard
+  const handleCopyPrompt = useCallback(() => {
+    if (!songTitle.trim()) return;
+
+    const prompt = buildPrompt();
+
+    writePromptToClipboard(prompt)
       .then(() => {
         setCopiedPrompt(prompt);
         setActionSheetVisible(true);
@@ -109,16 +131,22 @@ export default function HtmlPasteInput({
       .catch(() => {
         // 静默失败
       });
-  }, [
-    songTitle,
-    artist,
-    includeVocabAndGrammar,
-    language,
-    matrix,
-    ocrDetectedLanguage,
-    ocrContext,
-    showAppToast,
-  ]);
+  }, [songTitle, buildPrompt, writePromptToClipboard, showAppToast]);
+
+  const handleOpenAiApp = useCallback(
+    async (app: AiAppInfo) => {
+      const prompt = buildPrompt(resolveEncoderModelHint(app.id));
+      try {
+        await writePromptToClipboard(prompt);
+        setCopiedPrompt(prompt);
+        await openAiApp(app.scheme);
+        setActionSheetVisible(false);
+      } catch {
+        // 静默失败
+      }
+    },
+    [buildPrompt, writePromptToClipboard],
+  );
 
   return (
     <div className="html-paste ext-pipeline">
@@ -145,7 +173,7 @@ export default function HtmlPasteInput({
               id="artist-input"
               value={artist}
               onChange={(e) => setArtist(e.target.value)}
-              placeholder="歌手信息（可选）"
+              placeholder="歌手信息"
             />
           </label>
         </div>
@@ -192,6 +220,7 @@ export default function HtmlPasteInput({
         visible={actionSheetVisible}
         onClose={() => setActionSheetVisible(false)}
         copiedText={copiedPrompt}
+        onOpenApp={handleOpenAiApp}
       />
     </div>
   );

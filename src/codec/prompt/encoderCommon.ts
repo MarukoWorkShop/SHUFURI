@@ -5,6 +5,7 @@ import type { ClassifiedTextLine, OcrDetectedLanguage } from '../../services/ocr
 export type EncoderPromptOptions = {
   includeVocabAndGrammar: boolean;
   matrix: LanguageMatrixContext;
+  modelHint?: 'qwen' | 'doubao' | 'deepseek' | 'default';
   ocrContext?: {
     songTitle?: string;
     artist?: string;
@@ -28,8 +29,8 @@ export function buildGrammarLabelHint(interfaceLanguage: InterfaceLanguage): str
 export function buildLearnerGlossBlock(gloss: GlossSpec, matrix: LanguageMatrixContext): string {
   const pedagogicalRule =
     matrix.interfaceLanguage === 'zh'
-      ? `MEANING, DETAIL, lyric translation (L column 4), and EX_ZH MUST be ${gloss.label}. NO English in pedagogical fields.`
-      : `MEANING, DETAIL, lyric translation (L column 4), and EX_ZH MUST be ${gloss.label}; grammar TITLE uses (English gloss); NO Chinese in pedagogical fields.`;
+      ? `MEANING, DETAIL, lyric translation (L column 4), and pedagogical_translation (V/G col7) MUST be ${gloss.label}. NO English in pedagogical fields.`
+      : `MEANING, DETAIL, lyric translation (L column 4), and pedagogical_translation (V/G col7) MUST be ${gloss.label}; grammar_label col3 uses (${buildGrammarLabelHint(matrix.interfaceLanguage)} gloss in parentheses). NO Chinese in pedagogical fields.`;
 
   return `
 [Learner]
@@ -48,27 +49,31 @@ export function buildVocabGrammarIncludeRule(
     return '- Output H + L only; omit V/G sections.';
   }
   const hint = buildGrammarLabelHint(interfaceLanguage);
-  return `- V: 6–10 items; G: 3–6 points; G column 3 label format: "source term (${hint} gloss in parentheses)"; parentheses hold native-language gloss.`;
+  const parenRule =
+    interfaceLanguage === 'zh'
+      ? 'grammar_label gloss MUST be inside （） or (); NEVER append Chinese after only a space'
+      : 'grammar_label gloss MUST be inside () or （）; NEVER append gloss after only a space';
+  return `- V: 6–10 items; G: 3–6 points; G column 3: "source term (${hint} gloss in parentheses)"; ${parenRule}.`;
 }
 
-export function buildLyricsLine4Rule(
+export function buildLyricsLine4WireRule(
   gloss: GlossSpec,
   interfaceLanguage: InterfaceLanguage,
-  targetLang: SampleLang,
+  activeTarget: SampleLang,
 ): string {
-  if (targetLang === 'en') {
-    return `- L column 4: ${gloss.label} gloss (maps to column 3; brief gloss or leave empty).`;
+  if (activeTarget === 'en') {
+    return `  · L column 4 = ${gloss.label} gloss`;
   }
-  if (targetLang === 'zh') {
+  if (activeTarget === 'zh') {
     if (interfaceLanguage === 'zh') {
-      return '- L column 4: leave empty (Chinese interface; no gloss line).';
+      return '  · L column 4 = leave empty (trailing | when empty)';
     }
-    return `- L column 4: ${gloss.label} gloss (${gloss.translationField}).`;
+    return `  · L column 4 = ${gloss.label} gloss`;
   }
   if (interfaceLanguage === 'zh') {
-    return '- L column 4: full-line Simplified Chinese translation (maps to column 3; NOT a line number or vocab meaning).';
+    return '  · L column 4 = Simplified Chinese line translation → frontend .zh-line';
   }
-  return `- L column 4: full-line ${gloss.translationField} (secondary lyric line; NOT a line number or vocab meaning).`;
+  return `  · L column 4 = natural English line translation → frontend .zh-line (DOM class unchanged)`;
 }
 
 export function buildOcrHintBlock(ctx: EncoderPromptOptions['ocrContext']): string {
@@ -84,186 +89,215 @@ export function buildOcrHintBlock(ctx: EncoderPromptOptions['ocrContext']): stri
       lines.push(`OCR: "${raw}"`);
     }
   }
-  lines.push('[End_Context]');
+  lines.push(
+    'Context hints do NOT override H col3 title or official lyrics.',
+    '[End_Context]',
+  );
   return '\n' + lines.join('\n') + '\n';
 }
 
 export function buildStrictRaw(includeVocab: boolean): string {
-  const columnIntegrity = includeVocab
-    ? `
-- Column count integrity: each row MUST have a fixed pipe count (tag + fields). Count unescaped | only.
-  · H: exactly 3 | → H|artist|title|lang
-  · L: exactly 3 | → L|line_no|main|translation_or_gloss (trailing | when column 4 empty)
-  · V/G: exactly 6 | → tag|index|field3|field4|lyric_line_no|pedagogical_example|pedagogical_translation (trailing | when last field empty)
-- Emit ALL L rows before @1/@2 V/G sections.
-- lyric_line_no (5th field): REQUIRED 1-based L line (≥1) where the term/grammar appears in lyrics (study-card source). NEVER 0.
-- pedagogical_example (6th field): REQUIRED hand-written teaching sentence for poster; MUST differ from the cited L line; NEVER a lone integer.
-- pedagogical_translation (7th field): gloss of pedagogical_example only — NOT the line number.`
-    : `
-- Column count integrity: each row MUST have a fixed pipe count (tag + fields). Count unescaped | only.
-  · H: exactly 3 | → H|artist|title|lang
-  · L: exactly 3 | → L|line_no|main|translation_or_gloss (trailing | when column 4 empty)
-- Do NOT emit @1, @2, V, or G rows.`;
-
+  const vocabNote = includeVocab
+    ? '- Emit ALL L rows before @1/@2 V/G sections.'
+    : '- Do NOT emit @1, @2, V, or G rows.';
   return `
 [STRICT_RAW]
-- Output MUST be a record stream only: start with @0, end with @9.
 - Forbidden: markdown code fences (\`\`\`), HTML, explanatory prefix/suffix text.
 - One record per line; column separator is unescaped |; literal | inside a field MUST be written as \\|.
-- Ruby micro-syntax: {base:reading} (colon, NOT pipe); e.g. {秋桜:コスモス}, {淡:あわ}.${columnIntegrity}`;
+- Ruby micro-syntax: {base:reading} (colon, NOT pipe); e.g. {秋桜:コスモス}, {淡:あわ}.
+${vocabNote}`;
 }
 
-export function buildWireSchema(includeVocab: boolean, interfaceLanguage: InterfaceLanguage): string {
+export function buildWireSchema(
+  includeVocab: boolean,
+  interfaceLanguage: InterfaceLanguage,
+  activeTarget: SampleLang,
+  gloss: GlossSpec,
+): string {
   const glossCol =
     interfaceLanguage === 'zh'
-      ? 'Simplified Chinese (meaning column, example translation column, lyric translation)'
-      : 'natural English (meaning, example translation, lyric translation; NO Chinese)';
+      ? 'Simplified Chinese (meaning, pedagogical_translation, lyric translation)'
+      : 'natural English (meaning, pedagogical_translation, lyric translation; NO Chinese)';
 
-  const lColRules =
-    interfaceLanguage === 'zh'
-      ? `  · jp/ko: column 4 = Simplified Chinese line translation → frontend .zh-line
-  · en: column 4 = Simplified Chinese gloss
-  · zh: column 4 may be empty`
-      : `  · jp/ko: column 4 = natural English line translation → frontend .zh-line (DOM class name unchanged)
-  · en: column 4 = natural English gloss
-  · zh: column 4 = natural English gloss → gloss-line`;
+  const lColRule = buildLyricsLine4WireRule(gloss, interfaceLanguage, activeTarget);
+
+  const vgFieldRules = includeVocab
+    ? `
+- lyric_line_no (col5): see [Study_cards]
+- pedagogical_example (col6): see [Pedagogical_example]
+- pedagogical_translation (col7): gloss of col6 only`
+    : '';
 
   const vocab = includeVocab
     ? `
 @1
 V|index|headword|meaning|lyric_line_no|pedagogical_example|pedagogical_translation
-  · 6 | (7 fields); meaning + pedagogical_translation = ${glossCol}
-  · lyric_line_no = L line where headword appears (≥1, NEVER 0) — for study cards, NOT poster
-  · pedagogical_example = new teaching sentence (poster) — do NOT copy L line verbatim
-  · pedagogical_translation = gloss of pedagogical_example (NOT line number)
+  · exactly 6 | (7 fields); meaning + pedagogical_translation = ${glossCol}
 @2
 G|index|grammar_label|detail|lyric_line_no|pedagogical_example|pedagogical_translation
-  · 6 | (7 fields); detail + pedagogical_translation = ${glossCol}
-  · lyric_line_no = L line illustrating grammar (≥1, NEVER 0) — for study cards
-  · pedagogical_example = new teaching sentence (poster) — do NOT copy L line verbatim
-  · pedagogical_translation = gloss of pedagogical_example (NOT line number)
-...`
+  · exactly 6 | (7 fields); detail + pedagogical_translation = ${glossCol}${vgFieldRules}`
     : '';
+
   return `
 [Wire_Schema]
 @0
 H|artist|title|lang
-  · 3 | (4 columns); col3 = prompt song title (metadata only — NOT a substitute for L|1)
-L|line_no(1-based)|target_main_line(ruby)|translation_or_gloss
-  · col2 MUST start at 1 and be contiguous 1..N (no skipping L|1)
-${lColRules}
-  · 3 | (4 columns)${vocab}
-@9`;
+  · exactly 3 | (4 fields); col3 = prompt song title (metadata — NOT a substitute for L|1); col4 = lang code
+L|line_no(1-based)|target_main_line|translation_or_gloss
+  · exactly 3 | (4 fields); col2 contiguous 1..N (MUST include L|1)
+${lColRule}${vocab}
+  · Stream ends with @9`;
+}
+
+export function buildJpRubyBlock(includeVocab: boolean): string {
+  const col6Line = includeVocab
+    ? '\n- V/G col6: newly authored sentence — never copy any L|n|col3 (see [Pedagogical_example])'
+    : '';
+  return `
+[Jp_ruby]
+- L col3 / V headword col3: {漢字:かな} on kanji; kana-only / digits / punctuation unchanged${col6Line}`;
+}
+
+export function buildZhColumnMapBlock(includeVocab: boolean): string {
+  const pedRef = includeVocab ? ', [Pedagogical_example]' : '';
+  return `
+[Zh_column_map]
+| Row        | col3 (main/label/headword)     | col6 (pedagogical_example) |
+| L          | {字:pinyin} contiguous tokens  | —                          |
+| V headword | {字:pinyin} allowed            | plain Hanzi only           |
+| G label    | plain Hanzi + (gloss)          | plain Hanzi only           |
+See [Zh_ruby], [Zh_grammar]${pedRef} for details.`;
 }
 
 export function buildZhRubyLyricsBlock(): string {
   return `
-[Zh_ruby — L column 3 and V column 3 (headword) ONLY]
-- Format: {汉字:拼音} micro-syntax (colon in prompt; pipe also accepted)
-- EVERY CJK character in lyric lines MUST have ruby — no bare Hanzi (Latin/digits/punctuation exempt)
-- Emit ONLY back-to-back {字:拼音} tokens plus spaces/punctuation/Latin — NEVER bare CJK between tokens
-- Prefer per-character {字:zì} tokens; multi-char words may use {词:pín yīn} when syllable count matches Hanzi count
-- Forbidden: skipping ruby for "common" characters or only annotating headwords
-- Forbidden alternating pattern (Qwen/Tongyi failure — causes doubled Hanzi on screen):
-  · WRONG: {藤:téng}蔓{蔓:màn}植{植:zhí}物{物:wù} → displays as 藤蔓蔓植植物物
-  · WRONG: Japanese-style base+brace: 藤{蔓:màn} or 蔓{蔓:màn}
-  · WRONG: repeating the same Hanzi outside and inside consecutive tokens: {A:py}B{B:py}
-- CORRECT: L|1|{藤:téng}{蔓:màn}{植:zhí}{物:wù}|translation
-- Ruby reading MUST be pinyin (Latin letters + tone marks/numbers) — NEVER another CJK character in the reading slot
-- Self-check per L row: mentally delete every {…:…} token — remaining col3 must contain ZERO CJK characters`;
+[Zh_ruby — L col3 and V headword col3 ONLY]
+- Format: {汉字:拼音}; emit ONLY back-to-back tokens + spaces/punctuation/Latin — NEVER bare CJK between tokens
+- Reading MUST be pinyin (Latin + tone marks/numbers) — NEVER another CJK character
+- WRONG: {藤:téng}蔓{蔓:màn}… → 藤蔓蔓… on screen | WRONG: {A:py}B{B:py}
+- CORRECT: L|1|{藤:téng}{蔓:màn}{植:zhí}{物:wù}|…
+- Self-check: delete all {…:…} from L col3 — zero CJK characters remain`;
 }
 
-export function buildZhGrammarLabelBlock(): string {
+export function buildZhGrammarLabelBlock(interfaceLanguage: InterfaceLanguage): string {
+  const glossInParen =
+    interfaceLanguage === 'zh'
+      ? 'short Chinese gloss inside （） or () — NO English in col3 parentheses'
+      : 'short English gloss inside () or （）';
+  const detailCol =
+    interfaceLanguage === 'zh' ? 'col4 (detail) = Simplified Chinese explanation' : 'col4 (detail) = English explanation';
+  const examples =
+    interfaceLanguage === 'zh'
+      ? '像（比喻标记）| 满了（结果补语）| 在（进行态标记）'
+      : '像 (simile marker) | 满了 (resultative complement) | 在 (progressive marker)';
+
   return `
-[Zh_grammar — G column 3 (grammar_label)]
-- Plain Hanzi + gloss in parentheses — NO {汉字:拼音} ruby tokens in grammar_label
-- Format: source_term (English gloss in parentheses) — same as jp/ko/en grammar samples
-- Examples: 像 (simile marker) | 满了 (resultative complement) | 在 (progressive marker)
-- col4 (detail) = English explanation; parentheses in col3 hold the short English gloss only
-- FORBIDDEN in col3: {满:了} (reading slot must never be another Hanzi — causes 满 with 了 above 满)
-- FORBIDDEN: {为:为}, {像:像}, {在:在} — never repeat Hanzi as the "reading"
-- FORBIDDEN: applying L-line full-line ruby rules to G col3
-- If you need two characters (e.g. 满 + 了), write plain text: 满了 (resultative complement) — not {满:了}`;
+[Zh_grammar — G col3 grammar_label]
+- Plain Hanzi + gloss in parentheses — NO {汉字:拼音} ruby in grammar_label
+- Format: source_term (${glossInParen})
+- Examples: ${examples}
+- ${detailCol}
+- Gloss inside parentheses MUST have NO "{...}" ruby tokens
+- FORBIDDEN: {满:了}, {为:为}, {像:像} — never Hanzi as "reading"; use plain 满了 (gloss) not {满:了}`;
 }
 
-export function buildZhPedagogicalExampleBlock(): string {
+export function buildStudyCardsCitationBlock(): string {
   return `
-[Zh_pedagogical — V/G column 6 (pedagogical_example)]
-- Plain Hanzi only — NO {汉字:拼音} ruby in pedagogical_example (poster hides example pinyin)
-- If you ever emit ruby in col6 by mistake: use contiguous {字:拼音} only — NEVER {A:py}B{B:py} alternating
-- MUST write a NEW teaching sentence — NEVER copy any L line verbatim or reuse a lyric fragment
-- lyric_line_no (col 5) cites the line where the term appears; col 6 must differ from that L line text
-- pedagogical_translation (col 7) glosses col 6 only`;
+[Study_cards — lyric_line_no col5 ALL languages]
+- Word/grammar study cards (Anki) are built from V/G rows for jp, ko, en, and zh equally
+- Study card example = L|lyric_line_no|col3 lyric line (+ L col4 translation when present) — ALWAYS the original sung line
+- Study cards NEVER use pedagogical_example (col6); col6 is for the poster only
+- col5 MUST be the 1-based L index where the headword or grammar point appears in the official lyrics`;
 }
 
-export function buildIntegrityCheck(includeVocab: boolean): string {
-  const extra = includeVocab
-    ? ' Each V/G row MUST have lyric_line_no (≥1) + pedagogical_example (new sentence ≠ cited L line) + pedagogical_translation. NEVER 0 in lyric_line_no.'
-    : '';
+export function buildPedagogicalExampleBlock(activeTarget: SampleLang): string {
+  const langNotes: Record<SampleLang, string> = {
+    jp: '- jp col6 may use {base:reading} ruby — still must be a NEW sentence, not a lyric paste',
+    ko: '- ko col6: plain Korean sentence — no parenthetical readings',
+    en: '- en col6: plain English sentence — no ruby',
+    zh: '- zh col6: plain Hanzi only — NO {汉字:拼音} ruby (see [Zh_column_map])',
+  };
   return `
-[Integrity]
-- Retrieve complete official lyrics; line numbers MUST be contiguous 1..N.
-- Stream MUST end with @9; missing @9 counts as failure.${extra}`;
+[Pedagogical_example — V/G col6 ALL target languages]
+- col6 is a hand-written teaching example for the poster — NOT a lyric quotation
+- col5 (lyric_line_no) cites the lyric line for study cards — see [Study_cards]
+- FORBIDDEN: copying the cited L line into col6 (col6 is poster-only; study cards read L rows directly)
+- FORBIDDEN: copying the cited L line, any other L line, or a contiguous lyric fragment from the song
+- col6 MUST differ from every L|n|col3 text (compare after removing {base:reading} ruby markup)
+- Self-check: if col6 equals or is contained in any lyric line → rewrite col6 as a new sentence
+${langNotes[activeTarget]}`;
 }
 
 export function buildStreamCloseBlock(): string {
   return `
 [Stream_Close — REQUIRED]
 - The absolute LAST line of your entire output MUST be exactly: @9
-- After @9 output NOTHING: no summary, no 「希望对您有帮助」, no markdown fence, no blank explanation
-- Missing @9 = entire output rejected by the app (100% failure)
-- If token budget is tight: shorten V/G or omit @1/@2 entirely, but NEVER omit @9
-- Self-check before send: scroll to bottom — last non-empty line MUST be @9`;
+- After @9 output NOTHING: no summary, no 「希望对您有帮助」, no markdown fence, no explanation
+- If token budget is tight: shorten V/G or omit @1/@2 entirely, but NEVER omit @9`;
 }
 
 export function buildHeaderLyricsSeparationBlock(artist: string, title: string): string {
   return `
-[H_metadata vs L_lyrics — NO deduplication]
-- H|artist|title|lang is METADATA only:
-  · col2 = artist "${artist}" (from prompt)
-  · col3 = song title "${title}" (from prompt) — NEVER substitute the first lyric line
-  · col4 = lang code
-- L|line_no|main|translation is LYRICS only:
-  · col2 = contiguous 1-based index; MUST include L|1 and run 1..N with no gaps or renumbering
-  · col3 = official sung lyric text; col4 = translation/gloss
-- CRITICAL: when H|col3 and L|1|col3 text are identical, emit BOTH rows (two separate records) — NEVER skip L|1 because H already contains the same string
-- "Both rows" means H and L|1 records — NOT doubling each Hanzi character inside L col3
-- NEVER copy L|1 into H|col3 when it differs from prompt title "${title}"
-- Context/OCR First_Line (if present) is the opening lyric → belongs in L|1 col3 when official; it does NOT replace H|col3 unless it equals the prompt title
-- Self-check before send: H|col3 is exactly "${title}"; L|1 exists; line numbers are 1..N contiguous`;
+[H_metadata vs L_lyrics]
+- H = metadata: col2 artist "${artist}", col3 title "${title}", col4 lang code
+- L = lyrics: col2 contiguous 1..N; col3 official lyric text
+- When H col3 equals L|1 col3 text: emit BOTH rows — NEVER skip L|1 (two records, NOT per-character doubling)
+- Example: H|歌手|同文歌名|ko and L|1|同文歌名|translation — both required
+- NEVER put L|1 text into H col3 when it differs from prompt title "${title}"
+- OCR First_Line → L|1 col3 when official; does NOT replace H col3 unless it equals the prompt title`;
 }
 
-/** When H title equals L|1 lyric text, both H and L|1 rows are required (not per-character doubling). */
-export function buildTitleLyricOverlapSampleBlock(): string {
+export function buildSourceIntegrityBlock(
+  artist: string,
+  title: string,
+  firstLyricLine?: string,
+): string {
+  const searchQuery =
+    artist.trim() && artist.trim() !== '佚名'
+      ? `「${artist} ${title} 歌词」`
+      : `「${title} 歌词」`;
+  const anchor = firstLyricLine?.trim()
+    ? `\n- Anchor line (OCR/song match): "${firstLyricLine.trim().slice(0, 120)}" — searched lyrics MUST include this line; reject wrong homonym songs`
+    : '';
   return `
-[Sample — H title equals L|1 text; both H and L|1 rows required]
-@0
-H|示例歌手|同文歌名|ko
-L|1|同文歌名|When H col3 equals L|1 col3, still emit L|1 — do NOT skip L|1 (this is NOT doubling each character)
-L|2|다음 가사 줄|next line translation
-@9`;
+[Source_Integrity]
+- Target: "${artist} - ${title}" — studio OFFICIAL published lyrics ONLY (not memory, paraphrase, fan lyric)
+- BEFORE encoding: search web for ${searchQuery}; transcribe verbatim from ≥2 matching lyric pages; turn on 联网/搜索 if the app supports it
+- L col3 = published lines only; if sources conflict or search fails: output verified L rows + @9 — NEVER pad gaps with guesses${anchor}
+- Do NOT invent, merge other songs, or split/merge official lines
+- L indices contiguous 1..N; omit uncertain lines rather than fabricate (incomplete + @9 beats wrong lyrics)`;
 }
 
-export function buildSourceIntegrityBlock(artist: string, title: string): string {
+export function buildSelfCheckBlock(activeTarget: SampleLang, includeVocab: boolean): string {
+  const col6Line = includeVocab
+    ? '\n4. V/G col6 differs from every L|n|col3 — new poster sentence only (see [Pedagogical_example])'
+    : '';
+  const zhLine =
+    activeTarget === 'zh'
+      ? `\n${includeVocab ? '5' : '4'}. zh L col3: zero bare CJK after removing all {…:…} tokens`
+      : '';
   return `
-[Source_Integrity — NO hallucination]
-- Target song: "${artist} - ${title}" (exact artist + title from the prompt)
-- Use the complete OFFICIAL published lyrics only — same song, same artist, same language
-- Do NOT invent, guess, paraphrase from memory, or merge lines from other songs/versions/covers
-- Do NOT split one official line into two L rows or merge two official lines into one L row
-- L indices MUST be contiguous 1..N matching the authoritative full lyric text
-- If unsure of any line: omit that L row rather than fabricate (incomplete + @9 beats wrong lyrics)
-- H|col3 = metadata title; L|col3 = lyric text — separate roles even when strings match`;
+[Self_Check — before send]
+1. Last non-empty line is exactly @9
+2. L line numbers contiguous 1..N
+3. H col3 = prompt title; L|1 exists; L lyrics transcribed from web search — not memory recall${col6Line}${zhLine}`;
 }
 
-export function buildModelComplianceBlock(): string {
+export function buildModelComplianceBlock(modelHint?: EncoderPromptOptions['modelHint']): string {
+  let extra = '';
+  if (modelHint === 'qwen') {
+    extra =
+      '\n- Tongyi/Qwen: enable 联网搜索 first; verify lyrics against web — never {A:py}B{B:py} on zh L col3; verify @9';
+  } else if (modelHint === 'deepseek') {
+    extra =
+      '\n- DeepSeek: search official lyrics before @0; no preamble/reasoning; no ``` fences; after @9 output NOTHING';
+  } else if (modelHint === 'doubao') {
+    extra =
+      '\n- Doubao: enable 联网搜索 to verify official lyrics before encoding; never guess from memory';
+  }
   return `
 [Model_Compliance]
-- Output RAW record stream only — first line MUST be @0 (or H| after any strip)
-- Forbidden: \`\`\` code fences, HTML, bullet lists, JSON, explanatory preface/epilogue
-- Tongyi/Qwen/通义千问: @9 is non-negotiable; verify last line before sending
-- Tongyi/Qwen zh L col3: contiguous {字:拼音} tokens only — never {A:py}B{B:py}; zero bare CJK after removing all tokens
-- Doubao/other models: same rules — no postscript after @9`;
+- Output RAW record stream only — first line @0; no \`\`\` fences, HTML, bullet lists, JSON, or epilogue after @9${extra}`;
 }
 
 export type SampleLang = 'jp' | 'ko' | 'en' | 'zh';
@@ -328,7 +362,7 @@ G|1|from (source)|indicates origin|1|a letter from home|a letter from home
 H|周杰伦|晴天|zh
 L|1|{故:gù}{事:shì}{的:de}{小:xiǎo}{黄:huáng}{花:huā}|small yellow flowers of the story
 @1
-V|1|{黄:huáng}{花:huā}|small yellow flower|1|路边开着小黄花|little yellow flowers by the road
+V|1|{黄:huáng}{花:huā}|small yellow flower|1|春天路边开满小黄花|little yellow flowers bloom by the road in spring
 @2
 G|1|的 (possessive)|marks possession|1|这是老师的书|this is the teacher's book
 @9`;
@@ -374,11 +408,11 @@ G|1|from（从）|表示来源|1|a letter from home|一封来自家的信
 [Sample]
 @0
 H|周杰伦|晴天|zh
-L|1|{故:gù}{事:shì}{的:de}{小:xiǎo}{黄:huáng}{花:huā}|故事的小黄花
+L|1|{故:gù}{事:shì}{的:de}{小:xiǎo}{黄:huáng}{花:huā}|
 @1
-V|1|{黄:huáng}{花:huā}|小黄花|1|路边开着小黄花|路边开着小黄花
+V|1|{黄:huáng}{花:huā}|小黄花|1|春天路边开满小黄花|路边春天开满小黄花
 @2
-G|1|的（的）|表示领属或修饰|1|这是老师的书|这是老师的书
+G|1|的（的）|表示领属或修饰|1|这是老师的书|这是老师的教材
 @9`;
   }
 }

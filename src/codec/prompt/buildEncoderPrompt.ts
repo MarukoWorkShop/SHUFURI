@@ -6,12 +6,21 @@ import { buildJpEncoderPrompt } from './encoderJp';
 import { buildKoEncoderPrompt } from './encoderKo';
 import { buildZhEncoderPrompt } from './encoderZh';
 import {
+  buildFullSampleBlock,
   buildHeaderLyricsSeparationBlock,
   buildModelComplianceBlock,
   buildOcrHintBlock,
+  buildSelfCheckBlock,
   buildSourceIntegrityBlock,
   buildStreamCloseBlock,
-  buildTitleLyricOverlapSampleBlock,
+  buildStrictRaw,
+  buildWireSchema,
+  buildZhColumnMapBlock,
+  buildZhGrammarLabelBlock,
+  buildStudyCardsCitationBlock,
+  buildPedagogicalExampleBlock,
+  buildJpRubyBlock,
+  buildZhRubyLyricsBlock,
   fillEncoderMeta,
   type EncoderPromptOptions,
 } from './encoderCommon';
@@ -37,7 +46,8 @@ export function buildEncoderPrompt(
   }
 
   const gloss = getGlossSpec(matrix.interfaceLanguage);
-  const ocr = buildOcrHintBlock(options.ocrContext);
+  const include = options.includeVocabAndGrammar;
+  const iface = matrix.interfaceLanguage;
 
   let body: string;
   switch (lang) {
@@ -54,17 +64,40 @@ export function buildEncoderPrompt(
       body = buildJpEncoderPrompt(a, t, gloss, options);
   }
 
-  return fillEncoderMeta(
-    body
-      + buildHeaderLyricsSeparationBlock(a, t)
-      + buildTitleLyricOverlapSampleBlock()
-      + buildSourceIntegrityBlock(a, t)
-      + buildStreamCloseBlock()
-      + buildModelComplianceBlock()
-      + ocr,
-    a,
-    t,
-  );
+  body += buildSourceIntegrityBlock(a, t, options.ocrContext?.firstLyricLine);
+  body += buildOcrHintBlock(options.ocrContext);
+  body += buildWireSchema(include, iface, lang, gloss);
+  body += buildStrictRaw(include);
+
+  if (include) {
+    body += buildStudyCardsCitationBlock();
+    body += buildPedagogicalExampleBlock(lang);
+  }
+
+  if (lang === 'jp') {
+    body += buildJpRubyBlock(include);
+  }
+
+  if (lang === 'zh') {
+    body += buildZhColumnMapBlock(include);
+    body += buildZhRubyLyricsBlock();
+    body += buildZhGrammarLabelBlock(iface);
+  }
+
+  body += buildFullSampleBlock(lang, include, iface);
+  body += buildHeaderLyricsSeparationBlock(a, t);
+  body += buildStreamCloseBlock();
+  body += buildSelfCheckBlock(lang, include);
+  body += buildModelComplianceBlock(options.modelHint);
+
+  return fillEncoderMeta(body, a, t);
+}
+
+export function resolveEncoderModelHint(appId: string): EncoderPromptOptions['modelHint'] {
+  if (appId === 'tongyi' || appId === 'wenxin') return 'qwen';
+  if (appId === 'doubao') return 'doubao';
+  if (appId === 'deepseek') return 'deepseek';
+  return 'default';
 }
 
 /** @deprecated 使用 buildEncoderPrompt */

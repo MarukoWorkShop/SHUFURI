@@ -1,9 +1,11 @@
 import { compileStreamDocument } from './roleCompiler';
 import { parseStream } from './parseStream';
+import { warnPedagogicalLyricCopies } from './validatePedagogicalExamples';
 import type { CompileOptions, ParsedStreamLyrics } from './types';
 
 export function compileDocument(raw: string, opts?: CompileOptions): ParsedStreamLyrics {
   const document = parseStream(raw);
+  warnPedagogicalLyricCopies(document);
   const bodyHtml = compileStreamDocument(document, opts);
   return {
     bodyHtml,

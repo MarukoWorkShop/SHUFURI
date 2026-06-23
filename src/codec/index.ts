@@ -25,4 +25,4 @@ export { resolvePosterClass, usesRubyMarkup, usesPlainHtml, type PosterTextRole 
 export { compileStreamDocument } from './roleCompiler';
 export { compileDocument, normalizeStreamText } from './compileDocument';
 
-export { buildEncoderPrompt } from './prompt/buildEncoderPrompt';
+export { buildEncoderPrompt, resolveEncoderModelHint } from './prompt/buildEncoderPrompt';

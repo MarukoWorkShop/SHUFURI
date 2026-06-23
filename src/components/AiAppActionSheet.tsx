@@ -7,6 +7,8 @@ type Props = {
   onClose: () => void;
   /** 已复制到剪贴板的内容（仅用于检查后状态显示） */
   copiedText?: string;
+  /** 打开指定 AI 应用；未提供时直接 deep link */
+  onOpenApp?: (app: AiAppInfo) => void | Promise<void>;
 };
 
 const AI_APP_ICONS: Record<string, string> = {
@@ -18,7 +20,7 @@ const AI_APP_ICONS: Record<string, string> = {
   deepseek: '/assets/app-icons/deepseek.png',
 };
 
-export default function AiAppActionSheet({ visible, onClose, copiedText }: Props) {
+export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenApp }: Props) {
   const [apps, setApps] = useState<AiAppInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -33,11 +35,15 @@ export default function AiAppActionSheet({ visible, onClose, copiedText }: Props
   }, [visible]);
 
   const handleOpenApp = useCallback(
-    async (scheme: string) => {
-      await openAiApp(scheme);
-      onClose();
+    async (app: AiAppInfo) => {
+      if (onOpenApp) {
+        await onOpenApp(app);
+      } else {
+        await openAiApp(app.scheme);
+        onClose();
+      }
     },
-    [onClose],
+    [onOpenApp, onClose],
   );
 
   if (!visible) return null;
@@ -72,7 +78,7 @@ export default function AiAppActionSheet({ visible, onClose, copiedText }: Props
                 key={app.id}
                 type="button"
                 className="ai-action-sheet__item"
-                onClick={() => handleOpenApp(app.scheme)}
+                onClick={() => handleOpenApp(app)}
               >
                 <img
                   className="ai-action-sheet__item-icon"
