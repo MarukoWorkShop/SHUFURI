@@ -68,7 +68,7 @@ export default function ShufuriPosterEditCanvas({
     [layoutProfile],
   );
 
-  const { width: w } = getShufuriPosterCanvasDimensions(layoutProfile);
+  const { width: w, height: h } = getShufuriPosterCanvasDimensions(layoutProfile);
   const targetW = w * displayScale;
   const frameRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -99,9 +99,14 @@ export default function ShufuriPosterEditCanvas({
     if (!el) {
       return;
     }
+    let raf = 0;
     const update = () => {
-      const natural = Math.max(el.scrollHeight, el.offsetHeight);
-      setScaledH(natural * renderScale);
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const natural = Math.max(el.scrollHeight, el.offsetHeight, el.getBoundingClientRect().height);
+        // 亚像素与 ruby 行高余量，避免底部被裁切导致「滚不到底」
+        setScaledH(Math.ceil(natural * renderScale + 8));
+      });
     };
     update();
     const ro = new ResizeObserver(update);
@@ -109,13 +114,16 @@ export default function ShufuriPosterEditCanvas({
     if (document.fonts?.ready) {
       void document.fonts.ready.then(update);
     }
-    return () => ro.disconnect();
-  }, [renderScale, safeBody, title, artist, layoutProfile, safeTitleMarkup]);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  }, [renderScale, safeBody, title, artist, layoutProfile, safeTitleMarkup, showRuby]);
 
   const scaledFrameStyle: CSSProperties = {
     width: targetW,
     maxWidth: '100%',
-    minHeight: scaledH,
+    ...(scaledH != null ? { height: scaledH, minHeight: scaledH } : { minHeight: h * renderScale }),
     position: 'relative',
     overflow: 'visible',
     flexShrink: 0,

@@ -108,10 +108,11 @@ export default function InkFineTuneEditor({
   const rootRef = useRef<HTMLDivElement>(null);
 
   const handlePointerTarget = useCallback(
-    (el: Element | null) => {
-      if (!el) return;
+    (el: Element | null): InkEditTarget | null => {
+      if (!el) return null;
       const target = resolveEditTarget(el);
       if (target) onOpenTarget(target);
+      return target;
     },
     [onOpenTarget],
   );
@@ -121,15 +122,17 @@ export default function InkFineTuneEditor({
     if (!root) return;
 
     const onClick = (e: MouseEvent) => {
+      const target = handlePointerTarget(e.target as Element);
+      if (!target) return;
       e.preventDefault();
       e.stopPropagation();
-      handlePointerTarget(e.target as Element);
     };
 
     const onDblClick = (e: MouseEvent) => {
+      const target = handlePointerTarget(e.target as Element);
+      if (!target) return;
       e.preventDefault();
       e.stopPropagation();
-      handlePointerTarget(e.target as Element);
     };
 
     const onTouchEnd = (e: TouchEvent) => {
@@ -144,14 +147,14 @@ export default function InkFineTuneEditor({
         Math.abs(touch.clientX - last.x) < 24 &&
         Math.abs(touch.clientY - last.y) < 24
       ) {
-        e.preventDefault();
         lastTapRef.current = null;
-        handlePointerTarget(el);
+        const target = handlePointerTarget(el);
+        if (target) e.preventDefault();
       } else {
         lastTapRef.current = { time: now, x: touch.clientX, y: touch.clientY };
         if (interaction === 'click') {
-          e.preventDefault();
-          handlePointerTarget(el);
+          const target = handlePointerTarget(el);
+          if (target) e.preventDefault();
         }
       }
     };
