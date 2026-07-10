@@ -129,6 +129,7 @@ export default function App() {
           lyricsLanguage={lyricsLanguage}
           colorTheme={appSettings.colorTheme}
           defaultIncludeVocabAndGrammar={appSettings.defaultIncludeVocabAndGrammar}
+          defaultPedagogicalLevel={appSettings.defaultPedagogicalLevel}
           studyCardsBundleIdRef={studyCardsBundleIdRef}
           syncStudyCardsFromRaw={syncStudyCardsFromRaw}
           onWorkspaceReset={() => setInputResetKey((k) => k + 1)}

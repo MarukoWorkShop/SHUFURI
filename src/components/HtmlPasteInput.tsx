@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { buildEncoderPrompt, resolveEncoderModelHint } from '../codec/prompt/buildEncoderPrompt';
 import type { EncoderPromptOptions } from '../codec/prompt/buildEncoderPrompt';
-import type { LyricsLanguage } from '../services/appSettings';
+import type { LyricsLanguage, PedagogicalLevel } from '../services/appSettings';
 import type { LanguageMatrixContext } from '../services/languageMatrix/types';
 import { postClipboardWrite, openAiApp } from '../utils/nativeBridge';
 import type { AiAppInfo } from '../bridge/deepLinkPlugin';
@@ -12,6 +12,7 @@ import LanguageWheel from './LanguageWheel';
 
 type Props = {
   includeVocabAndGrammar: boolean;
+  pedagogicalLevel: PedagogicalLevel;
   language?: LyricsLanguage;
   wheelLanguages?: LyricsLanguage[];
   matrix: LanguageMatrixContext;
@@ -34,6 +35,7 @@ type Props = {
 
 export default function HtmlPasteInput({
   includeVocabAndGrammar,
+  pedagogicalLevel,
   language,
   wheelLanguages,
   matrix,
@@ -81,6 +83,7 @@ export default function HtmlPasteInput({
 
       return buildEncoderPrompt(promptArtist, title, {
         includeVocabAndGrammar,
+        pedagogicalLevel: includeVocabAndGrammar ? pedagogicalLevel : undefined,
         matrix: { ...matrix, activeTarget: effectiveTarget },
         modelHint,
         ocrContext: ocrContext
@@ -102,6 +105,7 @@ export default function HtmlPasteInput({
       songTitle,
       artist,
       includeVocabAndGrammar,
+      pedagogicalLevel,
       language,
       matrix,
       ocrDetectedLanguage,

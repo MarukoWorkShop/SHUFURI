@@ -1,4 +1,6 @@
 import type { PosterLayoutProfile } from '../utils/shufuriPoster/types';
+import type { PedagogicalLevel } from './pedagogicalLevel';
+import { DEFAULT_PEDAGOGICAL_LEVEL } from './pedagogicalLevel';
 import { extractArtistFromLyricsRaw } from './lyricsHtml';
 
 const DB_NAME = 'japanese-kana-app';
@@ -23,6 +25,8 @@ export type SavedLyricsProject = {
   /** 标题区笔刷高亮 markup（h1 innerHTML） */
   titleMarkupHtml?: string;
   includeVocabAndGrammar?: boolean;
+  /** 生成时词解/语法难度快照 */
+  pedagogicalLevel?: PedagogicalLevel;
   /** 排版管线语言（大模型声明 / 自动检测） */
   lang?: import('./appSettings').LangCode;
   savedAt: number;
@@ -72,6 +76,7 @@ export async function listSavedLyricsProjects(): Promise<SavedLyricsProject[]> {
       ...item,
       artist: item.artist?.trim() || extractArtistFromLyricsRaw(item.rawLyrics) || undefined,
       includeVocabAndGrammar: item.includeVocabAndGrammar ?? true,
+      pedagogicalLevel: item.pedagogicalLevel ?? DEFAULT_PEDAGOGICAL_LEVEL,
     }))
     .sort((a, b) => b.savedAt - a.savedAt);
 }
@@ -85,6 +90,7 @@ export async function getSavedLyricsProject(id: string): Promise<SavedLyricsProj
     ...item,
     artist: item.artist?.trim() || extractArtistFromLyricsRaw(item.rawLyrics) || undefined,
     includeVocabAndGrammar: item.includeVocabAndGrammar ?? true,
+    pedagogicalLevel: item.pedagogicalLevel ?? DEFAULT_PEDAGOGICAL_LEVEL,
   };
 }
 
@@ -106,6 +112,8 @@ export async function saveLyricsProject(
     ...(project.includeVocabAndGrammar !== undefined
       ? { includeVocabAndGrammar: project.includeVocabAndGrammar }
       : {}),
+    ...(project.pedagogicalLevel ? { pedagogicalLevel: project.pedagogicalLevel } : {}),
+    ...(project.lang ? { lang: project.lang } : {}),
     savedAt: project.savedAt ?? Date.now(),
   };
   await runTransaction('readwrite', (store) => store.put(record));
@@ -157,6 +165,7 @@ export async function writeProjectToUserFolder(project: SavedLyricsProject): Pro
     savedAt: project.savedAt,
     pageCount: project.pageHtmls.length,
     includeVocabAndGrammar: project.includeVocabAndGrammar,
+    pedagogicalLevel: project.pedagogicalLevel,
   };
 
   const metaHandle = await songDir.getFileHandle('metadata.json', { create: true });

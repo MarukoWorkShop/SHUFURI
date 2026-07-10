@@ -83,6 +83,7 @@ export default function HomeScreen({
       <HtmlPasteInput
         key={inputResetKey}
         includeVocabAndGrammar={appSettings.defaultIncludeVocabAndGrammar}
+        pedagogicalLevel={appSettings.defaultPedagogicalLevel}
         language={appSettings.lyricsLanguage}
         wheelLanguages={wheelLanguages}
         matrix={languageMatrixContext}

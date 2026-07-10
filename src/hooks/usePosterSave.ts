@@ -35,6 +35,7 @@ type Options = {
   lyricsLanguage: import('../services/appSettings').LyricsLanguage;
   posterRenderOpts: PosterRenderOptions;
   defaultIncludeVocabAndGrammar: boolean;
+  defaultPedagogicalLevel: import('../services/appSettings').PedagogicalLevel;
   studyCardsBundleIdRef: RefObject<string>;
   lyricsRef: RefObject<string>;
   pageRefs: RefObject<(HTMLDivElement | null)[]>;
@@ -57,6 +58,7 @@ export function usePosterSave({
   lyricsLanguage,
   posterRenderOpts,
   defaultIncludeVocabAndGrammar,
+  defaultPedagogicalLevel,
   studyCardsBundleIdRef,
   lyricsRef,
   pageRefs,
@@ -102,6 +104,7 @@ export function usePosterSave({
         layoutProfile,
         lang: documentLang,
         includeVocabAndGrammar: defaultIncludeVocabAndGrammar,
+        pedagogicalLevel: defaultIncludeVocabAndGrammar ? defaultPedagogicalLevel : undefined,
         ...(cleanedTitleMarkup ? { titleMarkupHtml: cleanedTitleMarkup } : {}),
       });
       setSavedProjectId(saved.id);
@@ -155,6 +158,7 @@ export function usePosterSave({
     lang,
     posterRenderOpts,
     defaultIncludeVocabAndGrammar,
+    defaultPedagogicalLevel,
     onLibrarySaved,
     setPages,
     pageRefs,

@@ -56,6 +56,10 @@ for (const lang of ['jp', 'ko', 'en', 'zh']) {
   assert(prompt.includes('pedagogical_translation'), `${lang} pedagogical_translation field`);
   assert(prompt.includes('[Pedagogical_example'), `${lang} pedagogical example block`);
   if (lang === 'jp') {
+    assert(prompt.includes('[Pedagogical_Level]'), `${lang} pedagogical level block`);
+    assert(prompt.includes('JLPT N3–N2'), `${lang} default intermediate framework`);
+  }
+  if (lang === 'jp') {
     assert(prompt.includes('[Jp_ruby]'), `${lang} jp ruby block`);
   } else {
     assert(!prompt.includes('[Jp_ruby]'), `${lang} no jp ruby block`);
@@ -89,6 +93,7 @@ assert(!/\nV\|/.test(lyricsOnly), 'lyrics-only omits V rows');
 assert(lyricsOnly.includes('[Wire_Schema]'), 'lyrics-only has wire schema');
 assert(!lyricsOnly.includes('exactly 6 |'), 'lyrics-only omits V/G pipe count');
 assert(!lyricsOnly.includes('[Pedagogical_example'), 'lyrics-only omits pedagogical block');
+assert(!lyricsOnly.includes('[Pedagogical_Level]'), 'lyrics-only omits pedagogical level block');
 assert(lyricsOnly.includes('Do NOT emit @1'), 'lyrics-only forbids V/G in strict raw');
 assert(!lyricsOnly.includes('[Zh_pedagogical]'), 'lyrics-only no dead zh pedagogical ref');
 

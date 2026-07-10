@@ -4,6 +4,11 @@ import {
   normalizeLearningTargetLanguages,
 } from './languageMatrix/wheelLanguages';
 import type { InterfaceLanguage, LearningTargetLanguage } from './languageMatrix/types';
+import {
+  DEFAULT_PEDAGOGICAL_LEVEL,
+  isPedagogicalLevel,
+  type PedagogicalLevel,
+} from './pedagogicalLevel';
 
 /** 拨轮当前学习目标语言 */
 export type LyricsLanguage = LearningTargetLanguage;
@@ -14,13 +19,15 @@ export type LangCode = 'jp' | 'ko' | 'en' | 'zh';
 /** 全局换肤：mono 墨 | blue 绀 | red 赤 */
 export type ColorTheme = 'mono' | 'blue' | 'red';
 
-export type { InterfaceLanguage, LearningTargetLanguage };
+export type { InterfaceLanguage, LearningTargetLanguage, PedagogicalLevel };
 
 export type AppSettings = {
   /** 界面配色主题 */
   colorTheme: ColorTheme;
   /** 首页「一键生成指令」默认是否附带词解与语法 */
   defaultIncludeVocabAndGrammar: boolean;
+  /** 词解/语法难度：初级 / 中级 / 高级 */
+  defaultPedagogicalLevel: PedagogicalLevel;
   /** 使用语言：Prompt 释义/解析输出语言 */
   interfaceLanguage: InterfaceLanguage;
   /** 学习目标语言多选 */
@@ -37,6 +44,7 @@ function buildDefaults(): AppSettings {
   return {
     colorTheme: 'mono',
     defaultIncludeVocabAndGrammar: true,
+    defaultPedagogicalLevel: DEFAULT_PEDAGOGICAL_LEVEL,
     interfaceLanguage: resolveSystemInterfaceLanguage(),
     learningTargetLanguages: ['jp', 'ko', 'en'],
     lyricsLanguage: 'jp',
@@ -93,6 +101,9 @@ export function getAppSettings(): AppSettings {
   return {
     colorTheme: isColorTheme(stored.colorTheme) ? stored.colorTheme : DEFAULTS.colorTheme,
     defaultIncludeVocabAndGrammar: includeVocabAndGrammar,
+    defaultPedagogicalLevel: isPedagogicalLevel(stored.defaultPedagogicalLevel)
+      ? stored.defaultPedagogicalLevel
+      : DEFAULTS.defaultPedagogicalLevel,
     interfaceLanguage: isInterfaceLanguage(stored.interfaceLanguage)
       ? stored.interfaceLanguage
       : DEFAULTS.interfaceLanguage,

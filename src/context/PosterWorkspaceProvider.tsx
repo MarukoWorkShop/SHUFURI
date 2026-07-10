@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
-import type { ColorTheme, LyricsLanguage } from '../services/appSettings';
+import type { ColorTheme, LyricsLanguage, PedagogicalLevel } from '../services/appSettings';
 import { usePosterPreviewFitScale } from '../hooks/usePosterPreviewFitScale';
 import { useInkEditSession } from '../hooks/useInkEditSession';
 import { usePosterTypography } from '../hooks/usePosterTypography';
@@ -49,6 +49,7 @@ type Props = {
   lyricsLanguage: LyricsLanguage;
   colorTheme: ColorTheme;
   defaultIncludeVocabAndGrammar: boolean;
+  defaultPedagogicalLevel: PedagogicalLevel;
   studyCardsBundleIdRef: RefObject<string>;
   syncStudyCardsFromRaw: SyncStudyCardsFn;
   onWorkspaceReset: () => void;
@@ -61,6 +62,7 @@ export default function PosterWorkspaceProvider({
   lyricsLanguage,
   colorTheme,
   defaultIncludeVocabAndGrammar,
+  defaultPedagogicalLevel,
   studyCardsBundleIdRef,
   syncStudyCardsFromRaw,
   onWorkspaceReset,
@@ -224,6 +226,7 @@ export default function PosterWorkspaceProvider({
     lyricsLanguage,
     posterRenderOpts,
     defaultIncludeVocabAndGrammar,
+    defaultPedagogicalLevel,
     studyCardsBundleIdRef,
     lyricsRef,
     pageRefs,

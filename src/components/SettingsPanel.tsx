@@ -7,7 +7,14 @@ import {
   type ColorTheme,
   type InterfaceLanguage,
   type LearningTargetLanguage,
+  type PedagogicalLevel,
 } from '../services/appSettings';
+import {
+  PEDAGOGICAL_LEVEL_ORDER,
+  pedagogicalLevelFrameworkDetail,
+  pedagogicalLevelLabel,
+  pedagogicalLevelSettingsIntro,
+} from '../services/pedagogicalLevel';
 
 type Props = {
   open: boolean;
@@ -184,6 +191,35 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
               />
             </label>
             <p className="app-settings__hint">开启时，「一键生成指令」会要求 AI 附带词解与语法板块</p>
+            {settings.defaultIncludeVocabAndGrammar ? (
+              <>
+                <p className="app-settings__sublabel app-settings__sublabel--targets">词解难度</p>
+                <div
+                  className="app-settings__segmented app-settings__segmented--triple"
+                  role="group"
+                  aria-label="词解难度"
+                >
+                  {PEDAGOGICAL_LEVEL_ORDER.map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      className={`app-settings__segment${settings.defaultPedagogicalLevel === level ? ' is-active' : ''}`}
+                      aria-pressed={settings.defaultPedagogicalLevel === level}
+                      onClick={() => patch({ defaultPedagogicalLevel: level as PedagogicalLevel })}
+                    >
+                      {pedagogicalLevelLabel(level, settings.interfaceLanguage)}
+                    </button>
+                  ))}
+                </div>
+                <p className="app-settings__hint">{pedagogicalLevelSettingsIntro(settings.interfaceLanguage)}</p>
+                <p className="app-settings__hint" aria-live="polite">
+                  {pedagogicalLevelFrameworkDetail(
+                    settings.defaultPedagogicalLevel,
+                    settings.interfaceLanguage,
+                  )}
+                </p>
+              </>
+            ) : null}
           </section>
 
           <section className="app-settings__section">

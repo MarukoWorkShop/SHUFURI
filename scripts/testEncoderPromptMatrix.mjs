@@ -14,6 +14,7 @@ for (const activeTarget of targets) {
       const label = `${activeTarget}/${interfaceLanguage}/vocab=${includeVocabAndGrammar}`;
       const prompt = buildEncoderPrompt('测试歌手', '测试歌名', {
         includeVocabAndGrammar,
+        pedagogicalLevel: includeVocabAndGrammar ? 'advanced' : undefined,
         matrix: {
           interfaceLanguage,
           learningTargetLanguages: targets,
@@ -33,6 +34,8 @@ for (const activeTarget of targets) {
         assert(!prompt.includes('[Pedagogical_example'), `${label} no pedagogical block`);
       } else {
         assert(prompt.includes('[Pedagogical_example'), `${label} pedagogical block`);
+        assert(prompt.includes('[Pedagogical_Level]'), `${label} level block`);
+        assert(prompt.includes('Level: advanced'), `${label} advanced level`);
       }
     }
   }

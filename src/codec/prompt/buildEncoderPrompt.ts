@@ -24,6 +24,8 @@ import {
   fillEncoderMeta,
   type EncoderPromptOptions,
 } from './encoderCommon';
+import { buildPedagogicalLevelBlock } from './pedagogicalLevel';
+import { resolvePedagogicalLevel } from '../../services/pedagogicalLevel';
 
 export type { EncoderPromptOptions };
 
@@ -47,6 +49,7 @@ export function buildEncoderPrompt(
 
   const gloss = getGlossSpec(matrix.interfaceLanguage);
   const include = options.includeVocabAndGrammar;
+  const pedagogicalLevel = include ? resolvePedagogicalLevel(options.pedagogicalLevel) : undefined;
   const iface = matrix.interfaceLanguage;
 
   let body: string;
@@ -70,6 +73,7 @@ export function buildEncoderPrompt(
   body += buildStrictRaw(include);
 
   if (include) {
+    body += buildPedagogicalLevelBlock(lang, pedagogicalLevel);
     body += buildStudyCardsCitationBlock();
     body += buildPedagogicalExampleBlock(lang);
   }
@@ -87,7 +91,7 @@ export function buildEncoderPrompt(
   body += buildFullSampleBlock(lang, include, iface);
   body += buildHeaderLyricsSeparationBlock(a, t);
   body += buildStreamCloseBlock();
-  body += buildSelfCheckBlock(lang, include);
+  body += buildSelfCheckBlock(lang, include, pedagogicalLevel);
   body += buildModelComplianceBlock(options.modelHint);
 
   return fillEncoderMeta(body, a, t);

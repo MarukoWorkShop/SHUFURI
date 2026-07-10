@@ -1,9 +1,11 @@
 import type { GlossSpec } from '../../services/languageMatrix/glossSpec';
 import type { InterfaceLanguage, LanguageMatrixContext } from '../../services/languageMatrix/types';
 import type { ClassifiedTextLine, OcrDetectedLanguage } from '../../services/ocrTypes';
+import type { PedagogicalLevel } from '../../services/pedagogicalLevel';
 
 export type EncoderPromptOptions = {
   includeVocabAndGrammar: boolean;
+  pedagogicalLevel?: PedagogicalLevel;
   matrix: LanguageMatrixContext;
   modelHint?: 'qwen' | 'doubao' | 'deepseek' | 'default';
   ocrContext?: {
@@ -268,19 +270,28 @@ export function buildSourceIntegrityBlock(
 - L indices contiguous 1..N; omit uncertain lines rather than fabricate (incomplete + @9 beats wrong lyrics)`;
 }
 
-export function buildSelfCheckBlock(activeTarget: SampleLang, includeVocab: boolean): string {
+export function buildSelfCheckBlock(
+  activeTarget: SampleLang,
+  includeVocab: boolean,
+  pedagogicalLevel?: PedagogicalLevel,
+): string {
   const col6Line = includeVocab
     ? '\n4. V/G col6 differs from every L|n|col3 — new poster sentence only (see [Pedagogical_example])'
     : '';
+  const levelLine =
+    includeVocab && pedagogicalLevel
+      ? '\n5. V/G counts and difficulty MUST match [Pedagogical_Level]; [Sample] illustrates format only'
+      : '';
+  const zhNum = includeVocab ? (pedagogicalLevel ? 6 : 5) : 4;
   const zhLine =
     activeTarget === 'zh'
-      ? `\n${includeVocab ? '5' : '4'}. zh L col3: zero bare CJK after removing all {…:…} tokens`
+      ? `\n${zhNum}. zh L col3: zero bare CJK after removing all {…:…} tokens`
       : '';
   return `
 [Self_Check — before send]
 1. Last non-empty line is exactly @9
 2. L line numbers contiguous 1..N
-3. H col3 = prompt title; L|1 exists; L lyrics transcribed from web search — not memory recall${col6Line}${zhLine}`;
+3. H col3 = prompt title; L|1 exists; L lyrics transcribed from web search — not memory recall${col6Line}${levelLine}${zhLine}`;
 }
 
 export function buildModelComplianceBlock(modelHint?: EncoderPromptOptions['modelHint']): string {
