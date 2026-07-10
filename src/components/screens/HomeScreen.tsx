@@ -6,6 +6,7 @@ import { useClipboardDetection } from '../../hooks/useClipboardDetection';
 import HtmlPasteInput from '../HtmlPasteInput';
 import SavedLyricsLibrary from '../SavedLyricsLibrary';
 import StudyCardsLibrary from '../StudyCardsLibrary';
+import HomeDailyLyricQuote from '../HomeDailyLyricQuote';
 import { useLayoutEffect, type RefObject, type Dispatch, type SetStateAction } from 'react';
 import type { SavedLyricsProject } from '../../services/savedLyricsStore';
 import { ensurePosterFontsLoaded } from '../../utils/shufuriPoster/fonts';
@@ -96,6 +97,7 @@ export default function HomeScreen({
       />
       <SavedLyricsLibrary onOpen={onOpenProject} refreshKey={libraryRefreshKey} />
       <StudyCardsLibrary />
+      <HomeDailyLyricQuote refreshKey={libraryRefreshKey} onOpenProject={onOpenProject} />
     </div>
   );
 }

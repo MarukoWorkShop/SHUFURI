@@ -1,0 +1,94 @@
+.home-daily-quote {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
+  width: 100%;
+  padding-top: var(--ui-space-4);
+  padding-bottom: calc(var(--ui-space-5) + var(--safe-bottom));
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.home-daily-quote__button {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: center;
+  cursor: pointer;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-daily-quote__content {
+  max-width: 70%;
+  margin-inline: auto;
+  text-align: center;
+  opacity: var(--home-daily-quote-opacity);
+  transition: opacity 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity;
+}
+
+.home-daily-quote__content.is-fading-out {
+  opacity: 0;
+}
+
+.home-daily-quote__content.is-fading-in {
+  opacity: 0;
+  animation: home-daily-quote-fade-in 0.85s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes home-daily-quote-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: var(--home-daily-quote-opacity);
+  }
+}
+
+.home-daily-quote__lines {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.42em;
+}
+
+.home-daily-quote__line {
+  display: block;
+  margin: 0;
+  max-width: 100%;
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-relaxed);
+  letter-spacing: 0.06em;
+  color: var(--color-home-quote-fg);
+}
+
+.home-daily-quote[data-lang='en'] .home-daily-quote__line {
+  font-family: var(--ui-font-sans);
+  letter-spacing: 0.08em;
+}
+
+.home-daily-quote__source {
+  display: block;
+  margin-top: var(--ui-space-1);
+  font-family: var(--ui-font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--color-home-quote-source-fg);
+}
+
+.home-daily-quote__button:active .home-daily-quote__content:not(.is-fading-out):not(.is-fading-in) {
+  opacity: 0.55;
+}
