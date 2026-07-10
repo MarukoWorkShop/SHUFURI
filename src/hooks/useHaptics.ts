@@ -39,6 +39,28 @@ export function hapticButton(): void {
   })();
 }
 
+/** 轻触反馈 — impact: light；首页摘录长按换句 */
+export function hapticLight(): void {
+  void (async () => {
+    const mod = await loadMod();
+    if (mod) {
+      try {
+        await mod.Haptics.impact({ style: mod.ImpactStyle.Light });
+      } catch {
+        /* noop */
+      }
+      return;
+    }
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      try {
+        navigator.vibrate(10);
+      } catch {
+        /* noop */
+      }
+    }
+  })();
+}
+
 /** 开关 / 选项选中 - impact: light */
 export function hapticSelectionChanged(): void {
   hapticButton();
