@@ -1,5 +1,4 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
 import {
   buildShufuriEditDocumentCssOverrides,
   buildShufuriEditDocumentRootStyle,
@@ -71,6 +70,7 @@ export default function ShufuriPosterEditCanvas({
   const { width: w, height: h } = getShufuriPosterCanvasDimensions(layoutProfile);
   const targetW = w * displayScale;
   const frameRef = useRef<HTMLDivElement>(null);
+  const scaleWrapperRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const [renderScale, setRenderScale] = useState(displayScale);
   const [scaledH, setScaledH] = useState<number | undefined>();
@@ -80,19 +80,49 @@ export default function ShufuriPosterEditCanvas({
     if (!frame) {
       return;
     }
+    // 量父级可用宽，避免自身 height 变化 → 滚动条出现/消失 → clientWidth 振荡卡死
+    const measureEl =
+      frame.closest('.edit-canvas-scroll') ?? frame.parentElement ?? frame;
     const updateFrame = () => {
-      const actualW = frame.clientWidth;
-      if (actualW > 0 && w > 0) {
-        setRenderScale(actualW / w);
+      const availableW = measureEl.clientWidth;
+      if (availableW > 0 && w > 0) {
+        const next = Math.min(availableW, targetW) / w;
+        setRenderScale((prev) => (Math.abs(prev - next) < 0.0005 ? prev : next));
       } else {
-        setRenderScale(displayScale);
+        setRenderScale((prev) => (Math.abs(prev - displayScale) < 0.0005 ? prev : displayScale));
       }
     };
     updateFrame();
     const ro = new ResizeObserver(updateFrame);
-    ro.observe(frame);
+    ro.observe(measureEl);
     return () => ro.disconnect();
-  }, [displayScale, w, layoutProfile]);
+  }, [displayScale, w, layoutProfile, targetW]);
+
+  useLayoutEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    frame.style.setProperty('--fv-edit-frame-w', `${targetW}px`);
+    if (scaledH != null) {
+      frame.style.setProperty('--fv-edit-frame-h', `${scaledH}px`);
+      frame.style.setProperty('--fv-edit-frame-min-h', `${scaledH}px`);
+    } else {
+      frame.style.removeProperty('--fv-edit-frame-h');
+      frame.style.setProperty('--fv-edit-frame-min-h', `${h * renderScale}px`);
+    }
+  }, [targetW, scaledH, h, renderScale]);
+
+  useLayoutEffect(() => {
+    const wrapper = scaleWrapperRef.current;
+    if (!wrapper) return;
+    wrapper.style.setProperty('--fv-edit-canvas-w', `${w}px`);
+    wrapper.style.setProperty('--fv-edit-render-scale', String(renderScale));
+  }, [w, renderScale]);
+
+  useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    Object.assign(el.style, rootStyle);
+  }, [rootStyle]);
 
   useLayoutEffect(() => {
     const el = rootRef.current;
@@ -103,9 +133,10 @@ export default function ShufuriPosterEditCanvas({
     const update = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        const natural = Math.max(el.scrollHeight, el.offsetHeight, el.getBoundingClientRect().height);
-        // 亚像素与 ruby 行高余量，避免底部被裁切导致「滚不到底」
-        setScaledH(Math.ceil(natural * renderScale + 8));
+        // 只用布局高度，避免父级 transform 污染 getBoundingClientRect
+        const natural = Math.max(el.scrollHeight, el.offsetHeight);
+        const next = Math.ceil(natural * renderScale + 8);
+        setScaledH((prev) => (prev === next ? prev : next));
       });
     };
     update();
@@ -120,32 +151,13 @@ export default function ShufuriPosterEditCanvas({
     };
   }, [renderScale, safeBody, title, artist, layoutProfile, safeTitleMarkup, showRuby]);
 
-  const scaledFrameStyle: CSSProperties = {
-    width: targetW,
-    maxWidth: '100%',
-    ...(scaledH != null ? { height: scaledH, minHeight: scaledH } : { minHeight: h * renderScale }),
-    position: 'relative',
-    overflow: 'visible',
-    flexShrink: 0,
-  };
-
-  const scaleWrapperStyle: CSSProperties = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: w,
-    transform: renderScale === 1 ? undefined : `scale(${renderScale})`,
-    transformOrigin: 'top left',
-  };
-
   return (
-    <div ref={frameRef} className="fv-poster-preview-frame fv-edit-canvas-frame" style={scaledFrameStyle}>
-      <div style={scaleWrapperStyle}>
+    <div ref={frameRef} className="fv-poster-preview-frame fv-edit-canvas-frame">
+      <div ref={scaleWrapperRef} className="fv-edit-canvas-scale">
         <div
           ref={rootRef}
           className="fv-html-poster-root fv-edit-document-root"
           data-ruby-visible={showRuby ? 'true' : 'false'}
-          style={rootStyle as CSSProperties}
         >
           <style>{innerCss}</style>
           {safeTitleMarkup ? (

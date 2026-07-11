@@ -301,12 +301,22 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     gap: 0.35em;
     ${unit === 'mm' ? 'flex: 0 0 auto;' : ''}
   }
+  ${root}.fv-title-name {
+    max-width: 100%;
+    min-width: 0;
+  }
   ${root}.fv-title-artist {
     font-size: 0.58em;
     font-weight: ${artistWght};
     color: #64748b;
     letter-spacing: 0.02em;
-    white-space: nowrap;
+    flex: 0 1 100%;
+    max-width: 100%;
+    min-width: 0;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
   ${root}.fv-title-name--placeholder,
   ${root}.fv-title-artist--placeholder {

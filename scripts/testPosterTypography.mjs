@@ -162,3 +162,11 @@ assert(cssOff.includes('data-ruby-visible="false"'), 'ruby hide CSS targets data
 assert(cssOff.includes('display: none'), 'ruby hide CSS hides rt');
 
 console.log('testPosterTypography (ruby + density): OK');
+
+const cssMobile = compilePosterCss(mobileJp, { unit: 'px', showRuby: true, includeFontFaces: false });
+assert(
+  cssMobile.includes('flex: 0 1 100%') && !/\.fv-title-artist[^}]*white-space:\s*nowrap/.test(cssMobile),
+  'artist line must wrap (no nowrap)',
+);
+
+console.log('testPosterTypography (title artist wrap): OK');

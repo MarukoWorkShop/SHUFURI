@@ -15,6 +15,7 @@ import {
   pedagogicalLevelLabel,
   pedagogicalLevelSettingsIntro,
 } from '../services/pedagogicalLevel';
+import { PressedButton } from './a11y/AriaToggleButtons';
 
 type Props = {
   open: boolean;
@@ -110,17 +111,16 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
             <p className="app-settings__label">界面配色</p>
             <div className="app-settings__theme-row">
               {COLOR_THEMES.map(({ id, label }) => (
-                <button
+                <PressedButton
                   key={id}
-                  type="button"
                   className={`app-settings__theme-btn${settings.colorTheme === id ? ' is-active' : ''}`}
                   data-theme-preview={id}
-                  aria-pressed={settings.colorTheme === id}
+                  pressed={settings.colorTheme === id}
                   onClick={() => patch({ colorTheme: id })}
                 >
                   <span className="app-settings__theme-swatch" aria-hidden />
                   <span className="app-settings__theme-label">{label}</span>
-                </button>
+                </PressedButton>
               ))}
             </div>
             <p className="app-settings__hint">切换全局按钮、输入框与面板色调</p>
@@ -135,22 +135,20 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
               aria-label="使用语言"
             >
               <span className="app-settings__lang-toggle__thumb" aria-hidden="true" />
-              <button
-                type="button"
+              <PressedButton
                 className={`app-settings__lang-toggle__option${settings.interfaceLanguage === 'zh' ? ' is-active' : ''}`}
-                aria-pressed={settings.interfaceLanguage === 'zh'}
+                pressed={settings.interfaceLanguage === 'zh'}
                 onClick={() => patch({ interfaceLanguage: 'zh' as InterfaceLanguage })}
               >
                 中文
-              </button>
-              <button
-                type="button"
+              </PressedButton>
+              <PressedButton
                 className={`app-settings__lang-toggle__option${settings.interfaceLanguage === 'en' ? ' is-active' : ''}`}
-                aria-pressed={settings.interfaceLanguage === 'en'}
+                pressed={settings.interfaceLanguage === 'en'}
                 onClick={() => patch({ interfaceLanguage: 'en' as InterfaceLanguage })}
               >
                 English
-              </button>
+              </PressedButton>
             </div>
             <p className="app-settings__lang-toggle-status" aria-live="polite">
               当前释义语言：
@@ -165,15 +163,14 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
               {LEARNING_TARGET_OPTIONS.map(({ id, label }) => {
                 const active = settings.learningTargetLanguages.includes(id);
                 return (
-                  <button
+                  <PressedButton
                     key={id}
-                    type="button"
                     className={`app-settings__lang-chip${active ? ' is-active' : ''}`}
-                    aria-pressed={active}
+                    pressed={active}
                     onClick={() => toggleLearningTarget(id)}
                   >
                     {label}
-                  </button>
+                  </PressedButton>
                 );
               })}
             </div>
@@ -200,15 +197,14 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
                   aria-label="词解难度"
                 >
                   {PEDAGOGICAL_LEVEL_ORDER.map((level) => (
-                    <button
+                    <PressedButton
                       key={level}
-                      type="button"
                       className={`app-settings__segment${settings.defaultPedagogicalLevel === level ? ' is-active' : ''}`}
-                      aria-pressed={settings.defaultPedagogicalLevel === level}
+                      pressed={settings.defaultPedagogicalLevel === level}
                       onClick={() => patch({ defaultPedagogicalLevel: level as PedagogicalLevel })}
                     >
                       {pedagogicalLevelLabel(level, settings.interfaceLanguage)}
-                    </button>
+                    </PressedButton>
                   ))}
                 </div>
                 <p className="app-settings__hint">{pedagogicalLevelSettingsIntro(settings.interfaceLanguage)}</p>

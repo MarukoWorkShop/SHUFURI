@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import {
   deleteSavedLyricsProject,
@@ -6,6 +6,7 @@ import {
   listSavedLyricsProjects,
   type SavedLyricsProject,
 } from '../services/savedLyricsStore';
+import { ExpandToggleButton } from './a11y/AriaToggleButtons';
 
 type SavedLyricsLibraryProps = {
   onOpen: (project: SavedLyricsProject) => void;
@@ -45,6 +46,7 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
   const dismissDragStartOffsetRef = useRef(0);
   const [dismissDragY, setDismissDragY] = useState(0);
   const [dismissDragging, setDismissDragging] = useState(false);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -222,17 +224,25 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
     await reload();
   };
 
-  const drawerDragStyle =
-    drawerActive && (dismissDragging || dismissDragY > 0)
-      ? { transform: `translate(-50%, ${dismissDragY}px)` }
-      : undefined;
+  const drawerDragOffsetActive = drawerActive && (dismissDragging || dismissDragY > 0);
+
+  useLayoutEffect(() => {
+    const el = drawerRef.current;
+    if (!el) return;
+    if (drawerDragOffsetActive) {
+      el.style.setProperty('--drawer-drag-y', `${dismissDragY}px`);
+    } else {
+      el.style.removeProperty('--drawer-drag-y');
+    }
+  }, [dismissDragY, drawerDragOffsetActive]);
 
   const drawerPortal =
     drawerVisible &&
     createPortal(
       <div
-        className={`saved-library-drawer${drawerActive ? ' is-open' : ''}${closing ? ' is-closing' : ''}${dismissDragging ? ' is-dismiss-dragging' : ''}`}
-        style={drawerDragStyle}
+        ref={drawerRef}
+        id="saved-library-drawer"
+        className={`saved-library-drawer${drawerActive ? ' is-open' : ''}${closing ? ' is-closing' : ''}${dismissDragging ? ' is-dismiss-dragging' : ''}${drawerDragOffsetActive ? ' is-drag-offset' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label="我的歌词本"
@@ -290,8 +300,10 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
               {items.map((item, index) => (
                 <li
                   key={item.id}
+                  ref={(el) => {
+                    el?.style.setProperty('--drawer-row-index', String(index));
+                  }}
                   className={`saved-library-drawer__row${selectedIds.has(item.id) ? ' is-selected' : ''}`}
-                  style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <label className="saved-library-drawer__row-check">
                     <input
@@ -340,12 +352,10 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
   return (
     <>
       <section className={`saved-library${unlatching ? ' is-unlatching' : ''}`}>
-        <button
-          type="button"
+        <ExpandToggleButton
           className="saved-library-toggle"
           onClick={handleToggle}
-          aria-expanded={drawerOpen}
-          aria-controls="saved-library-drawer"
+          expanded={drawerOpen}
         >
           <span className="saved-library-title">Archive</span>
           <span className="saved-library-toggle__aside">
@@ -356,7 +366,7 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
               </span>
             )}
           </span>
-        </button>
+        </ExpandToggleButton>
       </section>
       {drawerPortal}
     </>

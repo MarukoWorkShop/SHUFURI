@@ -143,6 +143,10 @@
   transition: none;
 }
 
+.saved-library-drawer.is-open.is-drag-offset {
+  transform: translate(-50%, var(--drawer-drag-y, 0));
+}
+
 .saved-library-drawer__dismiss-handle {
   flex-shrink: 0;
   display: flex;
@@ -287,6 +291,7 @@
   opacity: 0;
   transform: translateY(10px);
   min-height: 44px;
+  animation-delay: calc(var(--drawer-row-index, 0) * 0.05s);
 }
 
 .saved-library-drawer__row.is-selected {

@@ -390,6 +390,8 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  /* 预留滚动条槽，避免内容变高后宽度抖动 → 缩放测量死循环 */
+  scrollbar-gutter: stable;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   touch-action: pan-y;

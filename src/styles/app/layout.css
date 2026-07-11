@@ -344,6 +344,21 @@ html:has(.app--export) {
 
 .fv-edit-canvas-frame {
   overflow: visible;
+  position: relative;
+  flex-shrink: 0;
+  max-width: 100%;
+  width: var(--fv-edit-frame-w, 100%);
+  height: var(--fv-edit-frame-h, auto);
+  min-height: var(--fv-edit-frame-min-h, 0);
+}
+
+.fv-edit-canvas-scale {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--fv-edit-canvas-w);
+  transform: scale(var(--fv-edit-render-scale, 1));
+  transform-origin: top left;
 }
 
 .fv-poster-page-no {
