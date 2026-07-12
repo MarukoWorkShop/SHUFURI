@@ -577,6 +577,10 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     letter-spacing: normal;
     font-feature-settings: "palt" 0;
     max-width: 100%;
+  }
+  /* 漏标兜底空 rt：不占注音行高，避免分页/预览被撑高 */
+  ${bodySel} ruby[data-ink-empty-rt] rt:empty {
+    display: none !important;
   }`}
   ${bodySel} h2.lyrics-section-title {
     font-family: ${sectionTitleFont};

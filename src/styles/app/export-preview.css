@@ -421,6 +421,22 @@
   opacity: 0.72;
 }
 
+/* 漏标汉字空注音：不占行高；悬停提示可补假名 */
+.fv-edit-document-root .fv-body-h ruby[data-ink-empty-rt] rt:empty {
+  display: none !important;
+}
+
+.fv-edit-document-root .fv-body-h ruby[data-ink-empty-rt] {
+  border-bottom: 1px dotted color-mix(in srgb, var(--color-accent, #8b4557) 55%, transparent);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.fv-edit-document-root .fv-body-h ruby[data-ink-empty-rt]:hover {
+  background: color-mix(in srgb, var(--color-accent, #8b4557) 12%, transparent);
+  border-bottom-style: solid;
+}
+
 .export-buttons {
   display: flex;
   align-items: center;

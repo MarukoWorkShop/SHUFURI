@@ -13,6 +13,10 @@
   cursor: text;
 }
 
+.ink-fine-tune-root .fv-body-h ruby[data-ink-empty-rt] rt:empty {
+  display: none !important;
+}
+
 .ink-fine-tune-backdrop {
   position: fixed;
   inset: 0;

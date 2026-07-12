@@ -45,5 +45,10 @@ export function applyRubyEdit(
   const k = kanji.trim();
   const ka = kana.trim();
   ruby.innerHTML = `${escapeHtml(k)}<rt>${escapeHtml(ka)}</rt>`;
+  if (ka) {
+    ruby.removeAttribute('data-ink-empty-rt');
+  } else {
+    ruby.setAttribute('data-ink-empty-rt', '1');
+  }
   return parsed.root.innerHTML;
 }
