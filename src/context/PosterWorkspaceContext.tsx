@@ -74,13 +74,12 @@ export type PosterDocumentContextValue = {
 
 export type PosterTypographyContextValue = {
   showRubyAnnotations: boolean;
+  /** 固定为默认 100%；导出页已移除密度微调 UI */
   previewTypography: PreviewTypography;
   repaginating: boolean;
   rubyToggleSupported: boolean;
   posterRenderOpts: PosterRenderOptions;
   handleShowRubyChange: (next: boolean) => void;
-  setPreviewTypography: (typography: PreviewTypography) => void;
-  scheduleRebuildExportPages: () => void;
 };
 
 export type PosterInkContextValue = PosterWorkspaceInkSession;

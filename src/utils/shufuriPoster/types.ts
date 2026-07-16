@@ -8,16 +8,12 @@ export type PosterRenderOptions = {
   userLineHeightScale?: number;
 };
 
-export const PREVIEW_FONT_SCALE_MIN = 0.88;
-export const PREVIEW_FONT_SCALE_MAX = 1.12;
-export const PREVIEW_LINE_SCALE_MIN = 0.88;
-export const PREVIEW_LINE_SCALE_MAX = 1.15;
-
 export type PreviewTypography = {
   fontScale: number;
   lineHeightScale: number;
 };
 
+/** 导出/分页固定使用默认密度；用户侧字号·行距微调 UI 已移除 */
 export const DEFAULT_PREVIEW_TYPOGRAPHY: PreviewTypography = {
   fontScale: 1,
   lineHeightScale: 1,

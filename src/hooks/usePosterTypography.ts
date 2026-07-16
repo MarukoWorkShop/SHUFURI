@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { LangCode, LyricsLanguage } from '../services/appSettings';
 import { ensurePosterFontsLoaded } from '../utils/shufuriPoster/fonts';
 import { buildPosterPagesFromBody } from '../utils/shufuriPoster/buildPosterPages';
@@ -12,7 +12,6 @@ import {
   buildPosterRenderOptions,
   type PosterLayoutProfile,
   type PosterPageSlice,
-  type PreviewTypography,
 } from '../utils/shufuriPoster/types';
 import type { AppMode } from './usePosterWorkspace';
 
@@ -30,6 +29,10 @@ type Options = {
   onResetInkShowRuby?: () => void;
 };
 
+/**
+ * 导出密度（字号/行距）固定为默认 100%；注音开关仍由编辑页文具盒控制。
+ * PDF/预览共用同一套 buildPosterRenderOptions + 分页管线。
+ */
 export function usePosterTypography({
   mode,
   lang,
@@ -44,11 +47,8 @@ export function usePosterTypography({
   onResetInkShowRuby,
 }: Options) {
   const [showRubyAnnotations, setShowRubyAnnotations] = useState(true);
-  const [previewTypography, setPreviewTypography] = useState<PreviewTypography>(
-    DEFAULT_PREVIEW_TYPOGRAPHY,
-  );
   const [repaginating, setRepaginating] = useState(false);
-  const repaginateDebounceRef = useRef<number | null>(null);
+  const previewTypography = DEFAULT_PREVIEW_TYPOGRAPHY;
 
   const posterPipelineLang = useMemo(
     () => resolvePosterPipelineLang(lang, bodyHtml, lyricsLanguage),
@@ -101,16 +101,6 @@ export function usePosterTypography({
     pageRefs,
   ]);
 
-  const scheduleRebuildExportPages = useCallback(() => {
-    if (repaginateDebounceRef.current != null) {
-      window.clearTimeout(repaginateDebounceRef.current);
-    }
-    repaginateDebounceRef.current = window.setTimeout(() => {
-      repaginateDebounceRef.current = null;
-      void rebuildExportPages();
-    }, 300);
-  }, [rebuildExportPages]);
-
   const handleShowRubyChange = useCallback(
     (next: boolean) => {
       setShowRubyAnnotations(next);
@@ -123,28 +113,17 @@ export function usePosterTypography({
 
   const resetTypographyPreview = useCallback(() => {
     setShowRubyAnnotations(true);
-    setPreviewTypography(DEFAULT_PREVIEW_TYPOGRAPHY);
     onResetInkShowRuby?.();
   }, [onResetInkShowRuby]);
-
-  useEffect(() => {
-    return () => {
-      if (repaginateDebounceRef.current != null) {
-        window.clearTimeout(repaginateDebounceRef.current);
-      }
-    };
-  }, []);
 
   return {
     showRubyAnnotations,
     previewTypography,
-    setPreviewTypography,
     repaginating,
     posterPipelineLang,
     rubyToggleSupported,
     posterRenderOpts,
     rebuildExportPages,
-    scheduleRebuildExportPages,
     handleShowRubyChange,
     resetTypographyPreview,
   };

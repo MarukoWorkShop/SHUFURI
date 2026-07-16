@@ -169,11 +169,9 @@ export default function PosterWorkspaceProvider({
   const {
     showRubyAnnotations,
     previewTypography,
-    setPreviewTypography,
     repaginating,
     rubyToggleSupported,
     posterRenderOpts,
-    scheduleRebuildExportPages,
     handleShowRubyChange,
     resetTypographyPreview,
   } = typography;
@@ -318,8 +316,6 @@ export default function PosterWorkspaceProvider({
       rubyToggleSupported,
       posterRenderOpts,
       handleShowRubyChange,
-      setPreviewTypography,
-      scheduleRebuildExportPages,
     }),
     [
       showRubyAnnotations,
@@ -328,8 +324,6 @@ export default function PosterWorkspaceProvider({
       rubyToggleSupported,
       posterRenderOpts,
       handleShowRubyChange,
-      setPreviewTypography,
-      scheduleRebuildExportPages,
     ],
   );
 
