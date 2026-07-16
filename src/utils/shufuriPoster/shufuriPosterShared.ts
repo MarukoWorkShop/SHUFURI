@@ -190,7 +190,8 @@ export function buildFuriganaEditDocumentRootStyle(
     minHeight: `${h}px`,
     boxSizing: 'border-box',
     padding: `${pad.top}px ${pad.right}px ${pad.bottom}px ${pad.left}px`,
-    background: '#fff',
+    /* 编辑画布：随 data-theme 浅色令牌（导出/分页预览仍用白底） */
+    background: 'var(--color-edit-canvas-bg)',
     overflow: 'visible',
     textAlign: 'left',
     display: 'flex',

@@ -727,12 +727,19 @@ export function compilePosterCss(
   return `${fontFaces}${printShell}${bodyRules}${zhRules}${pageNo}${cjkNoBreak}${rubyVisibility}`;
 }
 
+/** 编辑页阅读档：主题浅底令牌 + Kami 行高（仅编辑画布，不影响导出分页） */
+const EDIT_CANVAS_BG = 'var(--color-edit-canvas-bg)';
+const EDIT_NEAR_BLACK = '#141413';
+/** Kami 阅读档行高区间 1.50–1.55 取中位 */
+const EDIT_KAMI_LINE_HEIGHT = 1.52;
+
 export function compileEditCssOverrides(): string {
   return `
   .fv-html-poster-root.fv-edit-document-root {
     height: auto !important;
     min-height: unset !important;
     overflow: visible !important;
+    background: ${EDIT_CANVAS_BG} !important;
   }
   .fv-html-poster-root.fv-edit-document-root .fv-body-h {
     overflow: visible !important;
@@ -748,5 +755,29 @@ export function compileEditCssOverrides(): string {
    */
   .fv-html-poster-root.fv-edit-document-root .fv-body-h .lyrics-group {
     contain: style;
+    margin-bottom: 1.7em !important;
+  }
+  .fv-html-poster-root.fv-edit-document-root .fv-title-h,
+  .fv-html-poster-root.fv-edit-document-root .fv-title-h .fv-title-name {
+    color: ${EDIT_NEAR_BLACK} !important;
+  }
+  .fv-html-poster-root.fv-edit-document-root .fv-body-h .jp-line,
+  .fv-html-poster-root.fv-edit-document-root .fv-body-h .jp-line *:not(rt):not(rp),
+  .fv-html-poster-root.fv-edit-document-root .fv-body-h .ko-line,
+  .fv-html-poster-root.fv-edit-document-root .fv-body-h .ko-line * {
+    color: ${EDIT_NEAR_BLACK} !important;
+    line-height: ${EDIT_KAMI_LINE_HEIGHT} !important;
+    letter-spacing: 0.06em !important;
+  }
+  .fv-html-poster-root.fv-edit-document-root .fv-body-h .zh-line,
+  .fv-html-poster-root.fv-edit-document-root .fv-body-h .zh-line *,
+  .fv-html-poster-root.fv-edit-document-root .fv-body-h .gloss-line,
+  .fv-html-poster-root.fv-edit-document-root .fv-body-h .gloss-line * {
+    color: var(--color-fg-secondary) !important;
+    line-height: 1.5 !important;
+    margin-top: 0.28em !important;
+  }
+  .fv-html-poster-root.fv-edit-document-root .fv-body-h ruby rt {
+    color: var(--color-fg-muted) !important;
   }`;
 }

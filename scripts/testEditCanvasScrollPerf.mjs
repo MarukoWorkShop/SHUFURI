@@ -19,7 +19,30 @@ function assert(cond, msg) {
 const editCss = compileEditCssOverrides();
 assert(!/content-visibility\s*:/.test(editCss), 'edit CSS must NOT use content-visibility (scrollHeight loop)');
 assert(editCss.includes('contain: style'), 'edit CSS may use style containment');
-console.log('OK: no content-visibility property in edit overrides');
+assert(
+  editCss.includes('var(--color-edit-canvas-bg)'),
+  'edit canvas background uses theme light token',
+);
+assert(editCss.includes('#141413'), 'edit near-black lyric color');
+assert(editCss.includes('line-height: 1.52'), 'edit Kami reading line-height');
+assert(editCss.includes('var(--color-fg-secondary)'), 'edit translation uses theme token');
+console.log('OK: edit theme-tinted reading overrides');
+
+const themeCss = fs.readFileSync(new URL('../src/styles/theme.css', import.meta.url), 'utf8');
+assert(themeCss.includes('--color-edit-canvas-bg'), 'theme defines edit canvas bg token');
+assert(
+  /\[data-theme="mono"\][\s\S]*?--color-edit-canvas-bg:\s*#f0efec/i.test(themeCss),
+  'mono edit canvas = light silver-gray',
+);
+assert(
+  /\[data-theme="blue"\][\s\S]*?--color-edit-canvas-bg:\s*#eef2f5/i.test(themeCss),
+  'blue edit canvas = light mist blue',
+);
+assert(
+  /\[data-theme="red"\][\s\S]*?--color-edit-canvas-bg:\s*#f7f0ef/i.test(themeCss),
+  'red edit canvas = light sakura pink',
+);
+console.log('OK: per-theme edit canvas light backgrounds');
 
 const previewCss = fs.readFileSync(
   new URL('../src/styles/app/export-preview.css', import.meta.url),

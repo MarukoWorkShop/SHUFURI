@@ -23,7 +23,16 @@
   touch-action: pan-y;
 }
 
-/* Edit layer */
+/* Edit layer — 羊皮纸浅底铺满整屏（含品牌栏），消除顶栏/工具栏色块断层 */
+html:has(.app--edit),
+html:has(.app--edit) body,
+.app--edit,
+.app--edit .app-screen__header,
+.app--edit .app-screen__body,
+.app--edit .app-main--preview {
+  background: var(--color-edit-canvas-bg);
+}
+
 .app--edit .app-screen__body {
   flex: 1;
   min-height: 0;
@@ -45,7 +54,8 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding-bottom: var(--ui-space-2);
+  /* 底边距改由 .edit-canvas-scroll 的 safe-bottom 承担，避免外壳再垫一层露色 */
+  padding-bottom: 0;
 }
 
 .app--export .app-main--preview {
@@ -68,6 +78,8 @@
   width: 100%;
   min-width: 0;
   position: relative;
+  /* 与编辑画布主题浅底一致，避免滚动露白 */
+  background: var(--color-edit-canvas-bg);
 }
 
 .edit-toolbar {
@@ -81,7 +93,7 @@
   border-bottom: var(--ui-border-hairline);
   position: relative;
   z-index: 3;
-  background: var(--ui-bg);
+  background: var(--color-edit-canvas-bg);
   touch-action: manipulation;
 }
 
@@ -203,6 +215,16 @@
   align-items: center;
   width: 100%;
   padding: var(--ui-space-1) 0 calc(var(--ui-space-2) + var(--safe-bottom));
+  background: var(--color-edit-canvas-bg);
+}
+
+/*
+ * 编辑画布 frame 高度含 +8px 缓冲；默认白底会在底部露白边。
+ * 与页面羊皮纸同色并去掉卡片阴影，避免底部色条。
+ */
+.app--edit .fv-poster-preview-frame.fv-edit-canvas-frame {
+  background: var(--color-edit-canvas-bg);
+  box-shadow: none;
 }
 
 .edit-canvas-scroll .ink-fine-tune-root {
@@ -210,6 +232,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  background: var(--color-edit-canvas-bg);
 }
 
 /*

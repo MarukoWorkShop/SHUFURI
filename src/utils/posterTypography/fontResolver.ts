@@ -46,7 +46,7 @@ export function resolvePinyinAccentColor(theme: ColorTheme = 'mono'): string {
     case 'red':
       return '#8b3535';
     case 'blue':
-      return '#2b3a4a';
+      return '#1b365d';
     case 'mono':
     default:
       return '#000000';
