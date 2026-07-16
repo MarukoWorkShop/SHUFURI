@@ -409,31 +409,42 @@
   align-items: center;
 }
 
-.fv-edit-document-root .fv-title-h[data-ink-title],
-.fv-edit-document-root .fv-body-h .zh-line,
-.fv-edit-document-root .fv-body-h ruby[data-ink-r] {
+/*
+ * 浏览态（未点右侧三角展开文具盒）：正文不可点选编辑，利于日文长文滑动。
+ * 展开文具盒后加 .is-ink-edit-armed 才恢复命中。
+ */
+.edit-canvas-scroll:not(.is-ink-edit-armed) .ink-fine-tune-root {
+  pointer-events: none;
+}
+
+/* 编辑态滑动中再锁一层，停滑后恢复 */
+.edit-canvas-scroll.is-ink-edit-armed.is-scrolling .ink-fine-tune-root {
+  pointer-events: none;
+}
+
+.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-title-h[data-ink-title],
+.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-body-h .zh-line,
+.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-body-h ruby[data-ink-r] {
   cursor: pointer;
 }
 
-.fv-edit-document-root .fv-title-h[data-ink-title]:active,
-.fv-edit-document-root .fv-body-h .zh-line:active,
-.fv-edit-document-root .fv-body-h ruby[data-ink-r]:active {
+.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-title-h[data-ink-title]:active,
+.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-body-h .zh-line:active,
+.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-body-h ruby[data-ink-r]:active {
   opacity: 0.72;
 }
 
-/* 漏标汉字空注音：不占行高；悬停提示可补假名 */
+/* 漏标汉字空注音：不占行高；仅编辑武装态显示可补音提示 */
 .fv-edit-document-root .fv-body-h ruby[data-ink-empty-rt] rt:empty {
   display: none !important;
 }
 
-.fv-edit-document-root .fv-body-h ruby[data-ink-empty-rt] {
-  border-bottom: 1px dotted color-mix(in srgb, var(--color-accent, #8b4557) 55%, transparent);
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
+.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-body-h ruby[data-ink-empty-rt] {
+  border-bottom: 1px dotted #c4a0a8;
 }
 
-.fv-edit-document-root .fv-body-h ruby[data-ink-empty-rt]:hover {
-  background: color-mix(in srgb, var(--color-accent, #8b4557) 12%, transparent);
+.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-body-h ruby[data-ink-empty-rt]:hover {
+  border-bottom-color: #8b4557;
   border-bottom-style: solid;
 }
 

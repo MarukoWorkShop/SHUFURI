@@ -72,6 +72,8 @@ type Props = {
   draftTitle: string;
   draftArtist: string;
   interaction: 'click' | 'doubleTap';
+  /** 为 false 时不挂载点选编辑（浏览/滑动模式，需先展开右侧文具盒） */
+  interactionEnabled?: boolean;
   onOpenTarget: (target: InkEditTarget) => void;
   onClose: () => void;
   onKanjiChange: (v: string) => void;
@@ -94,6 +96,7 @@ export default function InkFineTuneEditor({
   draftTitle,
   draftArtist,
   interaction,
+  interactionEnabled = true,
   onOpenTarget,
   onClose,
   onKanjiChange,
@@ -119,7 +122,7 @@ export default function InkFineTuneEditor({
 
   useEffect(() => {
     const root = containerRef.current;
-    if (!root) return;
+    if (!root || !interactionEnabled) return;
 
     const onClick = (e: MouseEvent) => {
       const target = handlePointerTarget(e.target as Element);
@@ -171,7 +174,7 @@ export default function InkFineTuneEditor({
       root.removeEventListener('dblclick', onDblClick);
       root.removeEventListener('touchend', onTouchEnd);
     };
-  }, [containerRef, handlePointerTarget, interaction]);
+  }, [containerRef, handlePointerTarget, interaction, interactionEnabled]);
 
   useEffect(() => {
     if (focusGroupIndex == null) return;

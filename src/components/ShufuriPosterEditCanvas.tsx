@@ -31,6 +31,9 @@ type Props = {
   showRuby?: boolean;
 };
 
+/** 高度亚像素抖动忽略阈值，避免 frame 高度微变触发 scroll 死循环 */
+const SCALED_H_EPSILON_PX = 2;
+
 export default function ShufuriPosterEditCanvas({
   title,
   artist,
@@ -72,8 +75,12 @@ export default function ShufuriPosterEditCanvas({
   const frameRef = useRef<HTMLDivElement>(null);
   const scaleWrapperRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  /** 内容/缩放刚变更时允许一次高度回落；其后只升不降，切断 scrollHeight 反馈环 */
+  const allowHeightShrinkRef = useRef(true);
   const [renderScale, setRenderScale] = useState(displayScale);
   const [scaledH, setScaledH] = useState<number | undefined>();
+
+  const contentKey = `${safeBody}\0${title}\0${artist ?? ''}\0${safeTitleMarkup ?? ''}\0${showRuby}\0${layoutProfile}`;
 
   useLayoutEffect(() => {
     const frame = frameRef.current;
@@ -95,7 +102,9 @@ export default function ShufuriPosterEditCanvas({
     updateFrame();
     const ro = new ResizeObserver(updateFrame);
     ro.observe(measureEl);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+    };
   }, [displayScale, w, layoutProfile, targetW]);
 
   useLayoutEffect(() => {
@@ -129,14 +138,24 @@ export default function ShufuriPosterEditCanvas({
     if (!el) {
       return;
     }
+    allowHeightShrinkRef.current = true;
+
     let raf = 0;
     const update = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        // 只用布局高度，避免父级 transform 污染 getBoundingClientRect
         const natural = Math.max(el.scrollHeight, el.offsetHeight);
         const next = Math.ceil(natural * renderScale + 8);
-        setScaledH((prev) => (prev === next ? prev : next));
+        setScaledH((prev) => {
+          if (prev == null) {
+            allowHeightShrinkRef.current = false;
+            return next;
+          }
+          if (Math.abs(prev - next) < SCALED_H_EPSILON_PX) return prev;
+          if (!allowHeightShrinkRef.current && next < prev) return prev;
+          allowHeightShrinkRef.current = false;
+          return next;
+        });
       });
     };
     update();
@@ -149,7 +168,7 @@ export default function ShufuriPosterEditCanvas({
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [renderScale, safeBody, title, artist, layoutProfile, safeTitleMarkup, showRuby]);
+  }, [renderScale, contentKey]);
 
   return (
     <div ref={frameRef} className="fv-poster-preview-frame fv-edit-canvas-frame">

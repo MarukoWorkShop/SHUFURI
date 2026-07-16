@@ -739,5 +739,14 @@ export function compileEditCssOverrides(): string {
     max-height: none !important;
     height: auto !important;
     flex: none !important;
+  }
+  /*
+   * 注意：编辑画布禁用 content-visibility（勿加该属性）。
+   * 离屏 lyrics-group 占位高度会随滚动抖动，再与
+   * ResizeObserver / scaledH / frame 高度形成死循环（再滑卡死、光标闪烁）。
+   * 仅用 style containment 降低样式重算范围。
+   */
+  .fv-html-poster-root.fv-edit-document-root .fv-body-h .lyrics-group {
+    contain: style;
   }`;
 }

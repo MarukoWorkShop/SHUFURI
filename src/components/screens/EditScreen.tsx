@@ -6,6 +6,9 @@ import {
   usePosterInkContext,
   usePosterTypographyContext,
 } from '../../context/PosterWorkspaceContext';
+import { useCallback } from 'react';
+import { useEditCanvasScrollPerfProbe } from '../../hooks/useEditCanvasScrollPerfProbe';
+import { useEditCanvasScrollInteractionLock } from '../../hooks/useEditCanvasScrollInteractionLock';
 
 export default function EditScreen() {
   const {
@@ -28,6 +31,23 @@ export default function EditScreen() {
     usePosterTypographyContext();
 
   const ink = usePosterInkContext();
+  const inkEditArmed = ink.inkToolboxOpen;
+  useEditCanvasScrollPerfProbe(editCanvasRef);
+  const closeInkOnScrollStart = useCallback(() => {
+    if (ink.inkEditTarget) ink.closeInkPopover();
+  }, [ink.inkEditTarget, ink.closeInkPopover]);
+  useEditCanvasScrollInteractionLock(editCanvasRef, {
+    onScrollStart: closeInkOnScrollStart,
+  });
+
+  const toggleInkToolbox = useCallback(() => {
+    if (ink.inkToolboxOpen) {
+      ink.closeInkPopover();
+      ink.setInkToolboxOpen(false);
+      return;
+    }
+    ink.setInkToolboxOpen(true);
+  }, [ink]);
 
   return (
     <div className="edit-area">
@@ -37,7 +57,7 @@ export default function EditScreen() {
         inkEditActive={ink.inkEditTarget !== null}
         showRuby={showRubyAnnotations}
         rubySupported={rubyToggleSupported}
-        onToggle={() => ink.setInkToolboxOpen((v) => !v)}
+        onToggle={toggleInkToolbox}
         onUndo={ink.handleInkUndo}
         onShowRubyChange={handleShowRubyChange}
       />
@@ -65,7 +85,10 @@ export default function EditScreen() {
         </div>
       </div>
 
-      <div ref={editCanvasRef} className="edit-canvas-scroll">
+      <div
+        ref={editCanvasRef}
+        className={`edit-canvas-scroll${inkEditArmed ? ' is-ink-edit-armed' : ''}`}
+      >
         <InkFineTuneEditor
           containerRef={editCanvasRef}
           focusGroupIndex={ink.inkFocusGroupIndex}
@@ -77,6 +100,7 @@ export default function EditScreen() {
           draftTitle={ink.inkDraftTitle}
           draftArtist={ink.inkDraftArtist}
           interaction="click"
+          interactionEnabled={inkEditArmed}
           onOpenTarget={ink.handleInkOpenTarget}
           onClose={ink.closeInkPopover}
           onKanjiChange={ink.setInkDraftKanji}
