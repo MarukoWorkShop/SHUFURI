@@ -255,6 +255,85 @@ export async function replaceStudyCardsForBundle(
   return { written: upserts.length, skipped };
 }
 
+/**
+ * 全量备份导入：按 id upsert；若 dedupeKey 冲突则合并到已有卡（保留本地 id）。
+ */
+export async function upsertStudyCardsFromBackup(
+  cards: StudyCard[],
+): Promise<{ written: number; skipped: number }> {
+  if (!cards.length) return { written: 0, skipped: 0 };
+
+  const existing = await listStudyCards();
+  const byId = new Map(existing.map((c) => [c.id, c]));
+  const byDedupe = new Map(existing.map((c) => [c.dedupeKey, c]));
+
+  const upserts: StudyCard[] = [];
+  const seenKeys = new Set<string>();
+  let skipped = 0;
+
+  for (const incoming of cards) {
+    const dedupeKey =
+      typeof incoming.dedupeKey === 'string' && incoming.dedupeKey.trim()
+        ? incoming.dedupeKey
+        : studyCardDedupeKey(incoming);
+
+    if (seenKeys.has(dedupeKey)) {
+      skipped += 1;
+      continue;
+    }
+    seenKeys.add(dedupeKey);
+
+    const byExistingDedupe = byDedupe.get(dedupeKey);
+    const byExistingId = byId.get(incoming.id);
+
+    if (byExistingDedupe) {
+      upserts.push({
+        ...byExistingDedupe,
+        ...incoming,
+        id: byExistingDedupe.id,
+        dedupeKey,
+        createdAt: Math.min(byExistingDedupe.createdAt, incoming.createdAt || Date.now()),
+      });
+    } else if (byExistingId) {
+      upserts.push({
+        ...byExistingId,
+        ...incoming,
+        id: byExistingId.id,
+        dedupeKey,
+      });
+    } else {
+      upserts.push({
+        ...incoming,
+        id: incoming.id || createCardId(),
+        dedupeKey,
+        createdAt: incoming.createdAt || Date.now(),
+      });
+    }
+  }
+
+  if (!upserts.length) return { written: 0, skipped };
+
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    for (const card of upserts) {
+      store.put(card);
+    }
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error ?? new Error('导入学习卡失败'));
+    };
+  });
+
+  notifyStudyCardsStoreChanged();
+  return { written: upserts.length, skipped };
+}
+
 export async function deleteStudyCard(id: string): Promise<void> {
   await deleteStudyCards([id]);
 }

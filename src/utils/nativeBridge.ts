@@ -208,16 +208,18 @@ export async function shareTextFile(
   filename: string,
   dialogTitle = '分享文本',
 ): Promise<void> {
-  const base = filename.replace(/\.txt$/i, '');
+  const match = filename.match(/^(.*?)(\.[A-Za-z0-9]+)?$/);
+  const base = (match?.[1] || filename).replace(/\.$/, '');
+  const ext = match?.[2] && match[2].length > 1 ? match[2] : '.txt';
   const safeName = sanitizeFilename(base);
   const result = await Filesystem.writeFile({
-    path: `${safeName}.txt`,
+    path: `${safeName}${ext}`,
     data: content,
     directory: Directory.Cache,
     encoding: Encoding.UTF8,
   });
   await Share.share({
-    title: safeName,
+    title: `${safeName}${ext}`,
     url: result.uri,
     dialogTitle,
   });

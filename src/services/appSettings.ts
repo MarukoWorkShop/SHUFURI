@@ -109,10 +109,8 @@ export function getAppSettings(): AppSettings {
       : DEFAULTS.interfaceLanguage,
     learningTargetLanguages,
     lyricsLanguage: normalizeActiveTarget(rawLyricsLanguage, learningTargetLanguages),
-    interactionSoundsEnabled:
-      typeof stored.interactionSoundsEnabled === 'boolean'
-        ? stored.interactionSoundsEnabled
-        : DEFAULTS.interactionSoundsEnabled,
+    /* 设置页已移除开关；忽略历史 localStorage 中的 false */
+    interactionSoundsEnabled: true,
   };
 }
 
@@ -131,8 +129,9 @@ export function saveAppSettings(partial: Partial<AppSettings>): AppSettings {
   return merged;
 }
 
+/** 交互音效默认开启；设置页已移除开关，始终视为开启 */
 export function isInteractionSoundEnabled(): boolean {
-  return getAppSettings().interactionSoundsEnabled;
+  return true;
 }
 
 export { resolveSystemInterfaceLanguage };

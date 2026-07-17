@@ -23,6 +23,7 @@ type AppShellProps = {
   settings: UseAppSettingsReturn;
   inputResetKey: number;
   libraryRefreshKey: number;
+  onLibraryImported: () => void;
   toastMessage: string | null;
 };
 
@@ -30,6 +31,7 @@ function AppShell({
   settings,
   inputResetKey,
   libraryRefreshKey,
+  onLibraryImported,
   toastMessage,
 }: AppShellProps) {
   const { mode, openProject } = usePosterDocumentContext();
@@ -63,6 +65,7 @@ function AppShell({
       settingsOpen={settingsOpen}
       onSettingsClose={() => setSettingsOpen(false)}
       onSettingsChange={handleSettingsChange}
+      onLibraryImported={onLibraryImported}
       hasMusicLink={hasMusicLink}
       chainBtnRef={chainBtnRef}
       chainTipVisible={chainTipVisible}
@@ -141,6 +144,7 @@ export default function App() {
               settings={settings}
               inputResetKey={inputResetKey}
               libraryRefreshKey={libraryRefreshKey}
+              onLibraryImported={() => setLibraryRefreshKey((k) => k + 1)}
               toastMessage={appToast.message}
             />
           </HomeSessionProvider>

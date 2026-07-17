@@ -17,6 +17,7 @@ type Props = {
   settingsOpen: boolean;
   onSettingsClose: () => void;
   onSettingsChange: (settings: AppSettings) => void;
+  onLibraryImported?: () => void;
   hasMusicLink: boolean;
   chainBtnRef: RefObject<HTMLButtonElement | null>;
   chainTipVisible: boolean;
@@ -33,6 +34,7 @@ export default function AppLayout({
   settingsOpen,
   onSettingsClose,
   onSettingsChange,
+  onLibraryImported,
   hasMusicLink,
   chainBtnRef,
   chainTipVisible,
@@ -71,7 +73,12 @@ export default function AppLayout({
         <ChainLinkTooltip anchorRect={chainBtnRef.current.getBoundingClientRect()} />
       )}
 
-      <SettingsPanel open={settingsOpen} onClose={onSettingsClose} onChange={onSettingsChange} />
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={onSettingsClose}
+        onChange={onSettingsChange}
+        onLibraryImported={onLibraryImported}
+      />
 
       <div className="app-screen__body">
         <main className={`app-main${isWorkspaceMode ? ' app-main--preview' : ''}`}>{children}</main>
