@@ -1,5 +1,5 @@
 /**
- * 编辑画布滚动性能相关 CSS / 空 ruby 回归（不撤空 ruby）
+ * 编辑画布滚动性能 / 主题层级 / 空 ruby 回归（不撤空 ruby）
  * 运行：npx tsx scripts/testEditCanvasScrollPerf.mjs
  */
 
@@ -23,26 +23,50 @@ assert(
   editCss.includes('var(--color-edit-canvas-bg)'),
   'edit canvas background uses theme light token',
 );
-assert(editCss.includes('#141413'), 'edit near-black lyric color');
+assert(editCss.includes('var(--color-edit-title)'), 'edit title uses theme token');
+assert(editCss.includes('var(--color-edit-artist)'), 'edit artist uses theme token');
+assert(editCss.includes('var(--color-edit-lyric)'), 'edit lyric uses theme token');
+assert(editCss.includes('var(--color-edit-study-term)'), 'edit study term uses theme token');
+assert(editCss.includes('var(--color-edit-section)'), 'edit section title uses theme token');
+assert(editCss.includes('font-size: 68px'), 'edit title enlarged vs body for hierarchy');
 assert(editCss.includes('line-height: 1.52'), 'edit Kami reading line-height');
 assert(editCss.includes('var(--color-fg-secondary)'), 'edit translation uses theme token');
-console.log('OK: edit theme-tinted reading overrides');
+assert(editCss.includes('border-left: 2px solid var(--color-edit-study-rail)'), 'study items use theme rail');
+assert(
+  editCss.includes('.fv-html-poster-root.fv-edit-document-root'),
+  'hierarchy overrides must stay scoped to edit document root',
+);
+assert(!editCss.includes('#141413'), 'edit near-black hex replaced by theme tokens');
+console.log('OK: edit theme-token hierarchy overrides');
 
 const themeCss = fs.readFileSync(new URL('../src/styles/theme.css', import.meta.url), 'utf8');
 assert(themeCss.includes('--color-edit-canvas-bg'), 'theme defines edit canvas bg token');
+assert(themeCss.includes('--color-edit-study-term'), 'theme defines study-term token');
 assert(
-  /\[data-theme="mono"\][\s\S]*?--color-edit-canvas-bg:\s*#f0efec/i.test(themeCss),
-  'mono edit canvas = light silver-gray',
+  /\[data-theme="mono"\][\s\S]*?--color-edit-study-term:\s*#3d3d3d/i.test(themeCss),
+  'mono study-term = deep gray',
 );
 assert(
-  /\[data-theme="blue"\][\s\S]*?--color-edit-canvas-bg:\s*#eef2f5/i.test(themeCss),
-  'blue edit canvas = light mist blue',
+  /\[data-theme="blue"\][\s\S]*?--color-edit-study-term:\s*#1b365d/i.test(themeCss),
+  'blue study-term = deep navy',
+);
+assert(
+  /\[data-theme="red"\][\s\S]*?--color-edit-study-term:\s*#8b3535/i.test(themeCss),
+  'red study-term = deep red',
+);
+assert(
+  /\[data-theme="mono"\][\s\S]*?--color-edit-canvas-bg:\s*var\(--color-bg\)/i.test(themeCss),
+  'mono edit canvas matches home page bg',
+);
+assert(
+  /\[data-theme="blue"\][\s\S]*?--color-edit-canvas-bg:\s*#eef2f7/i.test(themeCss),
+  'blue edit canvas = light navy mist',
 );
 assert(
   /\[data-theme="red"\][\s\S]*?--color-edit-canvas-bg:\s*#f7f0ef/i.test(themeCss),
   'red edit canvas = light sakura pink',
 );
-console.log('OK: per-theme edit canvas light backgrounds');
+console.log('OK: per-theme edit hierarchy tokens');
 
 const previewCss = fs.readFileSync(
   new URL('../src/styles/app/export-preview.css', import.meta.url),

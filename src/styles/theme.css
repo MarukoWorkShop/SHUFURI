@@ -168,6 +168,14 @@
   --color-bg-textarea: #f4f4f4;
   /* 编辑画布底 — 与墨主题首页同一浅白（非米黄） */
   --color-edit-canvas-bg: var(--color-bg);
+  /* 编辑预览信息层级（仅编辑画布；导出仍走海报写死色） */
+  --color-edit-title: #1a1a1a;
+  --color-edit-artist: #666666;
+  --color-edit-lyric: #2a2a2a;
+  --color-edit-section: #2a2a2a;
+  --color-edit-study-term: #3d3d3d;
+  --color-edit-study-rail: color-mix(in srgb, #3d3d3d 38%, transparent);
+  --color-edit-section-rule: color-mix(in srgb, #2a2a2a 22%, transparent);
 
   --color-fg: #000000;
   --color-fg-secondary: #666666;
@@ -240,6 +248,14 @@
   --color-bg-textarea: #e8eef5;
   /* 编辑画布浅底 — 浅绀白 */
   --color-edit-canvas-bg: #eef2f7;
+  /* 编辑预览信息层级 */
+  --color-edit-title: #142847;
+  --color-edit-artist: #3d5575;
+  --color-edit-lyric: #1a2f4a;
+  --color-edit-section: #1b365d;
+  --color-edit-study-term: #1b365d;
+  --color-edit-study-rail: color-mix(in srgb, #1b365d 42%, transparent);
+  --color-edit-section-rule: color-mix(in srgb, #1b365d 24%, transparent);
 
   --color-fg: #142847;
   --color-fg-secondary: #3d5575;
@@ -311,6 +327,14 @@
   --color-bg-textarea: #f5ecea;
   /* 编辑画布浅底 — 浅樱花淡粉 */
   --color-edit-canvas-bg: #f7f0ef;
+  /* 编辑预览信息层级 */
+  --color-edit-title: #1c1917;
+  --color-edit-artist: #57534e;
+  --color-edit-lyric: #292524;
+  --color-edit-section: #a63e3e;
+  --color-edit-study-term: #8b3535;
+  --color-edit-study-rail: color-mix(in srgb, #8b3535 42%, transparent);
+  --color-edit-section-rule: color-mix(in srgb, #a63e3e 24%, transparent);
 
   --color-fg: #1c1917;
   --color-fg-secondary: #57534e;

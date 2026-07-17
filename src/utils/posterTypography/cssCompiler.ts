@@ -727,21 +727,27 @@ export function compilePosterCss(
   return `${fontFaces}${printShell}${bodyRules}${zhRules}${pageNo}${cjkNoBreak}${rubyVisibility}`;
 }
 
-/** 编辑页阅读档：主题浅底令牌 + Kami 行高（仅编辑画布，不影响导出分页） */
+/** 编辑页阅读档：主题令牌层级（仅 `.fv-edit-document-root`，不影响导出分页/PDF） */
 const EDIT_CANVAS_BG = 'var(--color-edit-canvas-bg)';
-const EDIT_NEAR_BLACK = '#141413';
 /** Kami 阅读档行高区间 1.50–1.55 取中位 */
 const EDIT_KAMI_LINE_HEIGHT = 1.52;
+/**
+ * 编辑页固定 mobilePoster；标题相对海报基准 56px 放大，
+ * 与正文 ~32px 拉开明显字号差。
+ */
+const EDIT_TITLE_FONT_SIZE = '68px';
 
 export function compileEditCssOverrides(): string {
+  const root = '.fv-html-poster-root.fv-edit-document-root';
+  const body = `${root} .fv-body-h`;
   return `
-  .fv-html-poster-root.fv-edit-document-root {
+  ${root} {
     height: auto !important;
     min-height: unset !important;
     overflow: visible !important;
     background: ${EDIT_CANVAS_BG} !important;
   }
-  .fv-html-poster-root.fv-edit-document-root .fv-body-h {
+  ${body} {
     overflow: visible !important;
     max-height: none !important;
     height: auto !important;
@@ -753,31 +759,115 @@ export function compileEditCssOverrides(): string {
    * ResizeObserver / scaledH / frame 高度形成死循环（再滑卡死、光标闪烁）。
    * 仅用 style containment 降低样式重算范围。
    */
-  .fv-html-poster-root.fv-edit-document-root .fv-body-h .lyrics-group {
+  ${body} .lyrics-group {
     contain: style;
     margin-bottom: 1.7em !important;
   }
-  .fv-html-poster-root.fv-edit-document-root .fv-title-h,
-  .fv-html-poster-root.fv-edit-document-root .fv-title-h .fv-title-name {
-    color: ${EDIT_NEAR_BLACK} !important;
+
+  /* —— 歌名 / 歌手层级 —— */
+  ${root} .fv-title-h {
+    font-size: ${EDIT_TITLE_FONT_SIZE} !important;
+    color: var(--color-edit-title) !important;
+    margin-bottom: 0.55em !important;
   }
-  .fv-html-poster-root.fv-edit-document-root .fv-body-h .jp-line,
-  .fv-html-poster-root.fv-edit-document-root .fv-body-h .jp-line *:not(rt):not(rp),
-  .fv-html-poster-root.fv-edit-document-root .fv-body-h .ko-line,
-  .fv-html-poster-root.fv-edit-document-root .fv-body-h .ko-line * {
-    color: ${EDIT_NEAR_BLACK} !important;
+  ${root} .fv-title-h .fv-title-name {
+    color: var(--color-edit-title) !important;
+  }
+  ${root} .fv-title-h .fv-title-artist {
+    font-size: 0.48em !important;
+    color: var(--color-edit-artist) !important;
+    letter-spacing: 0.04em !important;
+  }
+  ${root} .fv-title-h .fv-title-name--placeholder,
+  ${root} .fv-title-h .fv-title-artist--placeholder {
+    color: var(--color-fg-faint) !important;
+  }
+
+  /* —— 歌词正文 / 译文 —— */
+  ${body} .jp-line,
+  ${body} .jp-line *:not(rt):not(rp),
+  ${body} .ko-line,
+  ${body} .ko-line *,
+  ${body} .cn-line,
+  ${body} .cn-line *:not(rt):not(rp) {
+    color: var(--color-edit-lyric) !important;
     line-height: ${EDIT_KAMI_LINE_HEIGHT} !important;
     letter-spacing: 0.06em !important;
   }
-  .fv-html-poster-root.fv-edit-document-root .fv-body-h .zh-line,
-  .fv-html-poster-root.fv-edit-document-root .fv-body-h .zh-line *,
-  .fv-html-poster-root.fv-edit-document-root .fv-body-h .gloss-line,
-  .fv-html-poster-root.fv-edit-document-root .fv-body-h .gloss-line * {
+  ${body} .zh-line,
+  ${body} .zh-line *,
+  ${body} .gloss-line,
+  ${body} .gloss-line * {
     color: var(--color-fg-secondary) !important;
     line-height: 1.5 !important;
     margin-top: 0.28em !important;
   }
-  .fv-html-poster-root.fv-edit-document-root .fv-body-h ruby rt {
+  ${body} ruby rt {
+    color: var(--color-fg-muted) !important;
+  }
+
+  /* —— 区段标题（重点词汇 / 重点语法） —— */
+  ${body} h2.lyrics-section-title {
+    color: var(--color-edit-section) !important;
+    border-bottom: 1px solid var(--color-edit-section-rule) !important;
+    padding-bottom: 0.35em !important;
+    margin-bottom: 0.85em !important;
+    letter-spacing: 0.08em !important;
+  }
+
+  /* —— 核心词 / 语法点标题：主题深色强调 —— */
+  ${body} .vocab-line1 .vocab-word,
+  ${body} .vocab-line1 .vocab-word *:not(rt):not(rp),
+  ${body} .vocab-line1 .vocab-word-ko,
+  ${body} .vocab-line1 .vocab-word-ko *,
+  ${body} .vocab-line1 .vocab-word-cn,
+  ${body} .vocab-line1 .vocab-word-cn *:not(rt):not(rp),
+  ${body} h3.grammar-point-title .grammar-title-ja,
+  ${body} h3.grammar-point-title .grammar-title-ja *:not(rt):not(rp),
+  ${body} h3.grammar-point-title .grammar-title-ko,
+  ${body} h3.grammar-point-title .grammar-title-ko *,
+  ${body} h3.grammar-point-title .grammar-title-cn,
+  ${body} h3.grammar-point-title .grammar-title-cn *:not(rt):not(rp),
+  ${body} h3.grammar-point-title .grammar-title-zh,
+  ${body} h3.grammar-point-title .grammar-title-zh * {
+    color: var(--color-edit-study-term) !important;
+  }
+  ${body} .vocab-line1 .vocab-meaning,
+  ${body} h3.grammar-point-title .grammar-title-gloss,
+  ${body} h3.grammar-point-title .grammar-title-gloss * {
+    color: var(--color-fg-secondary) !important;
+  }
+  ${body} .grammar-detail,
+  ${body} .grammar-detail *:not(rt):not(rp) {
+    color: var(--color-fg-secondary) !important;
+  }
+
+  /* —— 文档型条目导轨（弱层级，非卡片） —— */
+  ${body} .lyrics-vocab-item,
+  ${body} .lyrics-grammar-item {
+    border-left: 2px solid var(--color-edit-study-rail) !important;
+    padding-left: 0.75em !important;
+    margin-bottom: 3em !important;
+    box-sizing: border-box !important;
+  }
+  ${body} .vocab-ex-ja,
+  ${body} .vocab-ex-ja *:not(rt):not(rp),
+  ${body} .vocab-ex-ko,
+  ${body} .vocab-ex-ko *,
+  ${body} .grammar-ex-ja,
+  ${body} .grammar-ex-ja *:not(rt):not(rp),
+  ${body} .grammar-ex-ko,
+  ${body} .grammar-ex-ko * {
+    color: var(--color-edit-lyric) !important;
+  }
+  ${body} .vocab-ex-zh,
+  ${body} .vocab-ex-zh *,
+  ${body} .grammar-ex-zh,
+  ${body} .grammar-ex-zh *,
+  ${body} .vocab-ex-gloss,
+  ${body} .vocab-ex-gloss *,
+  ${body} .grammar-ex-gloss,
+  ${body} .grammar-ex-gloss * {
     color: var(--color-fg-muted) !important;
   }`;
 }
