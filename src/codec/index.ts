@@ -21,6 +21,7 @@ export {
 export { isStreamCodecText, isLegacyStructuredLyricsText } from './detect';
 export { resolveExampleRef } from './resolveExampleRef';
 export { parseStream, extractStreamHeader, extractStreamLang } from './parseStream';
+export { mergeConfirmedLyricsWithStudy, type MergeStreamResult } from './mergeStream';
 export { resolvePosterClass, usesRubyMarkup, usesPlainHtml, type PosterTextRole } from './masterHandbook';
 export { compileStreamDocument } from './roleCompiler';
 export { compileDocument, normalizeStreamText } from './compileDocument';

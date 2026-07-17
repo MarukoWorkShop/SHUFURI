@@ -100,6 +100,8 @@ function AppShell({
           }
           consumedClipboardRef={homeSession.consumedClipboardRef}
           prevClipboardHashRef={homeSession.prevClipboardHashRef}
+          externalPrompt={homeSession.externalPrompt}
+          onExternalPromptHandled={homeSession.clearExternalPrompt}
         />
       )}
 
@@ -136,7 +138,11 @@ export default function App() {
           onLibrarySaved={() => setLibraryRefreshKey((k) => k + 1)}
           showToast={appToast.show}
         >
-          <HomeSessionProvider showToast={appToast.show}>
+          <HomeSessionProvider
+            showToast={appToast.show}
+            pedagogicalLevel={appSettings.defaultPedagogicalLevel}
+            matrix={settings.languageMatrixContext}
+          >
             <AppShell
               settings={settings}
               inputResetKey={inputResetKey}

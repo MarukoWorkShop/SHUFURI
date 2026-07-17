@@ -3,11 +3,25 @@ import type { InterfaceLanguage, LanguageMatrixContext } from '../../services/la
 import type { ClassifiedTextLine, OcrDetectedLanguage } from '../../services/ocrTypes';
 import type { PedagogicalLevel } from '../../services/pedagogicalLevel';
 
+/**
+ * 两步式口令阶段：
+ * - 'full'：单步生成 H+L(+V/G)，保持历史默认行为（测试与既有调用不传该字段）。
+ * - 'lyrics'：第一步，仅要求完整歌词 H+L，收紧完整性/闭合约束。
+ * - 'study'：第二步，基于已确认歌词补 V/G 学习材料。
+ */
+export type EncoderPromptPhase = 'full' | 'lyrics' | 'study';
+
 export type EncoderPromptOptions = {
   includeVocabAndGrammar: boolean;
   pedagogicalLevel?: PedagogicalLevel;
   matrix: LanguageMatrixContext;
   modelHint?: 'qwen' | 'doubao' | 'deepseek' | 'default';
+  /** 两步式阶段；缺省为 'full'（单步）。 */
+  phase?: EncoderPromptPhase;
+  /** 第一步（lyrics）重试：上一趟被截断，强化"必须输出到最后一句"。 */
+  retry?: boolean;
+  /** 第二步（study）：已由用户确认的歌词记录流（含 @0/H/L/@9），逐字回显。 */
+  confirmedLyrics?: string;
   ocrContext?: {
     songTitle?: string;
     artist?: string;
@@ -230,12 +244,37 @@ export function buildPedagogicalExampleBlock(activeTarget: SampleLang): string {
 ${langNotes[activeTarget]}`;
 }
 
-export function buildStreamCloseBlock(): string {
+export function buildStreamCloseBlock(opts?: {
+  lyricsOnly?: boolean;
+  prioritizeLyrics?: boolean;
+}): string {
+  let budgetLine =
+    '- If token budget is tight: shorten V/G or omit @1/@2 entirely, but NEVER omit @9';
+  if (opts?.lyricsOnly) {
+    budgetLine =
+      '- NEVER stop before the last sung line; output @9 ONLY after the final L row of the whole song';
+  } else if (opts?.prioritizeLyrics) {
+    budgetLine =
+      '- NEVER stop before the last sung line; If token budget is tight: shorten/omit V/G first — NEVER truncate L rows; NEVER omit @9';
+  }
   return `
 [Stream_Close — REQUIRED]
 - The absolute LAST line of your entire output MUST be exactly: @9
 - After @9 output NOTHING: no summary, no 「希望对您有帮助」, no markdown fence, no explanation
-- If token budget is tight: shorten V/G or omit @1/@2 entirely, but NEVER omit @9`;
+${budgetLine}`;
+}
+
+/** 第二步（study）：回显已确认歌词，禁止改动，只补 V/G。 */
+export function buildConfirmedLyricsBlock(confirmedLyrics: string): string {
+  const stream = confirmedLyrics.trim();
+  return `
+[Confirmed_Lyrics — FINAL, user-verified]
+- The record stream below is the FINAL lyrics. Do NOT search, re-transcribe, translate differently, add, remove, reorder, split, merge, or alter ANY H/L row.
+- Re-emit @0, the H row, and EVERY L row below VERBATIM (same text, same 1..N indices); then append @1 V / @2 G study rows; end with @9.
+- V/G col5 (lyric_line_no) MUST be one of the L indices below; base every study item on these confirmed lyrics only.
+<<<CONFIRMED
+${stream}
+CONFIRMED>>>`;
 }
 
 export function buildHeaderLyricsSeparationBlock(artist: string, title: string): string {
@@ -253,6 +292,7 @@ export function buildSourceIntegrityBlock(
   artist: string,
   title: string,
   firstLyricLine?: string,
+  opts?: { completeness?: boolean; retry?: boolean },
 ): string {
   const searchQuery =
     artist.trim() && artist.trim() !== '佚名'
@@ -261,13 +301,20 @@ export function buildSourceIntegrityBlock(
   const anchor = firstLyricLine?.trim()
     ? `\n- Anchor line (OCR/song match): "${firstLyricLine.trim().slice(0, 120)}" — searched lyrics MUST include this line; reject wrong homonym songs`
     : '';
+  const completeness = opts?.completeness
+    ? `\n- COMPLETENESS: transcribe the ENTIRE song end-to-end — every verse, pre-chorus, chorus (including repeats as actually sung), bridge and outro. Keep going until the final sung line, THEN @9.
+- NEVER stop early, NEVER summarize with "…", "（略）", "以下省略", "副歌重复", or placeholders; write out repeated sections in full as sung.`
+    : '';
+  const retry = opts?.retry
+    ? `\n- ⚠ RETRY: the previous attempt was INCOMPLETE / truncated mid-song. This time output EVERY line to the very end. Full lyric coverage is the top priority; drop nothing.`
+    : '';
   return `
 [Source_Integrity]
 - Target: "${artist} - ${title}" — studio OFFICIAL published lyrics ONLY (not memory, paraphrase, fan lyric)
 - BEFORE encoding: search web for ${searchQuery}; transcribe verbatim from ≥2 matching lyric pages; turn on 联网/搜索 if the app supports it
 - L col3 = published lines only; if sources conflict or search fails: output verified L rows + @9 — NEVER pad gaps with guesses${anchor}
 - Do NOT invent, merge other songs, or split/merge official lines
-- L indices contiguous 1..N; omit uncertain lines rather than fabricate (incomplete + @9 beats wrong lyrics)`;
+- L indices contiguous 1..N; omit uncertain lines rather than fabricate (incomplete + @9 beats wrong lyrics)${completeness}${retry}`;
 }
 
 export function buildSelfCheckBlock(

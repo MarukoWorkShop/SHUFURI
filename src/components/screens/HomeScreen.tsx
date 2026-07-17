@@ -11,6 +11,7 @@ import { useLayoutEffect, type RefObject, type Dispatch, type SetStateAction } f
 import type { SavedLyricsProject } from '../../services/savedLyricsStore';
 import { ensurePosterFontsLoaded } from '../../utils/shufuriPoster/fonts';
 import { hideAppBootLoader } from '../../utils/hideAppBootLoader';
+import type { ExternalPromptRequest } from '../../hooks/useStructuredLyricsClipboardCard';
 
 type ShareOcrData = {
   title: string;
@@ -36,6 +37,8 @@ type Props = {
   onStructuredLyrics: (text: string) => boolean;
   consumedClipboardRef: RefObject<Set<string>>;
   prevClipboardHashRef: RefObject<string>;
+  externalPrompt?: ExternalPromptRequest | null;
+  onExternalPromptHandled?: () => void;
 };
 
 export default function HomeScreen({
@@ -56,6 +59,8 @@ export default function HomeScreen({
   onStructuredLyrics,
   consumedClipboardRef,
   prevClipboardHashRef,
+  externalPrompt,
+  onExternalPromptHandled,
 }: Props) {
   useLayoutEffect(() => {
     let cancelled = false;
@@ -95,6 +100,8 @@ export default function HomeScreen({
         pasteLayoutReady={pasteLayoutReady}
         onActivatePasteLayout={onActivatePasteLayout}
         onFormMetaChange={onFormMetaChange}
+        externalPrompt={externalPrompt}
+        onExternalPromptHandled={onExternalPromptHandled}
       />
       <SavedLyricsLibrary onOpen={onOpenProject} refreshKey={libraryRefreshKey} />
       <StudyCardsLibrary />

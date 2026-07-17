@@ -399,3 +399,163 @@
 .ocr-sheet--error {
   background: var(--color-status-error-bg);
 }
+
+/* ==============================================
+   两步式：歌词确认 Sheet（底部弹出）
+   ============================================== */
+.lyric-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: var(--color-scrim-medium);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.lyric-confirm-sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg-elevated);
+  border-radius: 20px 20px 0 0;
+  padding: 12px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  box-shadow: var(--shadow-sheet-up);
+  animation: ocrSheetSlideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  font-family: var(--ui-font-sans);
+}
+
+.lyric-confirm-sheet__handle {
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--color-sheet-handle);
+  margin: 0 auto 12px;
+  flex-shrink: 0;
+}
+
+.lyric-confirm-sheet__header {
+  text-align: left;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.lyric-confirm-sheet__eyebrow {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-fg-secondary);
+}
+
+.lyric-confirm-sheet__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-accent);
+}
+
+.lyric-confirm-sheet__meta {
+  margin: 6px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-fg-muted);
+}
+
+.lyric-confirm-sheet__preview {
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--color-bg);
+  margin-bottom: 14px;
+}
+
+.lyric-confirm-sheet__line {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 4px 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--color-fg);
+}
+
+.lyric-confirm-sheet__line-no {
+  flex: 0 0 1.6em;
+  text-align: right;
+  font-size: 11px;
+  color: var(--color-fg-faint);
+  font-variant-numeric: tabular-nums;
+  padding-top: 2px;
+}
+
+.lyric-confirm-sheet__line-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.lyric-confirm-sheet__line-gloss {
+  color: var(--color-fg-muted);
+  font-size: 12px;
+}
+
+.lyric-confirm-sheet__check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--color-fg);
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.lyric-confirm-sheet__check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-accent);
+}
+
+.lyric-confirm-sheet__hint {
+  margin: 0 0 14px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-fg-muted);
+  flex-shrink: 0;
+}
+
+.lyric-confirm-sheet__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lyric-confirm-sheet__btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.lyric-confirm-sheet__btn--primary {
+  flex: 1.4 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}

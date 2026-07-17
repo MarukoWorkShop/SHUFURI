@@ -6,6 +6,7 @@ import { buildJpEncoderPrompt } from './encoderJp';
 import { buildKoEncoderPrompt } from './encoderKo';
 import { buildZhEncoderPrompt } from './encoderZh';
 import {
+  buildConfirmedLyricsBlock,
   buildFullSampleBlock,
   buildHeaderLyricsSeparationBlock,
   buildModelComplianceBlock,
@@ -48,26 +49,39 @@ export function buildEncoderPrompt(
   }
 
   const gloss = getGlossSpec(matrix.interfaceLanguage);
-  const include = options.includeVocabAndGrammar;
+  const phase = options.phase ?? 'full';
+
+  if (phase === 'study') {
+    return buildStudyMaterialsPrompt(a, t, options);
+  }
+
+  // 第一步（lyrics）强制仅输出 H+L；'full' 沿用原设置（保持既有行为/测试）。
+  const include = phase === 'lyrics' ? false : options.includeVocabAndGrammar;
   const pedagogicalLevel = include ? resolvePedagogicalLevel(options.pedagogicalLevel) : undefined;
   const iface = matrix.interfaceLanguage;
+  const bodyOptions: EncoderPromptOptions = { ...options, includeVocabAndGrammar: include };
 
   let body: string;
   switch (lang) {
     case 'ko':
-      body = buildKoEncoderPrompt(a, t, gloss, options);
+      body = buildKoEncoderPrompt(a, t, gloss, bodyOptions);
       break;
     case 'en':
-      body = buildEnEncoderPrompt(a, t, gloss, options);
+      body = buildEnEncoderPrompt(a, t, gloss, bodyOptions);
       break;
     case 'zh':
-      body = buildZhEncoderPrompt(a, t, gloss, options);
+      body = buildZhEncoderPrompt(a, t, gloss, bodyOptions);
       break;
     default:
-      body = buildJpEncoderPrompt(a, t, gloss, options);
+      body = buildJpEncoderPrompt(a, t, gloss, bodyOptions);
   }
 
-  body += buildSourceIntegrityBlock(a, t, options.ocrContext?.firstLyricLine);
+  body += buildSourceIntegrityBlock(
+    a,
+    t,
+    options.ocrContext?.firstLyricLine,
+    phase === 'lyrics' ? { completeness: true, retry: options.retry } : undefined,
+  );
   body += buildOcrHintBlock(options.ocrContext);
   body += buildWireSchema(include, iface, lang, gloss);
   body += buildStrictRaw(include);
@@ -90,8 +104,64 @@ export function buildEncoderPrompt(
 
   body += buildFullSampleBlock(lang, include, iface);
   body += buildHeaderLyricsSeparationBlock(a, t);
-  body += buildStreamCloseBlock();
+  body += buildStreamCloseBlock(phase === 'lyrics' ? { lyricsOnly: true } : undefined);
   body += buildSelfCheckBlock(lang, include, pedagogicalLevel);
+  body += buildModelComplianceBlock(options.modelHint);
+
+  return fillEncoderMeta(body, a, t);
+}
+
+/**
+ * 第二步：基于已确认歌词补 V/G 学习材料。
+ * 强制回显 H+L、禁止改动歌词，只新增 @1/@2 词汇语法。
+ */
+function buildStudyMaterialsPrompt(
+  a: string,
+  t: string,
+  options: EncoderPromptOptions,
+): string {
+  const matrix = options.matrix;
+  const lang = matrix.activeTarget as EncoderTargetLanguage;
+  const iface = matrix.interfaceLanguage;
+  const gloss = getGlossSpec(iface);
+  const pedagogicalLevel = resolvePedagogicalLevel(options.pedagogicalLevel);
+  const confirmed = options.confirmedLyrics?.trim() ?? '';
+
+  const bodyOptions: EncoderPromptOptions = { ...options, includeVocabAndGrammar: true };
+  let body: string;
+  switch (lang) {
+    case 'ko':
+      body = buildKoEncoderPrompt(a, t, gloss, bodyOptions);
+      break;
+    case 'en':
+      body = buildEnEncoderPrompt(a, t, gloss, bodyOptions);
+      break;
+    case 'zh':
+      body = buildZhEncoderPrompt(a, t, gloss, bodyOptions);
+      break;
+    default:
+      body = buildJpEncoderPrompt(a, t, gloss, bodyOptions);
+  }
+
+  body += buildConfirmedLyricsBlock(confirmed);
+  body += buildWireSchema(true, iface, lang, gloss);
+  body += buildStrictRaw(true);
+  body += buildPedagogicalLevelBlock(lang, pedagogicalLevel);
+  body += buildStudyCardsCitationBlock();
+  body += buildPedagogicalExampleBlock(lang);
+
+  if (lang === 'jp') {
+    body += buildJpRubyBlock(true);
+  }
+  if (lang === 'zh') {
+    body += buildZhColumnMapBlock(true);
+    body += buildZhRubyLyricsBlock();
+    body += buildZhGrammarLabelBlock(iface);
+  }
+
+  body += buildFullSampleBlock(lang, true, iface);
+  body += buildStreamCloseBlock();
+  body += buildSelfCheckBlock(lang, true, pedagogicalLevel);
   body += buildModelComplianceBlock(options.modelHint);
 
   return fillEncoderMeta(body, a, t);

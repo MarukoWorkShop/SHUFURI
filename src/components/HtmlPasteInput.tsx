@@ -9,8 +9,10 @@ import { useAppToast } from '../context/AppToastContext';
 import ArrowRightIcon from './icons/ArrowRightIcon';
 import AiAppActionSheet from './AiAppActionSheet';
 import LanguageWheel from './LanguageWheel';
+import type { ExternalPromptRequest } from '../hooks/useStructuredLyricsClipboardCard';
 
 type Props = {
+  /** Step1 始终仅歌词；保留 prop 以免调用方断裂。词解由确认页勾选驱动。 */
   includeVocabAndGrammar: boolean;
   pedagogicalLevel: PedagogicalLevel;
   language?: LyricsLanguage;
@@ -31,11 +33,14 @@ type Props = {
   pasteLayoutReady?: boolean;
   onActivatePasteLayout?: (formMeta: { title?: string; artist?: string }) => void;
   onFormMetaChange?: (meta: { title: string; artist: string }) => void;
+  /** 确认页触发的学习材料 / 再试口令，写入剪贴板并弹出 AI 选择 */
+  externalPrompt?: ExternalPromptRequest | null;
+  onExternalPromptHandled?: () => void;
 };
 
 export default function HtmlPasteInput({
-  includeVocabAndGrammar,
-  pedagogicalLevel,
+  includeVocabAndGrammar: _includeVocabAndGrammar,
+  pedagogicalLevel: _pedagogicalLevel,
   language,
   wheelLanguages,
   matrix,
@@ -47,12 +52,16 @@ export default function HtmlPasteInput({
   pasteLayoutReady = false,
   onActivatePasteLayout,
   onFormMetaChange,
+  externalPrompt,
+  onExternalPromptHandled,
 }: Props) {
   const showAppToast = useAppToast();
   const [songTitle, setSongTitle] = useState(initialTitle || '');
   const [artist, setArtist] = useState(initialArtist || '');
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState('');
+  /** 外部注入口令（学习材料 / 再试）时锁定，打开 AI 不再重建 Step1 */
+  const [promptLocked, setPromptLocked] = useState(false);
 
   useEffect(() => {
     if (initialTitle) setSongTitle(initialTitle);
@@ -67,7 +76,7 @@ export default function HtmlPasteInput({
   }, [songTitle, artist, onFormMetaChange]);
 
   const buildPrompt = useCallback(
-    (modelHint?: EncoderPromptOptions['modelHint']) => {
+    (modelHint?: EncoderPromptOptions['modelHint'], retry = false) => {
       const title = songTitle.trim();
       const promptArtist = artist.trim() || '佚名';
 
@@ -81,11 +90,13 @@ export default function HtmlPasteInput({
               ? 'zh'
               : matrix.activeTarget);
 
+      // Step1：始终仅 H+L，词解在确认页勾选后走 Step2
       return buildEncoderPrompt(promptArtist, title, {
-        includeVocabAndGrammar,
-        pedagogicalLevel: includeVocabAndGrammar ? pedagogicalLevel : undefined,
+        includeVocabAndGrammar: false,
         matrix: { ...matrix, activeTarget: effectiveTarget },
         modelHint,
+        phase: 'lyrics',
+        retry,
         ocrContext: ocrContext
           ? {
               songTitle: ocrContext.songTitle,
@@ -101,16 +112,7 @@ export default function HtmlPasteInput({
             : undefined,
       });
     },
-    [
-      songTitle,
-      artist,
-      includeVocabAndGrammar,
-      pedagogicalLevel,
-      language,
-      matrix,
-      ocrDetectedLanguage,
-      ocrContext,
-    ],
+    [songTitle, artist, language, matrix, ocrDetectedLanguage, ocrContext],
   );
 
   const writePromptToClipboard = useCallback(
@@ -121,6 +123,25 @@ export default function HtmlPasteInput({
     [],
   );
 
+  useEffect(() => {
+    if (!externalPrompt?.text) return;
+    let cancelled = false;
+    void writePromptToClipboard(externalPrompt.text)
+      .then(() => {
+        if (cancelled) return;
+        setCopiedPrompt(externalPrompt.text);
+        setPromptLocked(true);
+        setActionSheetVisible(true);
+        onExternalPromptHandled?.();
+      })
+      .catch(() => {
+        if (!cancelled) onExternalPromptHandled?.();
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [externalPrompt?.token, externalPrompt?.text, writePromptToClipboard, onExternalPromptHandled]);
+
   const handleCopyPrompt = useCallback(() => {
     if (!songTitle.trim()) return;
 
@@ -129,8 +150,9 @@ export default function HtmlPasteInput({
     writePromptToClipboard(prompt)
       .then(() => {
         setCopiedPrompt(prompt);
+        setPromptLocked(false);
         setActionSheetVisible(true);
-        showAppToast('✓ 指令已复制到剪贴板');
+        showAppToast('✓ 歌词口令已复制（第一步：仅完整歌词）');
       })
       .catch(() => {
         // 静默失败
@@ -139,7 +161,9 @@ export default function HtmlPasteInput({
 
   const handleOpenAiApp = useCallback(
     async (app: AiAppInfo) => {
-      const prompt = buildPrompt(resolveEncoderModelHint(app.id));
+      const prompt = promptLocked
+        ? copiedPrompt
+        : buildPrompt(resolveEncoderModelHint(app.id));
       try {
         await writePromptToClipboard(prompt);
         setCopiedPrompt(prompt);
@@ -149,7 +173,7 @@ export default function HtmlPasteInput({
         // 静默失败
       }
     },
-    [buildPrompt, writePromptToClipboard],
+    [buildPrompt, writePromptToClipboard, copiedPrompt, promptLocked],
   );
 
   return (
@@ -195,7 +219,9 @@ export default function HtmlPasteInput({
             {onActivatePasteLayout && (
               <button
                 type="button"
-                className={`btn-tonal ext-pipeline__action-btn ext-pipeline__paste-btn${!pasteLayoutReady ? ' is-dormant' : ''}`}
+                className={`ext-pipeline__action-btn ext-pipeline__paste-btn ${
+                  pasteLayoutReady ? 'btn-filled' : 'btn-tonal is-dormant'
+                }`}
                 disabled={!pasteLayoutReady}
                 onClick={() =>
                   onActivatePasteLayout({
@@ -209,11 +235,15 @@ export default function HtmlPasteInput({
             )}
             <button
               type="button"
-              className="btn-filled ext-pipeline__action-btn ext-pipeline__gen-btn"
+              className={`ext-pipeline__action-btn ext-pipeline__gen-btn ${
+                pasteLayoutReady || !songTitle.trim()
+                  ? 'btn-tonal is-dormant'
+                  : 'btn-filled'
+              }`}
               onClick={handleCopyPrompt}
-              disabled={!songTitle.trim()}
+              disabled={!songTitle.trim() || pasteLayoutReady}
             >
-              <ArrowRightIcon size={16} />
+              {!pasteLayoutReady && <ArrowRightIcon size={16} />}
               <span>一键生成口令</span>
             </button>
           </div>

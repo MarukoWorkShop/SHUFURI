@@ -178,44 +178,34 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
           </section>
 
           <section className="app-settings__section">
-            <label className="app-settings__row">
-              <span className="app-settings__row-text">附词解与语法品读</span>
-              <input
-                type="checkbox"
-                className="app-settings__checkbox"
-                checked={settings.defaultIncludeVocabAndGrammar}
-                onChange={(e) => patch({ defaultIncludeVocabAndGrammar: e.target.checked })}
-              />
-            </label>
-            <p className="app-settings__hint">开启时，「一键生成指令」会要求 AI 附带词解与语法板块</p>
-            {settings.defaultIncludeVocabAndGrammar ? (
-              <>
-                <p className="app-settings__sublabel app-settings__sublabel--targets">词解难度</p>
-                <div
-                  className="app-settings__segmented app-settings__segmented--triple"
-                  role="group"
-                  aria-label="词解难度"
+            <p className="app-settings__row-text">附词解与语法品读</p>
+            <p className="app-settings__hint">
+              在歌词确认页勾选后，会按下方难度生成词解与语法讲解
+            </p>
+            <p className="app-settings__sublabel app-settings__sublabel--targets">词解难度</p>
+            <div
+              className="app-settings__segmented app-settings__segmented--triple"
+              role="group"
+              aria-label="词解难度"
+            >
+              {PEDAGOGICAL_LEVEL_ORDER.map((level) => (
+                <PressedButton
+                  key={level}
+                  className={`app-settings__segment${settings.defaultPedagogicalLevel === level ? ' is-active' : ''}`}
+                  pressed={settings.defaultPedagogicalLevel === level}
+                  onClick={() => patch({ defaultPedagogicalLevel: level as PedagogicalLevel })}
                 >
-                  {PEDAGOGICAL_LEVEL_ORDER.map((level) => (
-                    <PressedButton
-                      key={level}
-                      className={`app-settings__segment${settings.defaultPedagogicalLevel === level ? ' is-active' : ''}`}
-                      pressed={settings.defaultPedagogicalLevel === level}
-                      onClick={() => patch({ defaultPedagogicalLevel: level as PedagogicalLevel })}
-                    >
-                      {pedagogicalLevelLabel(level, settings.interfaceLanguage)}
-                    </PressedButton>
-                  ))}
-                </div>
-                <p className="app-settings__hint">{pedagogicalLevelSettingsIntro(settings.interfaceLanguage)}</p>
-                <p className="app-settings__hint" aria-live="polite">
-                  {pedagogicalLevelFrameworkDetail(
-                    settings.defaultPedagogicalLevel,
-                    settings.interfaceLanguage,
-                  )}
-                </p>
-              </>
-            ) : null}
+                  {pedagogicalLevelLabel(level, settings.interfaceLanguage)}
+                </PressedButton>
+              ))}
+            </div>
+            <p className="app-settings__hint">{pedagogicalLevelSettingsIntro(settings.interfaceLanguage)}</p>
+            <p className="app-settings__hint" aria-live="polite">
+              {pedagogicalLevelFrameworkDetail(
+                settings.defaultPedagogicalLevel,
+                settings.interfaceLanguage,
+              )}
+            </p>
           </section>
 
           <section className="app-settings__section">

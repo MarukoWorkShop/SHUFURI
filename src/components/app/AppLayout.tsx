@@ -3,6 +3,7 @@ import type { AppSettings } from '../../services/appSettings';
 import OfflineBanner from '../OfflineBanner';
 import SettingsPanel from '../SettingsPanel';
 import ClipboardDetectCard from '../ClipboardDetectCard';
+import LyricConfirmSheet from '../LyricConfirmSheet';
 import AppToast from '../AppToast';
 import AppHeader from './AppHeader';
 import ChainLinkTooltip from './ChainLinkTooltip';
@@ -50,6 +51,16 @@ export default function AppLayout({
     clipboardCardVisible,
     handleClipboardRenderLayout,
     handleClipboardDismiss,
+    confirmVisible,
+    confirmTitle,
+    confirmArtist,
+    confirmLang,
+    confirmLineCount,
+    confirmPreviewLines,
+    handleConfirmLayout,
+    handleConfirmStudy,
+    handleConfirmRetry,
+    handleConfirmDismiss,
   } = useHomeSessionContext();
 
   return (
@@ -84,6 +95,19 @@ export default function AppLayout({
         visible={clipboardCardVisible}
         onRenderLayout={handleClipboardRenderLayout}
         onDismiss={handleClipboardDismiss}
+      />
+
+      <LyricConfirmSheet
+        visible={confirmVisible}
+        songTitle={confirmTitle}
+        artist={confirmArtist}
+        language={confirmLang}
+        lineCount={confirmLineCount}
+        previewLines={confirmPreviewLines}
+        onConfirmLayout={handleConfirmLayout}
+        onConfirmStudy={handleConfirmStudy}
+        onRetry={handleConfirmRetry}
+        onDismiss={handleConfirmDismiss}
       />
 
       <AppToast message={toastMessage} placement="fixed" />

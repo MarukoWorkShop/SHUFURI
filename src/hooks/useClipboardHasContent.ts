@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react';
 import { readClipboardText } from '../utils/clipboard';
-import { isStructuredLyricsClipboardText } from '../utils/clipboardStructuredLyrics';
+import {
+  isStructuredLyricsClipboardText,
+  prepareStructuredLyricsClipboardText,
+} from '../utils/clipboardStructuredLyrics';
 import { onAppBecameActive } from '../utils/nativeBridge';
 
 const POLL_MS = 1500;
 
+/** 完整记录流，或 Step2 学习材料（含 V/G）均可点亮「粘贴并排版」 */
 async function clipboardHasStructuredLyrics(): Promise<boolean> {
   try {
     const text = await readClipboardText();
-    return isStructuredLyricsClipboardText(text);
+    const trimmed = text.trim();
+    if (!trimmed) return false;
+    if (isStructuredLyricsClipboardText(trimmed)) return true;
+    const cleaned = prepareStructuredLyricsClipboardText(trimmed);
+    return /(^|\n)[VG]\|/.test(cleaned);
   } catch {
     return false;
   }

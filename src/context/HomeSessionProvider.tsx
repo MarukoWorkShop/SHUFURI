@@ -7,13 +7,22 @@ import {
   type ShareOcrData,
 } from './HomeSessionContext';
 import type { ShowAppToast } from './AppToastContext';
+import type { PedagogicalLevel } from '../services/appSettings';
+import type { LanguageMatrixContext } from '../services/languageMatrix/types';
 
 type Props = {
   children: ReactNode;
   showToast: ShowAppToast;
+  pedagogicalLevel: PedagogicalLevel;
+  matrix: LanguageMatrixContext;
 };
 
-export default function HomeSessionProvider({ children, showToast }: Props) {
+export default function HomeSessionProvider({
+  children,
+  showToast,
+  pedagogicalLevel,
+  matrix,
+}: Props) {
   const { handleLayoutFromHtml } = usePosterDocumentContext();
   const [shareOcrData, setShareOcrData] = useState<ShareOcrData | null>(null);
 
@@ -21,6 +30,8 @@ export default function HomeSessionProvider({ children, showToast }: Props) {
     shareOcrData,
     showToast,
     onRenderLayout: handleLayoutFromHtml,
+    pedagogicalLevel,
+    matrix,
   });
 
   const value: HomeSessionContextValue = {
@@ -37,6 +48,18 @@ export default function HomeSessionProvider({ children, showToast }: Props) {
     activateClipboardDetectCardFromText: clipboardCard.activateClipboardDetectCardFromText,
     consumedClipboardRef: clipboardCard.consumedClipboardRef,
     prevClipboardHashRef: clipboardCard.prevClipboardHashRef,
+    confirmVisible: clipboardCard.confirmVisible,
+    confirmTitle: clipboardCard.confirmTitle,
+    confirmArtist: clipboardCard.confirmArtist,
+    confirmLang: clipboardCard.confirmLang,
+    confirmLineCount: clipboardCard.confirmLineCount,
+    confirmPreviewLines: clipboardCard.confirmPreviewLines,
+    handleConfirmLayout: clipboardCard.handleConfirmLayout,
+    handleConfirmStudy: clipboardCard.handleConfirmStudy,
+    handleConfirmRetry: clipboardCard.handleConfirmRetry,
+    handleConfirmDismiss: clipboardCard.handleConfirmDismiss,
+    externalPrompt: clipboardCard.externalPrompt,
+    clearExternalPrompt: clipboardCard.clearExternalPrompt,
   };
 
   return <HomeSessionContext.Provider value={value}>{children}</HomeSessionContext.Provider>;
