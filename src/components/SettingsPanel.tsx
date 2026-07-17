@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   getAppSettings,
@@ -15,12 +15,20 @@ import {
   pedagogicalLevelLabel,
   pedagogicalLevelSettingsIntro,
 } from '../services/pedagogicalLevel';
+import {
+  exportLibraryBackupJson,
+  importLibraryBackupJson,
+  readLibraryBackupFile,
+} from '../services/libraryBackup';
+import { useAppToast } from '../context/AppToastContext';
 import { PressedButton } from './a11y/AriaToggleButtons';
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onChange?: (settings: AppSettings) => void;
+  /** 全量导入后刷新首页歌词本 / Study Cards */
+  onLibraryImported?: () => void;
 };
 
 const APP_VERSION = '1.0.0';
@@ -38,10 +46,18 @@ const LEARNING_TARGET_OPTIONS: { id: LearningTargetLanguage; label: string }[] =
   { id: 'zh', label: '中文' },
 ];
 
-export default function SettingsPanel({ open, onClose, onChange }: Props) {
+export default function SettingsPanel({
+  open,
+  onClose,
+  onChange,
+  onLibraryImported,
+}: Props) {
+  const showToast = useAppToast();
   const [visible, setVisible] = useState(false);
   const [active, setActive] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(() => getAppSettings());
+  const [backupBusy, setBackupBusy] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -83,6 +99,40 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
     if (has && current.length <= 1) return;
     const next = has ? current.filter((t) => t !== id) : [...current, id];
     patch({ learningTargetLanguages: next });
+  };
+
+  const handleExportBackup = async () => {
+    if (backupBusy) return;
+    setBackupBusy(true);
+    try {
+      const result = await exportLibraryBackupJson();
+      showToast(
+        `已导出 ${result.lyricsCount} 首歌词、${result.studyCardsCount} 张学习卡`,
+      );
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : '导出失败');
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handleImportFile = async (file: File | undefined) => {
+    if (!file || backupBusy) return;
+    setBackupBusy(true);
+    try {
+      const text = await readLibraryBackupFile(file);
+      const result = await importLibraryBackupJson(text);
+      onLibraryImported?.();
+      showToast(
+        `已导入 ${result.lyricsUpserted} 首歌词、${result.studyCardsWritten} 张学习卡` +
+          (result.studyCardsSkipped ? `（跳过 ${result.studyCardsSkipped}）` : ''),
+      );
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : '导入失败');
+    } finally {
+      setBackupBusy(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   if (!visible) return null;
@@ -161,12 +211,12 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
             <p className="app-settings__sublabel app-settings__sublabel--targets">学习目标语言</p>
             <div className="app-settings__lang-chips">
               {LEARNING_TARGET_OPTIONS.map(({ id, label }) => {
-                const active = settings.learningTargetLanguages.includes(id);
+                const chipActive = settings.learningTargetLanguages.includes(id);
                 return (
                   <PressedButton
                     key={id}
-                    className={`app-settings__lang-chip${active ? ' is-active' : ''}`}
-                    pressed={active}
+                    className={`app-settings__lang-chip${chipActive ? ' is-active' : ''}`}
+                    pressed={chipActive}
                     onClick={() => toggleLearningTarget(id)}
                   >
                     {label}
@@ -209,15 +259,35 @@ export default function SettingsPanel({ open, onClose, onChange }: Props) {
           </section>
 
           <section className="app-settings__section">
-            <label className="app-settings__row">
-              <span className="app-settings__row-text">交互音效</span>
+            <p className="app-settings__label">数据备份</p>
+            <div className="app-settings__backup-actions">
+              <button
+                type="button"
+                className="app-settings__backup-btn"
+                disabled={backupBusy}
+                onClick={() => void handleExportBackup()}
+              >
+                导出歌词与单词（JSON）
+              </button>
+              <button
+                type="button"
+                className="app-settings__backup-btn"
+                disabled={backupBusy}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                全量导入
+              </button>
               <input
-                type="checkbox"
-                className="app-settings__checkbox"
-                checked={settings.interactionSoundsEnabled}
-                onChange={(e) => patch({ interactionSoundsEnabled: e.target.checked })}
+                ref={fileInputRef}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(e) => void handleImportFile(e.target.files?.[0])}
               />
-            </label>
+            </div>
+            <p className="app-settings__hint">
+              导出包含歌词本与 Study Cards；导入按 id 更新已有条目，不会清空本地库
+            </p>
           </section>
 
           <footer className="app-settings__footer">

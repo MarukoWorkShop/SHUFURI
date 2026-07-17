@@ -2,7 +2,7 @@ import { isInteractionSoundEnabled } from '../services/appSettings';
 import { hapticButton } from '../hooks/useHaptics';
 import { playLogitechClickSoundEffect } from './logitechClickSound';
 
-/** 统一按键反馈：震动（受设置「交互音效」总开关控制） */
+/** 统一按键反馈：震动 + 点按音（交互音效始终开启） */
 export function triggerButtonPressFeedback(): void {
   if (!isInteractionSoundEnabled()) {
     return;

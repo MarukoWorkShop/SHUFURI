@@ -120,6 +120,30 @@ export async function saveLyricsProject(
   return record;
 }
 
+/** 按 id upsert 多条歌词项目（全量备份导入） */
+export async function upsertSavedLyricsProjects(
+  projects: SavedLyricsProject[],
+): Promise<number> {
+  if (!projects.length) return 0;
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    for (const project of projects) {
+      store.put(project);
+    }
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error ?? new Error('导入歌词项目失败'));
+    };
+  });
+  return projects.length;
+}
+
 export async function deleteSavedLyricsProject(id: string): Promise<void> {
   await deleteSavedLyricsProjects([id]);
 }
