@@ -1,10 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { loadEnv } from 'vite';
+// @ts-expect-error local ESM stream helper (no package types)
+import { createExplainStreamMiddleware } from './scripts/arkExplainStream.mjs';
 
 export default defineConfig(({ mode }) => {
   // 加载 .env 中的非 VITE_ 前缀变量（仅 server 端可用）
   const env = loadEnv(mode, process.cwd(), '');
+  const arkKey = env.ARK_API_KEY || '';
 
   return {
     base: './',
@@ -23,12 +26,16 @@ export default defineConfig(({ mode }) => {
         name: 'ark-auth-injector',
         configureServer(server) {
           server.middlewares.use('/api/ark', (req, _res, next) => {
-            const arkKey = env.ARK_API_KEY || '';
             if (arkKey && req.headers) {
               req.headers['authorization'] = `Bearer ${arkKey}`;
             }
             next();
           });
+          // AI讲解 SSE：边生成边推送
+          server.middlewares.use(createExplainStreamMiddleware(arkKey));
+        },
+        configurePreviewServer(server) {
+          server.middlewares.use(createExplainStreamMiddleware(arkKey));
         },
       },
     ],

@@ -70,6 +70,13 @@ export type PosterDocumentContextValue = {
   openProject: (project: SavedLyricsProject) => Promise<void>;
   handleSave: () => Promise<void>;
   handleExportPdf: () => Promise<void>;
+  /** 将划词 AI 笔记条追加到歌词正文末尾（词汇条样式） */
+  appendExplainNote: (payload: {
+    term: string;
+    contextSense: string;
+    grammar?: string;
+    mood?: string;
+  }) => void;
 };
 
 export type PosterTypographyContextValue = {

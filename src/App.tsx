@@ -48,12 +48,11 @@ function AppShell({
 
   const pasteLayoutReady = useClipboardStructuredLyrics();
 
-  const { chainBtnRef, chainTipVisible, hasMusicLink, handleChainClick, storeMusicShare } =
-    useChainLink({
-      shareOcrData: homeSession.shareOcrData,
-      setShareOcrData: homeSession.setShareOcrData,
-      setAppSettings,
-    });
+  const { storeMusicShare } = useChainLink({
+    shareOcrData: homeSession.shareOcrData,
+    setShareOcrData: homeSession.setShareOcrData,
+    setAppSettings,
+  });
 
   const network = useNetworkStatus();
 
@@ -66,10 +65,6 @@ function AppShell({
       onSettingsClose={() => setSettingsOpen(false)}
       onSettingsChange={handleSettingsChange}
       onLibraryImported={onLibraryImported}
-      hasMusicLink={hasMusicLink}
-      chainBtnRef={chainBtnRef}
-      chainTipVisible={chainTipVisible}
-      onChainClick={() => void handleChainClick()}
       onSettingsClick={() => setSettingsOpen(true)}
       toastMessage={toastMessage ?? ''}
     >

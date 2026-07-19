@@ -1,4 +1,4 @@
-import type { RefObject, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { AppSettings } from '../../services/appSettings';
 import OfflineBanner from '../OfflineBanner';
 import SettingsPanel from '../SettingsPanel';
@@ -6,7 +6,6 @@ import ClipboardDetectCard from '../ClipboardDetectCard';
 import LyricConfirmSheet from '../LyricConfirmSheet';
 import AppToast from '../AppToast';
 import AppHeader from './AppHeader';
-import ChainLinkTooltip from './ChainLinkTooltip';
 import { useHomeSessionContext } from '../../context/HomeSessionContext';
 
 type Mode = 'input' | 'edit' | 'export';
@@ -19,10 +18,6 @@ type Props = {
   onSettingsClose: () => void;
   onSettingsChange: (settings: AppSettings) => void;
   onLibraryImported?: () => void;
-  hasMusicLink: boolean;
-  chainBtnRef: RefObject<HTMLButtonElement | null>;
-  chainTipVisible: boolean;
-  onChainClick: () => void;
   onSettingsClick: () => void;
   toastMessage: string;
   children: ReactNode;
@@ -36,16 +31,13 @@ export default function AppLayout({
   onSettingsClose,
   onSettingsChange,
   onLibraryImported,
-  hasMusicLink,
-  chainBtnRef,
-  chainTipVisible,
-  onChainClick,
   onSettingsClick,
   toastMessage,
   children,
 }: Props) {
   const isWorkspaceMode = mode === 'edit' || mode === 'export';
   const showHomeChrome = mode === 'input';
+
   const {
     clipboardDetectedSong,
     clipboardDetectedArtist,
@@ -74,15 +66,8 @@ export default function AppLayout({
       <AppHeader
         showHomeChrome={showHomeChrome}
         compact={isWorkspaceMode}
-        hasMusicLink={hasMusicLink}
-        chainBtnRef={chainBtnRef}
-        onChainClick={onChainClick}
         onSettingsClick={onSettingsClick}
       />
-
-      {chainTipVisible && showHomeChrome && chainBtnRef.current && (
-        <ChainLinkTooltip anchorRect={chainBtnRef.current.getBoundingClientRect()} />
-      )}
 
       <SettingsPanel
         open={settingsOpen}

@@ -24,6 +24,7 @@ import {
 } from './PosterWorkspaceContext';
 import type { LangCode } from '../services/appSettings';
 import type { ShowAppToast } from './AppToastContext';
+import { commitExplainNoteToBody } from '../utils/appendExplainNoteToBody';
 
 const EDIT_LAYOUT: PosterLayoutProfile = 'mobilePoster';
 
@@ -308,6 +309,20 @@ export default function PosterWorkspaceProvider({
     ],
   );
 
+  const appendExplainNote = useCallback(
+    (payload: {
+      term: string;
+      contextSense: string;
+      grammar?: string;
+      mood?: string;
+    }) => {
+      const next = commitExplainNoteToBody(bodyHtmlRef.current, payload);
+      bodyHtmlRef.current = next;
+      setBodyHtml(next);
+    },
+    [bodyHtmlRef, setBodyHtml],
+  );
+
   const typographyValue: PosterTypographyContextValue = useMemo(
     () => ({
       showRubyAnnotations,
@@ -356,6 +371,7 @@ export default function PosterWorkspaceProvider({
       openProject,
       handleSave,
       handleExportPdf: exportCtrl.handleExportPdf,
+      appendExplainNote,
     }),
     [
       mode,
@@ -383,6 +399,7 @@ export default function PosterWorkspaceProvider({
       handleLayoutFromHtml,
       openProject,
       handleSave,
+      appendExplainNote,
     ],
   );
 

@@ -351,7 +351,7 @@ export function buildModelComplianceBlock(modelHint?: EncoderPromptOptions['mode
       '\n- DeepSeek: search official lyrics before @0; no preamble/reasoning; no ``` fences; after @9 output NOTHING';
   } else if (modelHint === 'doubao') {
     extra =
-      '\n- Doubao: enable 联网搜索 to verify official lyrics before encoding; never guess from memory';
+      '\n- Doubao: backend enforces web_search via Responses API for Step1; transcribe ONLY from search results — never guess from memory';
   }
   return `
 [Model_Compliance]

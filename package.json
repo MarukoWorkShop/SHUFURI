@@ -8,6 +8,8 @@
     "dev:web": "vite --host",
     "generate:print-font": "node scripts/generatePrintFontBase64.mjs",
     "generate:icons": "node scripts/generateAppIcons.mjs",
+    "generate:jmdict-lite": "node scripts/buildJmdictLite.mjs",
+    "generate:kuromoji-dict": "mkdir -p public/dict/kuromoji && cp -R node_modules/@patdx/kuromoji/dict/*.dat.gz public/dict/kuromoji/",
     "build:web": "npm run generate:print-font && tsc -b && vite build",
     "build": "npm run build:web",
     "test:codec": "node scripts/testInferPosterLang.mjs && tsx scripts/testStreamCodec.mjs && tsx scripts/testPaginateCodecBody.mjs && tsx scripts/testMatchLyricCitation.mjs && tsx scripts/testUserAkizakuraPaste.mjs && tsx scripts/testShowRubyPagination.mjs && tsx scripts/testEncoderPrompt.mjs && tsx scripts/testEncoderPromptMatrix.mjs && tsx scripts/testPedagogicalLevelMatrix.mjs && tsx scripts/testPedagogicalLint.mjs && tsx scripts/testDeepSeekPrompt.mjs && tsx scripts/testZhPipeline.mjs && tsx scripts/testQwenPasteRepair.mjs",
@@ -16,10 +18,15 @@
     "cap:add:ios": "npx cap add ios",
     "cap:add:android": "npx cap add android",
     "cap:sync": "npm run build && npm run generate:icons && npx cap sync && node scripts/patchIosLaunchScreen.mjs",
+    "cap:sync:live": "npm run generate:icons && CAP_SERVER_URL=${CAP_SERVER_URL:-http://$(ipconfig getifaddr en0):5173} npx cap sync ios && node scripts/patchIosLaunchScreen.mjs",
     "cap:open:ios": "npx cap open ios",
     "cap:open:android": "npx cap open android",
     "cap:run:ios": "npm run build && npx cap run ios",
-    "cap:run:android": "npm run build && npx cap run android"
+    "cap:run:ios:live": "npm run cap:sync:live && npx cap run ios",
+    "cap:run:android": "npm run build && npx cap run android",
+    "deploy:ark-explain-stream": "npx tcb fn deploy arkExplainStream -e shufu-life-d8g9j8v5385543c1a --force",
+    "deploy:ark-proxy": "npx tcb fn deploy arkProxy -e shufu-life-d8g9j8v5385543c1a --force",
+    "pack:ark-explain-stream": "node scripts/packArkExplainStream.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",
@@ -30,6 +37,8 @@
     "@capacitor/ios": "^8.4.0",
     "@capacitor/network": "^8.0.1",
     "@capacitor/share": "^8.0.1",
+    "@cloudbase/js-sdk": "^3.6.3",
+    "@patdx/kuromoji": "^1.0.4",
     "heic2any": "^0.0.4",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
@@ -39,6 +48,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.0",
+    "@cloudbase/cli": "^2.11.7",
     "@esbuild/darwin-arm64": "^0.28.0",
     "@types/node": "^25.9.1",
     "@types/react": "^19.2.2",

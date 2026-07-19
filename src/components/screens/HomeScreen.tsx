@@ -1,4 +1,3 @@
-import type { OcrDetectedLanguage } from '../../services/ocrTypes';
 import type { AppSettings, LyricsLanguage } from '../../services/appSettings';
 import type { LanguageMatrixContext } from '../../services/languageMatrix/types';
 import type { StructuredLyricsCardFallbacks } from '../../utils/clipboardStructuredLyrics';
@@ -12,12 +11,8 @@ import type { SavedLyricsProject } from '../../services/savedLyricsStore';
 import { ensurePosterFontsLoaded } from '../../utils/shufuriPoster/fonts';
 import { hideAppBootLoader } from '../../utils/hideAppBootLoader';
 import type { ExternalPromptRequest } from '../../hooks/useStructuredLyricsClipboardCard';
-
-type ShareOcrData = {
-  title: string;
-  artist: string;
-  detectedLanguage?: OcrDetectedLanguage;
-};
+import type { ShareOcrData } from '../../context/HomeSessionContext';
+import { shareOcrToEncoderContext } from '../../utils/shareOcrToEncoderContext';
 
 type Props = {
   inputResetKey: number;
@@ -97,6 +92,7 @@ export default function HomeScreen({
         initialTitle={shareOcrData?.title}
         initialArtist={shareOcrData?.artist}
         ocrDetectedLanguage={shareOcrData?.detectedLanguage}
+        ocrContext={shareOcrToEncoderContext(shareOcrData)}
         pasteLayoutReady={pasteLayoutReady}
         onActivatePasteLayout={onActivatePasteLayout}
         onFormMetaChange={onFormMetaChange}

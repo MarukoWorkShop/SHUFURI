@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { buildEncoderPrompt, resolveEncoderModelHint } from '../codec/prompt/buildEncoderPrompt';
-import type { EncoderPromptOptions } from '../codec/prompt/buildEncoderPrompt';
+import { buildLyricsStep1Prompt } from '../codec/prompt/buildLyricsStep1Prompt';
+import type { EncoderPromptOptions } from '../codec/prompt/encoderCommon';
+import { resolveEncoderModelHint } from '../codec/prompt/buildEncoderPrompt';
 import type { LyricsLanguage, PedagogicalLevel } from '../services/appSettings';
 import type { LanguageMatrixContext } from '../services/languageMatrix/types';
 import { postClipboardWrite, openAiApp } from '../utils/nativeBridge';
@@ -80,23 +81,12 @@ export default function HtmlPasteInput({
       const title = songTitle.trim();
       const promptArtist = artist.trim() || '佚名';
 
-      const effectiveTarget: LyricsLanguage =
-        language ??
-        (ocrDetectedLanguage === 'ko'
-          ? 'ko'
-          : ocrDetectedLanguage === 'jp'
-            ? 'jp'
-            : ocrDetectedLanguage === 'zh'
-              ? 'zh'
-              : matrix.activeTarget);
-
-      // Step1：始终仅 H+L，词解在确认页勾选后走 Step2
-      return buildEncoderPrompt(promptArtist, title, {
-        includeVocabAndGrammar: false,
-        matrix: { ...matrix, activeTarget: effectiveTarget },
-        modelHint,
-        phase: 'lyrics',
-        retry,
+      return buildLyricsStep1Prompt({
+        artist: promptArtist,
+        title,
+        language,
+        matrix,
+        ocrDetectedLanguage,
         ocrContext: ocrContext
           ? {
               songTitle: ocrContext.songTitle,
@@ -107,9 +97,9 @@ export default function HtmlPasteInput({
               rawTexts: ocrContext.rawTexts,
               detectedLanguage: ocrDetectedLanguage,
             }
-          : ocrDetectedLanguage
-            ? { detectedLanguage: ocrDetectedLanguage }
-            : undefined,
+          : undefined,
+        modelHint,
+        retry,
       });
     },
     [songTitle, artist, language, matrix, ocrDetectedLanguage, ocrContext],
@@ -236,9 +226,7 @@ export default function HtmlPasteInput({
             <button
               type="button"
               className={`ext-pipeline__action-btn ext-pipeline__gen-btn ${
-                pasteLayoutReady || !songTitle.trim()
-                  ? 'btn-tonal is-dormant'
-                  : 'btn-filled'
+                pasteLayoutReady || !songTitle.trim() ? 'btn-tonal is-dormant' : 'btn-filled'
               }`}
               onClick={handleCopyPrompt}
               disabled={!songTitle.trim() || pasteLayoutReady}

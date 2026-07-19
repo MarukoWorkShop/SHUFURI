@@ -9,9 +9,11 @@ type Props = {
   inkEditActive?: boolean;
   showRuby: boolean;
   rubySupported: boolean;
+  explainActive?: boolean;
   onToggle: () => void;
   onUndo: () => void;
   onShowRubyChange: (show: boolean) => void;
+  onToggleExplain?: () => void;
 };
 
 export default function InkToolbox({
@@ -20,9 +22,11 @@ export default function InkToolbox({
   inkEditActive = false,
   showRuby,
   rubySupported,
+  explainActive = false,
   onToggle,
   onUndo,
   onShowRubyChange,
+  onToggleExplain,
 }: Props) {
   return (
     <div className={`ink-toolbox${open ? ' is-open' : ''}`}>
@@ -51,6 +55,19 @@ export default function InkToolbox({
           disabled={!rubySupported}
           onClick={() => onShowRubyChange(!showRuby)}
         />
+        {onToggleExplain && (
+          <button
+            type="button"
+            className={`ink-toolbox__tool ink-toolbox__tool--explain${explainActive ? ' is-active' : ''}`}
+            aria-label={explainActive ? '退出划词解释' : '划词解释'}
+            aria-pressed={explainActive}
+            onClick={onToggleExplain}
+          >
+            <span className="ink-toolbox__explain-mark" aria-hidden>
+              ?
+            </span>
+          </button>
+        )}
         <button
           type="button"
           className="ink-toolbox__tool ink-toolbox__tool--undo"

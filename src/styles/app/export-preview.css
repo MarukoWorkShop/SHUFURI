@@ -237,27 +237,111 @@ html:has(.app--edit) body,
 
 /*
  * 浏览态（未点右侧三角展开文具盒）：正文不可点选编辑，利于日文长文滑动。
- * 展开文具盒后加 .is-ink-edit-armed 才恢复命中。
+ * 展开文具盒后加 .is-ink-edit-armed 才恢复命中；划词模式 .is-explain-mode 也可命中选区。
  */
-.edit-canvas-scroll:not(.is-ink-edit-armed) .ink-fine-tune-root {
+.edit-canvas-scroll:not(.is-ink-edit-armed):not(.is-explain-mode) .ink-fine-tune-root {
   pointer-events: none;
 }
 
-/* 编辑态滑动中再锁一层，停滑后恢复 */
-.edit-canvas-scroll.is-ink-edit-armed.is-scrolling .ink-fine-tune-root {
+/* 编辑态滑动中再锁一层，停滑后恢复（划词模式保持可选中） */
+.edit-canvas-scroll.is-ink-edit-armed:not(.is-explain-mode).is-scrolling .ink-fine-tune-root {
   pointer-events: none;
 }
 
-.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-title-h[data-ink-title],
-.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-body-h .zh-line,
-.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-body-h ruby[data-ink-r] {
+.edit-canvas-scroll.is-ink-edit-armed:not(.is-explain-mode) .fv-edit-document-root .fv-title-h[data-ink-title],
+.edit-canvas-scroll.is-ink-edit-armed:not(.is-explain-mode) .fv-edit-document-root .fv-body-h .zh-line,
+.edit-canvas-scroll.is-ink-edit-armed:not(.is-explain-mode) .fv-edit-document-root .fv-body-h ruby[data-ink-r] {
   cursor: pointer;
 }
 
-.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-title-h[data-ink-title]:active,
-.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-body-h .zh-line:active,
-.edit-canvas-scroll.is-ink-edit-armed .fv-edit-document-root .fv-body-h ruby[data-ink-r]:active {
+.edit-canvas-scroll.is-ink-edit-armed:not(.is-explain-mode) .fv-edit-document-root .fv-title-h[data-ink-title]:active,
+.edit-canvas-scroll.is-ink-edit-armed:not(.is-explain-mode) .fv-edit-document-root .fv-body-h .zh-line:active,
+.edit-canvas-scroll.is-ink-edit-armed:not(.is-explain-mode) .fv-edit-document-root .fv-body-h ruby[data-ink-r]:active {
   opacity: 0.72;
+}
+
+/* 划词解释：默认不可选；仅语义块可选，避免跨段拖选 */
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  cursor: default;
+}
+
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .jp-line,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .ko-line,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .zh-line,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .cn-line,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .lyrics-vocab-item,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .lyrics-grammar-item,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .grammar-point-title,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .grammar-detail,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .grammar-ex-ja,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .grammar-ex-ko,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .grammar-ex-zh,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .grammar-ex-cn,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .vocab-ex-ja,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .vocab-ex-ko,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .vocab-ex-zh,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .vocab-ex-cn,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h p,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h h2,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h h3 {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  cursor: text;
+}
+
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .jp-line *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .ko-line *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .zh-line *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .cn-line *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .lyrics-vocab-item *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .lyrics-grammar-item *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .grammar-point-title *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .grammar-detail *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .grammar-ex-ja *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .grammar-ex-ko *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .grammar-ex-zh *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .grammar-ex-cn *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .vocab-ex-ja *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .vocab-ex-ko *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .vocab-ex-zh *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h .vocab-ex-cn *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h p *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h h2 *,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h h3 * {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  cursor: text;
+}
+
+/* 注音不可进选区文本 */
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h ruby rt,
+.edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h ruby rp {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  cursor: text;
+}
+
+.edit-area__workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.edit-area__workspace > .edit-canvas-scroll {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.edit-area--explain .edit-area__workspace {
+  flex-direction: row;
+  align-items: stretch;
 }
 
 /* 漏标汉字空注音：不占行高；仅编辑武装态显示可补音提示 */

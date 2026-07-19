@@ -65,6 +65,9 @@ type ShufuriPosterSinglePageProps = {
   lang?: LangCode;
   renderOptions?: PosterRenderOptions;
   captureRef?: Ref<HTMLDivElement>;
+  /** 划词解释模式：允许选中正文，禁用长按存图 */
+  explainMode?: boolean;
+  onAnalyzeSelection?: (selection: string, surroundingLine: string) => void;
 };
 
 /** 单页假名海报（预览 1:1，导出与预览同一 DOM） */
@@ -82,6 +85,8 @@ function ShufuriPosterSinglePage({
   lang,
   renderOptions,
   captureRef,
+  explainMode = false,
+  onAnalyzeSelection,
 }: ShufuriPosterSinglePageProps) {
   const showRuby = renderOptions?.showRuby ?? true;
   const safeFragment = useMemo(
@@ -296,6 +301,7 @@ function ShufuriPosterSinglePage({
 
   const onTouchStartPage = useCallback(
     (e: React.TouchEvent) => {
+      if (explainMode) return;
       if (e.touches.length === 1) {
         touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         clearLongPress();
@@ -304,7 +310,7 @@ function ShufuriPosterSinglePage({
         }, LONG_PRESS_MS);
       }
     },
-    [clearLongPress, handleRasterize],
+    [clearLongPress, explainMode, handleRasterize],
   );
 
   const onTouchMovePage = useCallback(
@@ -327,11 +333,31 @@ function ShufuriPosterSinglePage({
 
   const onContextMenuPage = useCallback(
     (e: React.MouseEvent) => {
+      if (explainMode) return;
       e.preventDefault();
       void handleRasterize();
     },
-    [handleRasterize],
+    [explainMode, handleRasterize],
   );
+
+  const emitSelectionIfAny = useCallback(() => {
+    if (!explainMode || !onAnalyzeSelection) return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+    const text = sel.toString().replace(/\s+/g, ' ').trim();
+    if (!text) return;
+
+    const node = sel.anchorNode;
+    const el =
+      node?.nodeType === Node.ELEMENT_NODE
+        ? (node as Element)
+        : node?.parentElement ?? null;
+    const lineEl = el?.closest(
+      '.jp-line, .zh-line, .lyrics-group, .grammar-point-title, .lyrics-vocab-item, p, h1, h2, h3',
+    );
+    const surrounding = (lineEl?.textContent ?? text).replace(/\s+/g, ' ').trim();
+    onAnalyzeSelection(text, surrounding);
+  }, [explainMode, onAnalyzeSelection]);
   /* ---- 长按保存 end ---- */
 
   const scaledFrameStyle: CSSProperties = {
@@ -360,9 +386,19 @@ function ShufuriPosterSinglePage({
       style={scaledFrameStyle}
       onTouchStart={onTouchStartPage}
       onTouchMove={onTouchMovePage}
-      onTouchEnd={onTouchEndPage}
+      onTouchEnd={(e) => {
+        onTouchEndPage();
+        if (explainMode) {
+          // 等系统选区稳定后再读取
+          window.setTimeout(() => emitSelectionIfAny(), 0);
+        }
+        void e;
+      }}
       onTouchCancel={onTouchEndPage}
       onContextMenu={onContextMenuPage}
+      onMouseUp={() => {
+        if (explainMode) emitSelectionIfAny();
+      }}
     >
       {saving && (
         <div className="fv-poster-saving-overlay">
@@ -428,6 +464,8 @@ export type ShufuriPosterPreviewProps = {
   lang?: LangCode;
   renderOptions?: PosterRenderOptions;
   captureRef?: (pageIndex: number) => (el: HTMLDivElement | null) => void;
+  explainMode?: boolean;
+  onAnalyzeSelection?: (selection: string, surroundingLine: string) => void;
 };
 
 /** 日语歌词海报：多页预览（视觉缩放，导出仍用 1:1 DOM） */
@@ -442,12 +480,17 @@ export default function ShufuriPosterPreview({
   lang,
   renderOptions,
   captureRef,
+  explainMode = false,
+  onAnalyzeSelection,
 }: ShufuriPosterPreviewProps) {
   const pages = pageSlices.length > 0 ? pageSlices : [{ html: '', spacingScale: 1 }];
   const n = pages.length;
 
   return (
-    <div className="fv-poster-preview-list" style={{ gap: pageGapPx * displayScale }}>
+    <div
+      className={`fv-poster-preview-list${explainMode ? ' is-explain-mode' : ''}`}
+      style={{ gap: pageGapPx * displayScale }}
+    >
       {pages.map((slice, i) => (
         <ShufuriPosterSinglePage
           key={`fv-page-${i}`}
@@ -464,6 +507,8 @@ export default function ShufuriPosterPreview({
           lang={lang}
           renderOptions={renderOptions}
           captureRef={captureRef?.(i)}
+          explainMode={explainMode}
+          onAnalyzeSelection={onAnalyzeSelection}
         />
       ))}
     </div>

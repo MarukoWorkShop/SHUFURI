@@ -334,6 +334,43 @@ export async function upsertStudyCardsFromBackup(
   return { written: upserts.length, skipped };
 }
 
+/**
+ * 单卡 upsert（不清除同 bundle 其它卡）：按 dedupeKey 合并或新建。
+ */
+export async function upsertStudyCardDraft(
+  draft: StudyCardDraft,
+): Promise<{ written: boolean; skipped: boolean; id?: string }> {
+  const dedupeKey = studyCardDedupeKey(draft);
+  const existing = await listStudyCards();
+  const same = existing.find((c) => c.dedupeKey === dedupeKey);
+
+  const card: StudyCard = same
+    ? { ...same, ...draft, dedupeKey }
+    : {
+        ...draft,
+        id: createCardId(),
+        createdAt: Date.now(),
+        dedupeKey,
+      };
+
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(card);
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error ?? new Error('写入学习卡失败'));
+    };
+  });
+
+  notifyStudyCardsStoreChanged();
+  return { written: true, skipped: false, id: card.id };
+}
+
 export async function deleteStudyCard(id: string): Promise<void> {
   await deleteStudyCards([id]);
 }

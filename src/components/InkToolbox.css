@@ -128,3 +128,11 @@
 .ink-toolbox__icon {
   display: block;
 }
+
+.ink-toolbox__explain-mark {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: var(--ui-font-sans, system-ui, sans-serif);
+}

@@ -8,6 +8,11 @@ export type ShareOcrData = {
   title: string;
   artist: string;
   detectedLanguage?: OcrDetectedLanguage;
+  /** OCR / 分享链上下文，供 Step1 口令锚定官方歌词 */
+  album?: string;
+  production?: string;
+  firstLyricLine?: string;
+  rawTexts?: string[];
 };
 
 export type HomeSessionContextValue = {

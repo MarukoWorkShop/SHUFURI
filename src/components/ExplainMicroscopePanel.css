@@ -1,0 +1,566 @@
+/* 显微镜视图：移动端底部抽屉 / 桌面端右侧并列 */
+
+.microscope-root {
+  --micro-blue: #e8f1fb;
+  --micro-blue-fg: #1e4a7a;
+  --macro-grad-from: #f3e8ff;
+  --macro-grad-to: #fce7f3;
+  --emotion-bg: #0f172a;
+  --emotion-fg: #f8fafc;
+  --focus-bg: #dbeafe;
+  --focus-fg: #1d4ed8;
+}
+
+.microscope-overlay {
+  display: none;
+}
+
+.microscope-panel {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  color: var(--color-fg, #1a1a1a);
+  box-shadow: -8px 0 32px rgba(15, 23, 42, 0.12);
+  z-index: 40;
+}
+
+.microscope-panel__handle {
+  display: none;
+  width: 36px;
+  height: 4px;
+  margin: 10px auto 4px;
+  border-radius: 999px;
+  background: #d1d5db;
+}
+
+.microscope-panel__header {
+  flex-shrink: 0;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border, #e5e7eb) 80%, transparent);
+}
+
+.microscope-panel__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.microscope-panel__icon {
+  display: flex;
+  color: var(--ui-fg-muted, #64748b);
+}
+
+.microscope-panel__title {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.microscope-panel__close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.microscope-panel__sentence {
+  margin: 0 0 10px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+}
+
+.microscope-panel__meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.microscope-panel__badge--local {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.microscope-panel__badge--ai {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.microscope-deep-dive {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.microscope-deep-dive:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.microscope-deep-dive:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.microscope-deep-dive--ghost {
+  margin-top: 8px;
+  background: transparent;
+  font-weight: 400;
+  color: #64748b;
+}
+
+.microscope-ai-body {
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #1e293b;
+  white-space: pre-wrap;
+}
+
+.microscope-ai-body.is-streaming {
+  border-color: #93c5fd;
+}
+
+.microscope-ai-card {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.microscope-ai-card__row + .microscope-ai-card__row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eef2f7;
+}
+
+.microscope-ai-card__label {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+
+.microscope-ai-card__body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #1e293b;
+  white-space: pre-wrap;
+}
+
+.microscope-ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.microscope-ai-actions .microscope-deep-dive {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 120px;
+  margin-top: 0;
+}
+
+.microscope-ai-caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: #2563eb;
+  animation: microscope-caret-blink 1s step-end infinite;
+}
+
+@keyframes microscope-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.microscope-section--ai {
+  margin-top: 4px;
+}
+
+.microscope-panel__sentence-dim {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.microscope-panel__focus {
+  background: var(--focus-bg);
+  color: var(--focus-fg);
+  padding: 0 4px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.microscope-panel__badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+.microscope-panel__model {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}
+
+.microscope-panel__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.microscope-section {
+  margin-bottom: 20px;
+}
+
+.microscope-section__label {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.microscope-section__label--macro {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: #7c3aed;
+  font-size: 13px;
+}
+
+.microscope-dict {
+  margin: 0 0 12px;
+}
+
+.microscope-dict__row {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+}
+
+.microscope-dict__row dt {
+  margin: 0;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.microscope-dict__row dd {
+  margin: 0;
+  color: #0f172a;
+  line-height: 1.5;
+}
+
+.microscope-grammar {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--micro-blue);
+  color: var(--micro-blue-fg);
+}
+
+.microscope-grammar__title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.microscope-grammar__body {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.microscope-section--macro {
+  font-family: 'Songti SC', 'Noto Serif SC', 'Source Han Serif SC', 'Hiragino Mincho ProN',
+    'Georgia', serif;
+}
+
+.microscope-context {
+  padding: 14px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  background: linear-gradient(145deg, var(--macro-grad-from), var(--macro-grad-to));
+  color: #3b0764;
+}
+
+.microscope-context__title,
+.microscope-emotion__title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.microscope-context__body,
+.microscope-emotion__body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.microscope-emotion {
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--emotion-bg);
+  color: var(--emotion-fg);
+}
+
+.microscope-chat {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: var(--ui-font-sans, system-ui, sans-serif);
+}
+
+.microscope-chat__bubble {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.microscope-chat__bubble--user {
+  align-self: flex-end;
+  background: #e2e8f0;
+  color: #0f172a;
+  max-width: 92%;
+}
+
+.microscope-chat__bubble--assistant {
+  align-self: flex-start;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  max-width: 96%;
+}
+
+.microscope-panel__follow-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.microscope-panel__error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: 13px;
+}
+
+.microscope-panel__error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.microscope-deep-dive-inline {
+  color: inherit;
+}
+
+.microscope-panel__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.microscope-skel {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f1f5f9, #e2e8f0, #f1f5f9);
+  background-size: 200% 100%;
+  animation: microscope-shimmer 1.2s ease-in-out infinite;
+}
+
+.microscope-skel--short {
+  width: 55%;
+}
+
+.microscope-skel--card {
+  height: 72px;
+  margin-top: 6px;
+}
+
+@keyframes microscope-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+/* 桌面：右侧并列，无遮罩 */
+@media (min-width: 900px) {
+  .export-area--explain .microscope-root,
+  .edit-area--explain .microscope-root {
+    position: relative;
+    flex: 0 0 min(380px, 38vw);
+    width: min(380px, 38vw);
+    max-width: 420px;
+    align-self: stretch;
+    min-height: 0;
+  }
+
+  .export-area--explain .microscope-overlay,
+  .edit-area--explain .microscope-overlay {
+    display: none;
+  }
+
+  .export-area--explain .microscope-panel,
+  .edit-area--explain .microscope-panel {
+    position: absolute;
+    inset: 0;
+    border-radius: 16px 0 0 16px;
+    animation: microscope-slide-in 0.28s ease;
+  }
+}
+
+@keyframes microscope-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 移动：底部抽屉 */
+@media (max-width: 899px) {
+  .microscope-root {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    pointer-events: none;
+  }
+
+  .microscope-overlay {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.35);
+    backdrop-filter: blur(2px);
+    pointer-events: auto;
+  }
+
+  .microscope-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: min(88vh, 720px);
+    border-radius: 18px 18px 0 0;
+    pointer-events: auto;
+    animation: microscope-sheet-up 0.28s ease;
+  }
+
+  .microscope-panel__handle {
+    display: block;
+  }
+}
+
+@keyframes microscope-sheet-up {
+  from {
+    transform: translateY(40%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.export-area--explain {
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.export-area--explain .export-area__main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 899px) {
+  .export-area--explain {
+    flex-direction: column;
+  }
+
+  .edit-area--explain .edit-area__workspace {
+    flex-direction: column;
+  }
+}
+
+/* 划词模式（导出预览遗留选择器，编辑页用 .edit-canvas-scroll.is-explain-mode） */
+.fv-poster-preview-list.is-explain-mode .fv-body-h {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
+}
+
+.fv-poster-preview-list.is-explain-mode .fv-html-poster-root {
+  cursor: text;
+}
+
+.preview-explain-hint {
+  font-size: 12px;
+  color: var(--color-accent, #2563eb);
+  white-space: nowrap;
+}
