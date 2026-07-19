@@ -19,6 +19,12 @@ import {
   jmdictHitToMicroscope,
   lookupJmdictLite,
 } from '../services/dict/jmdictLite';
+import {
+  ensureKrdictLiteLoaded,
+  getKrdictLiteMeta,
+  krdictHitToMicroscope,
+  lookupKrdictLite,
+} from '../services/dict/krdictLite';
 import { ensureKuromojiLoaded } from '../services/dict/kuromojiTokenizer';
 import type { ExplainPickContext } from '../utils/readSelectionForExplain';
 
@@ -154,10 +160,15 @@ export function useExplainSession({
 
   const arm = useCallback(() => {
     setExplainMode(true);
-    if ((lang ?? 'jp') === 'jp') {
+    const code = lang ?? 'jp';
+    if (code === 'jp') {
       void ensureJmdictLiteLoaded().catch(() => {});
       void ensureKuromojiLoaded().catch((err) => {
         console.warn('[kuromoji] preload failed', err);
+      });
+    } else if (code === 'ko') {
+      void ensureKrdictLiteLoaded().catch((err) => {
+        console.warn('[krdict] preload failed', err);
       });
     }
   }, [lang]);
@@ -313,16 +324,54 @@ export function useExplainSession({
       setPanelOpen(true);
       setDeepDiveLoading(false);
 
-      const useLocal = (lang ?? 'jp') === 'jp';
+      const code = lang ?? 'jp';
+      const useLocal = code === 'jp' || code === 'ko';
 
       if (!useLocal) {
-        // 非日语：暂无本地包，点 AI讲解 或直接 JSON 主路径
         setLoading(false);
         setError('当前语言暂无本地词典，可点「AI讲解」。');
         return;
       }
 
       setLoading(true);
+
+      if (code === 'ko') {
+        void lookupKrdictLite(phrase)
+          .then((hit) => {
+            const dictMeta = getKrdictLiteMeta();
+            if (dictMeta) {
+              setDictMetaLabel(`KRDICT lite · ${dictMeta.n} 词`);
+            }
+            if (hit) {
+              const parsed = krdictHitToMicroscope(hit);
+              resultRef.current = parsed;
+              setResult(parsed);
+              setResultSource('local');
+              setLoading(false);
+              setError(null);
+              return;
+            }
+            resultRef.current = null;
+            setResult(null);
+            setResultSource(null);
+            setLoading(false);
+            setError('本地词典未命中。可缩短选区，或直接点「AI讲解」。');
+          })
+          .catch((err) => {
+            console.warn('[krdict]', err);
+            resultRef.current = null;
+            setResult(null);
+            setResultSource(null);
+            setLoading(false);
+            setError(
+              err instanceof Error
+                ? `本地词典加载失败：${err.message}。可点「AI讲解」。`
+                : '本地词典加载失败。可点「AI讲解」。',
+            );
+          });
+        return;
+      }
+
       void lookupJmdictLite(phrase)
         .then((hit) => {
           const dictMeta = getJmdictLiteMeta();

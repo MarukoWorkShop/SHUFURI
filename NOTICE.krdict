@@ -1,0 +1,16 @@
+Korean Basic Dictionary (한국어기초사전 / KRDICT)
+================================================
+
+This project redistributes a derived lite subset of the Korean Basic Dictionary
+published by the National Institute of Korean Language (국립국어원).
+
+- Source mirror used for builds: https://github.com/spellcheck-ko/korean-dict-nikl
+- License: Creative Commons Attribution-ShareAlike 2.0 Korea (CC-BY-SA 2.0 KR)
+- Attribution: 국립국어원 한국어기초사전 (Korean Basic Dictionary)
+
+The bundled artifact is `public/dict/krdict-lite.json.gz` (filtered entries with
+Chinese equivalents; truncated for app size). Rebuild with:
+
+  npm run generate:krdict-lite
+
+License text: https://creativecommons.org/licenses/by-sa/2.0/kr/

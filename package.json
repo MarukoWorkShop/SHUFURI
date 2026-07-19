@@ -9,6 +9,8 @@
     "generate:print-font": "node scripts/generatePrintFontBase64.mjs",
     "generate:icons": "node scripts/generateAppIcons.mjs",
     "generate:jmdict-lite": "node scripts/buildJmdictLite.mjs",
+    "generate:krdict-lite": "node scripts/buildKrdictLite.mjs",
+    "smoke:krdict-lite": "tsx scripts/smokeKrdictLite.mts",
     "generate:kuromoji-dict": "mkdir -p public/dict/kuromoji && cp -R node_modules/@patdx/kuromoji/dict/*.dat.gz public/dict/kuromoji/",
     "build:web": "npm run generate:print-font && tsc -b && vite build",
     "build": "npm run build:web",

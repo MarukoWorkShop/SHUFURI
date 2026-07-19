@@ -29,3 +29,6 @@ yarn-error.*
 ios/
 android/
 .expo/
+
+# KRDICT XML 下载缓存（构建 lite 用）
+tmp/
