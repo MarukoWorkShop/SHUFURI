@@ -3,6 +3,7 @@ node_modules/
 
 # build
 dist/
+dist-cloud/
 src/utils/vectorPrint/printFontBase64.generated.ts
 
 # debug
@@ -14,8 +15,12 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files（含 ARK Key；勿提交）
+.env
 .env*.local
+
+# IDE / 第三方 agent 规则缓存
+.codebuddy/
 
 # typescript
 *.tsbuildinfo
