@@ -2,6 +2,8 @@
 
 Vite + React web app. Run `npm run dev` to start the dev server.
 
+**划词 AI讲解**（编辑页工具箱 `?`）：本地 JMdict + Kuromoji，可选 CloudBase → 火山引擎。设计与部署见 [`docs/AI_MODE_VOLCENGINE_DESIGN.md`](docs/AI_MODE_VOLCENGINE_DESIGN.md)。
+
 ---
 
 ## 日语歌词海报分页排版系统

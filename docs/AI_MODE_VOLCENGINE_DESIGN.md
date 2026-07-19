@@ -1,364 +1,147 @@
-# AI 模式（腾讯云代理 + 火山引擎）设计
+# 划词 AI 讲解（CloudBase + 火山引擎）
+
+**版本**：v2.0（产品方向已从「首页 AI 搜歌词」改为「编辑页划词解释」）  
+**分支**：`feat/ai-mode-volcengine`  
+**更新日期**：2026-07-19
+
+---
 
 ## 1. 目标
 
-在保留现有“外部 AI + 剪贴板”手动模式的同时，将首页左上角原音乐链接按钮改为 `AI` 模式开关。
+在**不改变**现有「外部 AI 口令 → 粘贴排版」主流程的前提下，于编辑页提供划词学习能力：
 
-AI 模式开启后，应用不再复制 Prompt、打开外部 AI 或等待用户粘贴，而是通过腾讯云后端代理调用火山引擎，自动完成：
+1. **本地优先**：JMdict lite + Kuromoji 即时给出读音 / 词性 / 基础义（英译）
+2. **可选 AI讲解**：经腾讯云 CloudBase 代理调用火山方舟（Doubao Mini），输出语境释义 / 语法拆解 / 歌词意境
+3. **添加到笔记**：将 AI 结果写入歌词正文末尾「划词笔记」区（样式与重点词汇条一致）
 
-1. Step 1：生成完整歌词记录流（`@0 + H + L + @9`）
-2. 用户在现有 `LyricConfirmSheet` 中确认歌词
-3. 未选择学习材料：直接排版
-4. 选择学习材料：Step 2 自动生成 V/G，和已确认 H/L 合并后排版
-5. 歌词错误或不完整：使用 `retry: true` 重新调用 Step 1
-
-现有手动模式保留为网络、配额、后端故障时的降级路径。
+**不做**：首页 AI 搜歌词、客户端直持 ARK API Key、整句翻译替代划选焦点。
 
 ---
 
-## 2. 分支基线
+## 2. 交互
 
-- 本地整合分支：`integration/all-features-local`
-- AI 功能分支：`feat/ai-mode-volcengine`
-- `main` 保持不变
+| 步骤 | 行为 |
+|------|------|
+| 入口 | 编辑页墨水工具箱 → `?` 开启划词 |
+| 选区 | 光标 I 型；选中词 / 短语 / 句内片段；钳制在语义块内 |
+| 本地 | 面板先出本地词典结果 |
+| AI | 用户点「AI讲解」→ 流式或整段返回三段结构 |
+| 笔记 | 「添加到笔记」→ 正文末尾追加 `lyrics-vocab-item` |
 
-整合分支包含：
-
-- 两步歌词确认流程
-- JSON 数据备份/导入
-- 编辑预览令牌色层级与词条竖线样式
-
-未直接合并 `fix/lyrics-completeness-prompt`，因为它基于旧代码快照，整体合并会删除或回退当前功能；其中有效的完整性约束已经由当前 `phase: 'lyrics'` Prompt 覆盖。
-
----
-
-## 3. 交互设计
-
-### 3.1 左上角 AI 开关
-
-删除原 `LinkChainIcon` 和下列行为：
-
-- 音乐链接状态提示
-- 从剪贴板恢复音乐分享
-- `ChainLinkTooltip`
-- `useChainLink` 在 Header 中的控制职责
-
-替换为 `AiModeToggle`：
-
-- 手动模式：显示 `AI`，弱化边框态
-- AI 模式：显示 `AI`，令牌色实心/高亮态
-- `aria-pressed` 表示切换状态
-- 模式持久化到 `AppSettings.generationMode`
-
-建议默认值：`external`。首次发布不改变现有用户习惯。
-
-```ts
-type GenerationMode = 'external' | 'ai';
-```
-
-未来 BYOK 不扩展模式枚举，而扩展凭证来源：
-
-```ts
-type AiCredentialMode = 'managed' | 'byok';
-```
-
-### 3.2 首页按钮
-
-手动模式维持当前行为：
-
-- 一键生成口令
-- 外部 AI
-- 返回后粘贴并排版
-
-AI 模式：
-
-- 主按钮文案改为“AI 查找歌词”
-- 点击后直接调用 Step 1
-- 生成中禁用重复提交，并显示“正在查找完整歌词…”
-- 不展示/不启用“粘贴并排版”
-- 保留取消请求入口（`AbortController`）
-
-### 3.3 歌词确认页
-
-复用现有 `LyricConfirmSheet`：
-
-- 完整滚动显示全部歌词
-- “重试”：
-  - AI 模式：内部重跑 Step 1（`retry: true`）
-  - 手动模式：继续复制强化 Prompt 并打开外部 AI
-- 未勾选学习材料：“确认并排版”
-- 勾选学习材料：“→ 去生成学习材料”
-  - AI 模式：内部调用 Step 2
-  - 手动模式：继续现有外部 Prompt 流程
-
-### 3.4 Step 2
-
-AI 模式下：
-
-1. 使用已确认 H/L 构建 `phase: 'study'` Prompt
-2. 后端调用火山引擎
-3. 客户端只采纳返回的 V/G
-4. 使用 `mergeConfirmedLyricsWithStudy` 合并
-5. H/L 永远使用用户确认版本，屏蔽模型第二次修改歌词
-6. 合并成功后直接排版
-
----
-
-## 4. 前端状态机
-
-状态应独立于页面的 `input | edit | export` 模式。
-
-```ts
-type AiGenerationStage =
-  | 'idle'
-  | 'lyrics-loading'
-  | 'lyrics-confirm'
-  | 'study-loading'
-  | 'layout-loading'
-  | 'error';
-```
-
-会话数据：
-
-```ts
-type AiGenerationSession = {
-  stage: AiGenerationStage;
-  requestId: string | null;
-  lyricsRaw: string;
-  error: string | null;
-  retryCount: number;
-};
-```
-
-状态转换：
+### AI 输出结构（严格）
 
 ```text
-idle
-  → lyrics-loading
-  → lyrics-confirm
-      ├─ 直接排版 → layout-loading → edit
-      ├─ 生成学习材料 → study-loading → layout-loading → edit
-      └─ 重试 → lyrics-loading
-
-任何 loading
-  → error
-  → 重试或切回手动模式
+【语境释义】…
+【语法拆解】…   ← 须还原口语缩略 / 活用 / 接续；禁止敷衍「整段=词典形」
+【歌词意境】…   ← ≤50 字；无可写「—」
 ```
 
-同一时刻只允许一个活跃请求。新请求开始前取消旧 `AbortController`。
+Prompt：`src/codec/prompt/buildMicroscopePrompt.ts` → `buildMicroscopeAiExplainPrompt`。
 
 ---
 
-## 5. 后端代理契约
-
-### 5.1 安全边界
-
-- 火山引擎 API Key 只存在腾讯云环境变量 `ARK_API_KEY`
-- 前端不包含 `VITE_ARK_API_KEY`
-- 前端不能把任意模型、任意 URL 或任意 Authorization 头透传给代理
-- 后端固定火山引擎域名、模型白名单和最大 token
-- 后端按匿名用户/IP 做限流、日配额和并发限制
-- 日志禁止记录完整歌词、完整 Prompt 和 API Key
-
-### 5.2 MVP：缓冲响应
-
-CloudBase `callFunction` 调用一般在函数完成后一次性返回，不应把它描述为浏览器可读 SSE。
-
-请求：
-
-```ts
-type ArkProxyRequest = {
-  action: 'lyrics.generate';
-  requestId: string;
-  phase: 'lyrics' | 'study';
-  prompt: string;
-  targetLanguage: 'jp' | 'ko' | 'en' | 'zh';
-  interfaceLanguage: 'zh' | 'en';
-};
-```
-
-响应：
-
-```ts
-type ArkProxyResponse = {
-  ok: boolean;
-  requestId: string;
-  content?: string;
-  usage?: {
-    inputTokens?: number;
-    outputTokens?: number;
-  };
-  error?: {
-    code:
-      | 'AUTH_FAILED'
-      | 'RATE_LIMITED'
-      | 'UPSTREAM_TIMEOUT'
-      | 'UPSTREAM_ERROR'
-      | 'EMPTY_OUTPUT'
-      | 'INVALID_REQUEST';
-    message: string;
-    retryable: boolean;
-  };
-};
-```
-
-后端映射到火山引擎：
-
-```json
-{
-  "model": "doubao-seed-2-0-mini-260215",
-  "messages": [
-    { "role": "user", "content": "<客户端生成的阶段 Prompt>" }
-  ],
-  "temperature": 0.1,
-  "max_tokens": 16384,
-  "stream": false
-}
-```
-
-说明：
-
-- Step 1 长歌词优先，`max_tokens` 必须高于过去的 8192；最终值受模型接入点上限约束。
-- Step 1 的低温度用于减少改写、漏行与格式漂移。
-- Step 2 可以使用 `temperature: 0.2`。
-
-### 5.3 后续：真实 SSE
-
-若需要逐字显示进度，腾讯云必须提供 HTTP/API Gateway 地址，由该地址转发：
-
-```http
-Content-Type: text/event-stream
-Cache-Control: no-cache
-X-Accel-Buffering: no
-```
-
-前端通过 `fetch()` 读取 `response.body.getReader()`。不能通过普通 `app.callFunction()` 获得同等流式体验。
-
-首版不依赖 SSE；只显示阶段级进度，降低后端改造风险。
-
----
-
-## 6. 输出验证
-
-后端返回不等于成功。客户端必须依次执行：
-
-### Step 1
-
-1. `prepareStructuredLyricsClipboardText`
-2. `parseStream`
-3. 必须有 H
-4. 必须有至少一个 L
-5. 必须闭合 `@9`
-6. 必须没有 V/G
-7. L 序号必须连续
-8. 通过后进入歌词确认页
-
-客户端无法自动证明“官方歌词绝对完整”，因此仍保留人工确认。可以把下列情况标记为可疑但不阻塞：
-
-- 行数异常少
-- 最后一行疑似未完成
-- 出现省略号/“副歌重复”等占位文本
-
-### Step 2
-
-1. 允许完整流或仅 V/G 片段
-2. `mergeConfirmedLyricsWithStudy`
-3. H/L 必须来自 Step 1 确认稿
-4. 丢弃越界 `lyric_line_no`
-5. 无 V/G 时提示用户重试或直接按歌词排版
-
----
-
-## 7. 前端模块拆分
-
-新增：
+## 3. 架构
 
 ```text
-src/services/ai/
-  types.ts                 # 请求、响应、错误类型
-  aiGateway.ts             # 后端代理抽象
-  cloudbaseGateway.ts      # 腾讯云 CloudBase 实现
-  volcengineLyrics.ts      # Step1/Step2 阶段调用
-
-src/hooks/
-  useAiLyricsSession.ts    # 状态机、取消、重试、合并、排版
-
-src/components/app/
-  AiModeToggle.tsx         # 替换左上角链条按钮
+编辑页选区
+  → lookupJmdictLite (+ Kuromoji)
+  →（可选）streamExplanation / generateExplanation
+       ├─ DEV：Vite 中间件 /api/explain-stream（scripts/arkExplainStream.mjs）
+       ├─ 正式包：VITE_EXPLAIN_STREAM_URL → 云函数 arkExplainStream（HTTP Access）
+       └─ 降级：callFunction(arkProxy) action=explain.selection
+  →（可选）appendExplainNote → bodyHtml「划词笔记」
 ```
 
-修改：
+### 密钥边界
 
-```text
-src/services/appSettings.ts
-  + generationMode: 'external' | 'ai'
-
-src/components/app/AppHeader.tsx
-  - LinkChainIcon
-  + AiModeToggle
-
-src/components/app/AppLayout.tsx
-  - ChainLinkTooltip
-
-src/App.tsx
-  - Header 中的 useChainLink 控制
-  + AI 模式及 useAiLyricsSession 接线
-
-src/components/HtmlPasteInput.tsx
-  根据 generationMode 切换“外部口令”与“内部 API”动作
-
-src/components/LyricConfirmSheet.tsx
-  复用 UI；回调由当前模式决定走内部 API 或外部 Prompt
-```
-
-`useChainLink` 中仍有 OCR/音乐分享状态写入职责；删除 Header 功能时不能直接整文件删除。应先把仍被 OCR 使用的 `storeMusicShare`/语言同步职责迁移到独立 hook。
+| 位置 | 内容 |
+|------|------|
+| 客户端 `.env` | 仅开发用 `ARK_API_KEY`（Vite 中间件注入）；**勿**设 `VITE_ARK_*` |
+| 云函数环境变量 | 生产 `ARK_API_KEY`（arkProxy / arkExplainStream） |
+| 正式包 | `VITE_EXPLAIN_STREAM_URL`（公开 HTTP 入口，无 Key） |
 
 ---
 
-## 8. BYOK 预留
+## 4. 云函数
 
-未来 BYOK 仍走腾讯云后端，避免浏览器直接请求火山引擎。
+目录：`cloudfunctions/`（`functions` → 同目录符号链接，兼容 CLI）  
+配置：`cloudbaserc.json`（`functionRoot: ./cloudfunctions`）
 
-推荐：
+| 函数 | 类型 | 用途 |
+|------|------|------|
+| `arkProxy` | Event | `explain.selection` 非流式降级；Mini + `thinking: disabled` |
+| `arkExplainStream` | Event + HTTP Access | 返回 SSE 协议正文（meta/delta/done）；首包延迟≈整段生成 |
 
-1. 用户在设置页提交 Key 到后端
-2. 后端使用 KMS 加密保存
-3. 前端只保存不透明 `credentialId`
-4. 请求中传 `credentialMode: 'byok'` 和 `credentialId`
-5. 后端解密后调用火山引擎
-6. 前端永远不能重新读取明文 Key
+部署示例：
 
-MVP 请求可以预留：
+```bash
+npm run deploy:ark-proxy
+npm run deploy:ark-explain-stream
+# 控制台为 arkExplainStream 绑定 HTTP 路径 /api/explain-stream，并配置 ARK_API_KEY
+```
 
-```ts
-credentialMode: 'managed'
+模型常量：`doubao-seed-2-0-mini-260215`，`max_tokens`≈360（与 `src/services/ai/types.ts` 对齐）。
+
+---
+
+## 5. 本地词典
+
+| 资源 | 路径 | 说明 |
+|------|------|------|
+| JMdict eng-common lite | `public/dict/jmdict-lite.json.gz` | `npm run generate:jmdict-lite` |
+| Kuromoji IPAdic | `public/dict/kuromoji/*.dat.gz` | `npm run generate:kuromoji-dict` |
+| 查词逻辑 | `src/services/dict/jmdictLite.ts` | 精确 → Kuromoji → 剥助词 → 活用 → 最长匹配 |
+| 分词 | `src/services/dict/kuromojiTokenizer.ts` | `@patdx/kuromoji` |
+
+**明确不采用（当前）**：官方「JMdict-chs」（官方无 Mandarin 发行）、SudachiJava/Py（不进 WebView）；中文义由 AI讲解补足。
+
+---
+
+## 6. 客户端环境变量
+
+见 `.env.example`：
+
+- `ARK_API_KEY`：仅本地 Vite 流式中间件
+- `VITE_EXPLAIN_STREAM_URL`：正式包 / 非局域网必填
+- `CAP_SERVER_URL`：可选；设则 Capacitor 加载电脑 Vite（联调），正式包勿设
+
+```bash
+# 正式包
+# 1. 写入 VITE_EXPLAIN_STREAM_URL
+# 2. 确认未设置 CAP_SERVER_URL
+npm run cap:sync
+# Xcode 重装真机
+
+# 局域网联调 AI 流式
+npm run dev
+npm run cap:sync:live   # 或 CAP_SERVER_URL=http://<LAN-IP>:5173
 ```
 
 ---
 
-## 9. 实施顺序
+## 7. 主要源码索引
 
-1. 定义 AI 类型、错误码和 `AiGateway` 接口
-2. 接入腾讯云代理（先缓冲响应）
-3. 实现 `useAiLyricsSession`
-4. 将左上角按钮替换为 AI 模式切换
-5. 改造首页主按钮
-6. 复用歌词确认页接入内部 Step 1/Step 2
-7. 增加取消、超时、配额、切回手动模式
-8. 单元测试 Prompt、状态机、响应清洗、V/G 合并
-9. 真机测试前后台切换、弱网、超时和重复点击
+| 区域 | 路径 |
+|------|------|
+| 会话 | `src/hooks/useExplainSession.ts` |
+| 面板 | `src/components/ExplainMicroscopePanel.tsx` |
+| 选区 | `src/utils/readSelectionForExplain.ts` |
+| 笔记写入 | `src/utils/appendExplainNoteToBody.ts` |
+| AI 网关 | `src/services/ai/*` |
+| 编辑页接线 | `src/components/screens/EditScreen.tsx` |
 
 ---
 
-## 10. 开发前需要的腾讯云信息
+## 8. 验收清单
 
-开始实际联调前需要确认：
+- [x] 工具箱 `?` 开启划词，本地词典先出结果
+- [x] AI讲解三段结构 + 单卡 UI
+- [x] 添加到笔记 → 正文末尾词汇条样式
+- [x] 正式包走 `VITE_EXPLAIN_STREAM_URL`；失败可降级 `arkProxy`
+- [x] 不在客户端打包生产 ARK Key
 
-1. CloudBase 环境 ID（旧设计记录为 `shufu-life-d8g9j8v5385543c1a`，需确认仍有效）
-2. 云函数名（旧设计记录为 `arkProxy`）
-3. 当前云函数是否接受 `{ action, body }`
-4. 是否已开启匿名登录
-5. 火山引擎模型接入点/模型 ID
-6. 模型支持的最大输出 token
-7. 是否已有域名/API Gateway；若有，是否支持 SSE
+---
 
+## 9. 历史说明
+
+v1 设计曾规划首页 `AI` 开关自动搜歌词（Step1/Step2）。产品已否决该方向：主流程仍为外部 AI 口令；本仓库 CloudBase 能力仅服务**划词讲解**。

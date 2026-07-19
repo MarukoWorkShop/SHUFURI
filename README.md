@@ -1,6 +1,6 @@
 SHUFURI Privacy Policy
 
-Last Updated: June 21, 2026
+Last Updated: July 19, 2026
 
 Welcome to SHUFURI (the "App"), a local-first typography and linguistic tech-stationery application designed for independent language learners and typography enthusiasts.
 
@@ -16,7 +16,9 @@ Device Information: We do not track your device ID, IP address, or location.
 2. Third-Party Services
 No Analytics: The App does not integrate any third-party analytics SDKs, tracking pixels, or advertising platforms.
 
-External AI Clipboard (User-Driven): When you manually copy external encrypted data streams into the App, that transaction is handled entirely by you. The App remains a pure offline rendering container.
+External AI Clipboard (User-Driven): When you manually copy external encrypted data streams into the App, that transaction is handled entirely by you. The App remains a pure offline rendering container for the main lyrics layout pipeline.
+
+Optional Selection Explain (User-Triggered): If you enable selection explain and tap “AI讲解”, the selected phrase and minimal sentence context are sent to a Tencent CloudBase cloud function that proxies Volcengine Ark. No ARK API key is embedded in the client for production builds. Local dictionary lookup (JMdict / Kuromoji) stays on-device. You can skip AI explain and use local results only.
 
 3. Children's Privacy
 Since we collect absolutely zero personal data, the App is inherently compliant with the Children's Online Privacy Protection Act (COPPA) and GDPR.
