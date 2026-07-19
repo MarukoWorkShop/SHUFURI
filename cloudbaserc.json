@@ -1,0 +1,20 @@
+{
+  "envId": "shufu-life-d8g9j8v5385543c1a",
+  "functionRoot": "./cloudfunctions",
+  "functions": [
+    {
+      "name": "arkProxy",
+      "timeout": 60,
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "installDependency": true
+    },
+    {
+      "name": "arkExplainStream",
+      "timeout": 60,
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "installDependency": false
+    }
+  ]
+}
