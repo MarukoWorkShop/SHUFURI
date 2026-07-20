@@ -104,10 +104,7 @@ export const ROLE_SELECTOR_MAP: Record<PosterTextRole, Partial<Record<LangCode |
     zh: '.cn-line',
   },
   lyricSecondary: {
-    jp: '.zh-line',
-    ko: '.zh-line',
-    en: '.gloss-line',
-    zh: '.gloss-line',
+    default: 'interfaceLanguage → .zh-line (zh) or .gloss-line (en); zh song + zh iface omits row',
   },
   rubyAnnotation: { default: 'ruby rt' },
   sectionTitle: { default: 'h2.lyrics-section-title' },

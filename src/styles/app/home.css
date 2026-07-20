@@ -49,24 +49,31 @@
   left: 0;
   right: 0;
   text-align: left;
-  font-size: 10px;
+  font-size: 10px !important;
   font-weight: 500;
   color: var(--color-fg-secondary);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 0;
   margin: 0;
-  line-height: 1;
+  line-height: 1 !important;
   pointer-events: none;
+
+  /* 兜底：防止 iOS 动态字体缩放造成“莫名放大” */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .ext-pipeline__label-meta {
   display: inline;
-  font-size: 10px;
+  font-size: 10px !important;
   font-weight: 400;
   color: var(--color-fg-muted);
   letter-spacing: 0.02em;
   margin-left: 8px;
+
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .ext-pipeline__field:focus-within .ext-pipeline__label-meta {
@@ -88,7 +95,7 @@
   box-shadow: none;
   padding: 16px 0 12px;
   font-family: var(--ui-font-sans);
-  font-size: 16px;
+  font-size: 16px !important;
   font-weight: 300;
   letter-spacing: 0.01em;
   color: var(--ui-fg);
@@ -100,6 +107,9 @@
   user-select: text;
   touch-action: manipulation;
   cursor: text;
+
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .ext-pipeline__input::placeholder {

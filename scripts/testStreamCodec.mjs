@@ -48,12 +48,17 @@ try {
 
 const compiled = compileDocument(enc);
 assert(compiled.bodyHtml.includes('class="lyrics-group"'), 'lyrics-group wrapper');
-assert(compiled.bodyHtml.includes('class="zh-line"'), 'zh-line secondary');
+assert(compiled.bodyHtml.includes('class="zh-line"'), 'zh-line secondary (zh iface default)');
 assert(compiled.bodyHtml.includes('回忆浮上心头'), 'poster vocab pedagogical translation');
 assert(/lyrics-vocab-item[\s\S]*?vocab-ex-zh[\s\S]*?回忆浮上心头/.test(compiled.bodyHtml), 'vocab item pedagogical');
 assert(!/lyrics-vocab-item[\s\S]*?ゆれます/.test(compiled.bodyHtml), 'vocab item not lyric line 4');
 assert(compiled.bodyHtml.includes('只要在身边就好'), 'poster grammar pedagogical translation');
 assert(compiled.title === '秋樱', 'title');
+
+const compiledEnIface = compileDocument(enc, { interfaceLanguage: 'en' });
+assert(compiledEnIface.bodyHtml.includes('class="gloss-line"'), 'en iface: gloss-line lyric secondary');
+assert(!compiledEnIface.bodyHtml.includes('class="zh-line"'), 'en iface: no zh-line');
+assert(/vocab-ex-gloss[\s\S]*?回忆浮上心头/.test(compiledEnIface.bodyHtml), 'en iface: vocab-ex-gloss');
 
 const qwenNoClose = `@0
 H|잔나비|주저하는 연인들을 위해|ko
@@ -62,6 +67,10 @@ L|1|나는 읽기 쉬운 마음이야|我是一颗很容易被读懂的心
 V|1|훑다|扫视、翻阅|2|책을 훑어보다|浏览书籍
 @2
 G|1|grammar（语法）|说明|1|example|例句`;
+const koEnIface = compileDocument(qwenNoClose, { interfaceLanguage: 'en' });
+assert(koEnIface.bodyHtml.includes('class="gloss-line"'), 'ko + en iface: gloss-line');
+assert(koEnIface.bodyHtml.includes('vocab-ex-gloss'), 'ko + en iface: vocab-ex-gloss');
+
 const qwenFixed = normalizeStreamInput(qwenNoClose);
 assert(qwenFixed.endsWith('@9'), 'auto-append @9 for qwen-style paste');
 assert(parseStream(qwenNoClose).closed, 'parse qwen without @9 after repair');

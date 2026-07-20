@@ -108,6 +108,13 @@ assert(jpEnInterface.includes('NO Chinese in pedagogical fields'), 'en interface
 assert(jpEnInterface.includes('L column 4 = natural English line translation'), 'jp active only one L col4 rule');
 assert(!jpEnInterface.includes('jp/ko: column 4'), 'jp active no multi-lang L col4 list');
 
+const enEnInterface = buildEncoderPrompt('Singer', 'Hello', {
+  includeVocabAndGrammar: true,
+  matrix: { ...matrixEn, activeTarget: 'en' },
+});
+assert(enEnInterface.includes('L column 4 = leave empty'), 'en active + en iface no lyric secondary');
+assert(!enEnInterface.includes('L column 4 = natural English line translation'), 'en active + en iface not gloss line');
+
 const jpZhInterface = buildEncoderPrompt('歌手', '歌名', {
   includeVocabAndGrammar: true,
   matrix: { ...matrixZh, activeTarget: 'jp' },
@@ -146,7 +153,8 @@ assert(!zhPrompt.includes('[Zh_pedagogical]'), 'zh no dead pedagogical ref');
 assert(zhPrompt.includes('[Zh_column_map]'), 'zh column map');
 assert(zhPrompt.includes('{藤:téng}{蔓:màn}'), 'zh correct ruby pattern in samples or rules');
 assert(zhPrompt.includes('NO {汉字:拼音} ruby in grammar_label'), 'zh grammar no ruby');
-assert(zhPrompt.includes('plain Hanzi only'), 'zh pedagogical plain hanzi note');
+assert(zhPrompt.includes('full-line {汉字:拼音}'), 'zh pedagogical example requires pinyin ruby');
+assert(zhPrompt.includes('NEVER Hanzi-as-reading'), 'zh forbids Hanzi-as-reading in col6');
 assert(zhPrompt.length < MAX_ZH_PROMPT_CHARS, 'zh prompt length budget');
 assert(zhPrompt.includes('L column 4 = leave empty'), 'zh active only zh L col4 rule');
 assert(!zhPrompt.includes('jp/ko: column 4'), 'zh active no multi-lang L col4 list');

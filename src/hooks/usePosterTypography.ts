@@ -30,7 +30,8 @@ type Options = {
 };
 
 /**
- * 导出密度（字号/行距）固定为默认 100%；注音开关仍由编辑页文具盒控制。
+ * 导出密度（字号/行距倍率）固定为默认 100%；
+ * mobilePoster 的行距基准已对齐编辑页 Kami，分页仍可按 spacingScale 弹性收紧。
  * PDF/预览共用同一套 buildPosterRenderOptions + 分页管线。
  */
 export function usePosterTypography({

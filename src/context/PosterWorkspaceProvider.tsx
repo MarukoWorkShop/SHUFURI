@@ -266,6 +266,8 @@ export default function PosterWorkspaceProvider({
     () => ({
       inkToolboxOpen: inkSession.inkToolboxOpen,
       setInkToolboxOpen: inkSession.setInkToolboxOpen,
+      inkEditMode: inkSession.inkEditMode,
+      setInkEditMode: inkSession.setInkEditMode,
       canUndoInkEdit: inkSession.canUndoInkEdit,
       inkFocusGroupIndex: inkSession.inkFocusGroupIndex,
       inkEditTarget: inkSession.inkEditTarget,
@@ -288,6 +290,8 @@ export default function PosterWorkspaceProvider({
     [
       inkSession.inkToolboxOpen,
       inkSession.setInkToolboxOpen,
+      inkSession.inkEditMode,
+      inkSession.setInkEditMode,
       inkSession.canUndoInkEdit,
       inkSession.inkFocusGroupIndex,
       inkSession.inkEditTarget,
@@ -316,11 +320,11 @@ export default function PosterWorkspaceProvider({
       grammar?: string;
       mood?: string;
     }) => {
-      const next = commitExplainNoteToBody(bodyHtmlRef.current, payload);
+      const next = commitExplainNoteToBody(bodyHtmlRef.current, payload, lang);
       bodyHtmlRef.current = next;
       setBodyHtml(next);
     },
-    [bodyHtmlRef, setBodyHtml],
+    [bodyHtmlRef, lang, setBodyHtml],
   );
 
   const typographyValue: PosterTypographyContextValue = useMemo(

@@ -16,5 +16,6 @@ ${buildLearnerGlossBlock(gloss, options.matrix)}
 [Lang: zh]
 - H col3 = song title from prompt; H col4 (lang code) MUST be zh
 - L col3: full-line {Hanzi:pinyin} on every CJK character (see [Zh_ruby]); contiguous tokens only
+- V/G col6: same {Hanzi:pinyin} rule as L — Latin pinyin only, never Hanzi-as-reading
 ${buildVocabGrammarIncludeRule(include, iface)}`;
 }

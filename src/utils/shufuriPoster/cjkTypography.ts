@@ -85,6 +85,22 @@ export function cjkLetterSpacingEm(spacingScale: number): string {
   return `${em.toFixed(4)}em`;
 }
 
+/**
+ * mobilePoster Kami 字距：满档 0.06em；spacingScale&lt;1 时向负字距收紧，
+ * 与 cjkLetterSpacingEm 同斜率，避免弹性装页时字距仍偏松。
+ */
+export function kamiLetterSpacingEm(
+  spacingScale: number,
+  baseEm = 0.06,
+): string {
+  const s = Math.max(CJK_TYPOGRAPHY_SCALE_MIN, Math.min(1, spacingScale));
+  if (s >= 1) {
+    return `${baseEm}em`;
+  }
+  const em = baseEm - (1 - s) * 0.12;
+  return `${em.toFixed(4)}em`;
+}
+
 /** CJK 正文换行与避头尾 CSS 片段 */
 export function buildCjkWrapCss(): string {
   return `

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { buildLyricsStep1Prompt } from '../codec/prompt/buildLyricsStep1Prompt';
 import type { EncoderPromptOptions } from '../codec/prompt/encoderCommon';
 import { resolveEncoderModelHint } from '../codec/prompt/buildEncoderPrompt';
@@ -11,6 +11,15 @@ import ArrowRightIcon from './icons/ArrowRightIcon';
 import AiAppActionSheet from './AiAppActionSheet';
 import LanguageWheel from './LanguageWheel';
 import type { ExternalPromptRequest } from '../hooks/useStructuredLyricsClipboardCard';
+
+/** 歌名比对用：去空白、小写，忽略标点差异 */
+function normalizeTitleKey(title: string): string {
+  return title
+    .trim()
+    .toLowerCase()
+    .replace(/[\s\u3000]+/g, '')
+    .replace(/[^\p{L}\p{N}\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/gu, '');
+}
 
 type Props = {
   /** Step1 始终仅歌词；保留 prop 以免调用方断裂。词解由确认页勾选驱动。 */
@@ -31,7 +40,10 @@ type Props = {
     firstLyricLine?: string;
     rawTexts?: string[];
   };
+  /** 剪贴板含可排版流（完整或学习材料） */
   pasteLayoutReady?: boolean;
+  /** 流内 H 歌名；用于表单偏离时把主暗示切到「生成口令」 */
+  clipboardStreamTitle?: string;
   onActivatePasteLayout?: (formMeta: { title?: string; artist?: string }) => void;
   onFormMetaChange?: (meta: { title: string; artist: string }) => void;
   /** 确认页触发的学习材料 / 再试口令，写入剪贴板并弹出 AI 选择 */
@@ -51,6 +63,7 @@ export default function HtmlPasteInput({
   ocrDetectedLanguage,
   ocrContext,
   pasteLayoutReady = false,
+  clipboardStreamTitle = '',
   onActivatePasteLayout,
   onFormMetaChange,
   externalPrompt,
@@ -63,6 +76,30 @@ export default function HtmlPasteInput({
   const [copiedPrompt, setCopiedPrompt] = useState('');
   /** 外部注入口令（学习材料 / 再试）时锁定，打开 AI 不再重建 Step1 */
   const [promptLocked, setPromptLocked] = useState(false);
+
+  /**
+   * 主次暗示（互不 disabled）：
+   * - 剪贴板可排版且表单歌名未偏离流内歌名 → 粘贴为主
+   * - 否则有标题 → 生成口令为主
+   * 仅「缺标题」禁用口令；仅「剪贴板无可排版流」禁用粘贴。
+   */
+  const { pastePrimary, generatePrimary, canGenerate } = useMemo(() => {
+    const formTitle = songTitle.trim();
+    const canGen = formTitle.length > 0;
+    const streamKey = normalizeTitleKey(clipboardStreamTitle);
+    const formKey = normalizeTitleKey(formTitle);
+    const diverged =
+      pasteLayoutReady &&
+      streamKey.length > 0 &&
+      formKey.length > 0 &&
+      streamKey !== formKey;
+    const pasteIsPrimary = pasteLayoutReady && !diverged;
+    return {
+      pastePrimary: pasteIsPrimary,
+      generatePrimary: canGen && !pasteIsPrimary,
+      canGenerate: canGen,
+    };
+  }, [songTitle, pasteLayoutReady, clipboardStreamTitle]);
 
   useEffect(() => {
     if (initialTitle) setSongTitle(initialTitle);
@@ -210,7 +247,7 @@ export default function HtmlPasteInput({
               <button
                 type="button"
                 className={`ext-pipeline__action-btn ext-pipeline__paste-btn ${
-                  pasteLayoutReady ? 'btn-filled' : 'btn-tonal is-dormant'
+                  pastePrimary ? 'btn-filled' : 'btn-tonal is-dormant'
                 }`}
                 disabled={!pasteLayoutReady}
                 onClick={() =>
@@ -226,12 +263,12 @@ export default function HtmlPasteInput({
             <button
               type="button"
               className={`ext-pipeline__action-btn ext-pipeline__gen-btn ${
-                pasteLayoutReady || !songTitle.trim() ? 'btn-tonal is-dormant' : 'btn-filled'
+                generatePrimary ? 'btn-filled' : 'btn-tonal is-dormant'
               }`}
               onClick={handleCopyPrompt}
-              disabled={!songTitle.trim() || pasteLayoutReady}
+              disabled={!canGenerate}
             >
-              {!pasteLayoutReady && <ArrowRightIcon size={16} />}
+              {generatePrimary && <ArrowRightIcon size={16} />}
               <span>一键生成口令</span>
             </button>
           </div>

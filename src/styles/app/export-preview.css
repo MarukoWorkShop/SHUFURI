@@ -317,11 +317,12 @@ html:has(.app--edit) body,
   cursor: text;
 }
 
-/* 注音不可进选区文本 */
+/* 注音不可进选区、不可挡拖选（点击落到基字） */
 .edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h ruby rt,
 .edit-canvas-scroll.is-explain-mode .fv-edit-document-root .fv-body-h ruby rp {
   -webkit-user-select: none !important;
   user-select: none !important;
+  pointer-events: none !important;
   cursor: text;
 }
 

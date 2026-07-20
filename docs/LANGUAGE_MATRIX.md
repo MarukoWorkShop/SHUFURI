@@ -1,7 +1,7 @@
 # 语言矩阵（Language Matrix）
 
-**版本**：v1.2  
-**更新日期**：2026-06-18  
+**版本**：v1.3  
+**更新日期**：2026-07-20  
 **关联 PRD**：§5.2–5.3、§11；**关联设计规范**：§7.3、§7.4
 
 语言矩阵是 SHUFURI **设置层与 Prompt 生成层**之间的二维约束框架，决定：
@@ -129,6 +129,24 @@ AI 输出 `@0 … @9` 单行管道密文（`H/L/V/G` 记录），前端 [`src/co
 | 语法 TITLE | `原语言（中文括注）` | `original (English gloss)` |
 | 语法规则块 | `[Grammar_TITLE_Format]` 中文括注规范 | 英文括注规范 |
 
+### 5.5 辅文 DOM class（`interfaceLanguage` × 歌曲 `lang`）
+
+编译时由 [`masterHandbook.ts`](../src/codec/masterHandbook.ts) 的 `resolvePosterClass` 决定；**辅文 class 只看使用语言**，与歌曲语种无关（中文歌 + 中文界面除外）。
+
+| 使用语言 | 歌词 L col4 | 例句 col7 | 语法括注 |
+|----------|-------------|-----------|----------|
+| **zh** | `.zh-line` | `.vocab-ex-zh` / `.grammar-ex-zh` | `.grammar-title-zh` |
+| **en** | `.gloss-line` | `.vocab-ex-gloss` / `.grammar-ex-gloss` | `.grammar-title-gloss` |
+
+| 歌曲 `lang` | 主行 | 辅行（zh 界面） | 辅行（en 界面） |
+|-------------|------|-----------------|-----------------|
+| jp | `.jp-line` | `.zh-line`（中文译） | `.gloss-line`（英文 gloss） |
+| ko | `.ko-line` | `.zh-line` | `.gloss-line` |
+| en | `.jp-line` | `.zh-line`（中文译） | `.gloss-line`（英文 gloss） |
+| zh | `.cn-line` | *无* | `.gloss-line`（英文 gloss） |
+
+Prompt 中 L col4 的 frontend 提示与上表一致（见 `buildLyricsLine4WireRule`）。
+
 ---
 
 ## 6. 设置 UI
@@ -200,6 +218,7 @@ buildEncoderPrompt → 外部 AI → src/codec（parseStream + roleCompiler）
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v1.3 | 2026-07-20 | 辅文 DOM class 统一由 `interfaceLanguage` 决定：zh→`*-zh`/`.zh-line`，en→`*-gloss`/`.gloss-line`；jp/ko 英界面不再误用 `.zh-line` |
 | v1.2 | 2026-06-18 | 移除「跟随系统语言」；未知 locale 首次默认 English；启动不再覆盖用户选择 |
 | v1.1 | 2026-06-03 | 中文目标管线：独立 Prompt/解析/CSS；GLOSS 标签；拼音主题色 |
 | v1.0 | 2026-06-03 | 初版：使用语言 × 学习目标语言；Prompt gloss 参数化；拨轮联动 |

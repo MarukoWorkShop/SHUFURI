@@ -1,4 +1,4 @@
-import type { LangCode } from '../services/appSettings';
+import type { InterfaceLanguage, LangCode } from '../services/appSettings';
 import type { CompileOptions } from './types';
 
 export type PosterTextRole =
@@ -19,13 +19,6 @@ const LYRIC_PRIMARY: Record<LangCode, string> = {
   ko: 'ko-line',
   en: 'jp-line',
   zh: 'cn-line',
-};
-
-const LYRIC_SECONDARY: Record<LangCode, string> = {
-  jp: 'zh-line',
-  ko: 'zh-line',
-  en: 'gloss-line',
-  zh: 'gloss-line',
 };
 
 const VOCAB_TERM: Record<LangCode, string> = {
@@ -49,12 +42,10 @@ const GRAMMAR_EX_PRIMARY: Record<LangCode, string> = {
   zh: 'grammar-ex-cn',
 };
 
-const GRAMMAR_EX_SECONDARY: Record<LangCode, string> = {
-  jp: 'grammar-ex-zh',
-  ko: 'grammar-ex-zh',
-  en: 'grammar-ex-gloss',
-  zh: 'grammar-ex-gloss',
-};
+/** 辅文 DOM class 由使用语言决定：zh → *-zh / zh-line；en → *-gloss / gloss-line */
+function auxClass(zhClass: string, glossClass: string, iface: InterfaceLanguage): string {
+  return iface === 'en' ? glossClass : zhClass;
+}
 
 export function resolvePosterClass(
   role: PosterTextRole,
@@ -68,7 +59,8 @@ export function resolvePosterClass(
       return LYRIC_PRIMARY[contentLang];
     case 'lyricSecondary':
       if (contentLang === 'zh' && iface === 'zh') return '';
-      return LYRIC_SECONDARY[contentLang];
+      if (contentLang === 'en' && iface === 'en') return '';
+      return auxClass('zh-line', 'gloss-line', iface);
     case 'vocabTerm':
       return VOCAB_TERM[contentLang];
     case 'vocabMeaning':
@@ -76,20 +68,19 @@ export function resolvePosterClass(
     case 'vocabExamplePrimary':
       return VOCAB_EX_PRIMARY[contentLang];
     case 'vocabExampleSecondary':
-      return 'vocab-ex-zh';
+      return auxClass('vocab-ex-zh', 'vocab-ex-gloss', iface);
     case 'grammarTitlePrimary':
       if (contentLang === 'ko') return 'grammar-title-ko';
       if (contentLang === 'zh') return 'grammar-title-cn';
       return 'grammar-title-ja';
     case 'grammarTitleSecondary':
-      if (contentLang === 'en') return 'grammar-title-gloss';
-      return 'grammar-title-zh';
+      return auxClass('grammar-title-zh', 'grammar-title-gloss', iface);
     case 'grammarDetail':
       return 'grammar-detail';
     case 'grammarExamplePrimary':
       return GRAMMAR_EX_PRIMARY[contentLang];
     case 'grammarExampleSecondary':
-      return GRAMMAR_EX_SECONDARY[contentLang];
+      return auxClass('grammar-ex-zh', 'grammar-ex-gloss', iface);
     default:
       return '';
   }
@@ -101,7 +92,9 @@ export function usesRubyMarkup(role: PosterTextRole, contentLang: LangCode): boo
     return (
       role === 'lyricPrimary' ||
       role === 'vocabTerm' ||
-      role === 'grammarTitlePrimary'
+      role === 'vocabExamplePrimary' ||
+      role === 'grammarTitlePrimary' ||
+      role === 'grammarExamplePrimary'
     );
   }
   return (

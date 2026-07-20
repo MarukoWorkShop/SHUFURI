@@ -13,7 +13,7 @@ export type PreviewTypography = {
   lineHeightScale: number;
 };
 
-/** 导出/分页固定使用默认密度；用户侧字号·行距微调 UI 已移除 */
+/** 导出/分页默认密度；mobilePoster 行距基准已对齐编辑 Kami，页级仍可弹性收紧 */
 export const DEFAULT_PREVIEW_TYPOGRAPHY: PreviewTypography = {
   fontScale: 1,
   lineHeightScale: 1,

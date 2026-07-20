@@ -12,7 +12,7 @@ import {
   ZH_POSTER_TITLE_FONT_FAMILY,
   ZH_SONGTI_FONT_FAMILY,
 } from '../shufuriPoster/fonts.ts';
-import { cjkFontScale, cjkLetterSpacingEm } from '../shufuriPoster/cjkTypography.ts';
+import { cjkFontScale, cjkLetterSpacingEm, kamiLetterSpacingEm } from '../shufuriPoster/cjkTypography.ts';
 import {
   AUX_WEIGHT,
   BASE_AUX_PX,
@@ -23,6 +23,8 @@ import {
   JP_RUBY_RT_EM_MOBILE,
   JP_RUBY_RT_EM_PRINT,
   JP_RUBY_WEIGHT,
+  KAMI_GROUP_MB_EM,
+  KAMI_LETTER_SPACING_EM,
   KO_PRIMARY_WEIGHT,
   LANG_WHEEL_INDICATOR_BASE_PX,
   LANG_WHEEL_INDICATOR_LEG_PX,
@@ -110,10 +112,12 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   const lang = ctx.lang;
   const scaleLine = (n: number) => n * lineScale;
   const scaleEmLine = (n: number) => `${scaleLine(n)}em`;
-  const cjkFsMul = cjkFontScale(fontScale);
-  const cjkLs = cjkLetterSpacingEm(fontScale);
   const d = dimForProfile(ctx.profile);
   const isMobile = ctx.profile === 'mobilePoster';
+  const cjkFsMul = cjkFontScale(fontScale);
+  const cjkLs = isMobile
+    ? kamiLetterSpacingEm(fontScale, KAMI_LETTER_SPACING_EM)
+    : cjkLetterSpacingEm(fontScale);
   const scaleBody = d.elasticFontBase / POSTER_ELASTIC_FONT_BASE_PX;
   const showRuby = ctx.showRuby ?? true;
   const rubyAffectsLayout = supportsPosterRubyToggle(lang) && showRuby;
@@ -133,7 +137,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
     : (isMobile ? d.elasticLhBase : (d.jpLineHeightBase ?? 1.75));
   const zhLyricsLhBase = isCompact
     ? (d.compactZhLineHeightBase ?? (isMobile ? 1.15 : 1.2))
-    : (isMobile ? 1.3 : (d.zhLineHeightBase ?? 1.35));
+    : (d.zhLineHeightBase ?? (isMobile ? 1.3 : 1.35));
   const jpLh = scaleLine(jpLhBase);
   const zhLyricsLh = scaleLine(zhLyricsLhBase);
   const koLh = jpLh;
@@ -144,7 +148,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   const jpStudyFont = isEnglish ? EN_FONT_FAMILY : KOZMIN_PRO_REGULAR_FAMILY;
 
   const layout: LayoutSpacingTokens = {
-    groupMb: scaleEmLine(isMobile ? 1.5 : 1.35),
+    groupMb: scaleEmLine(isMobile ? KAMI_GROUP_MB_EM : 1.35),
     lyricsJpZhGap: scaleEmLine(isMobile ? 0.06 : 0.04),
     auxJpZhGap: scaleEmLine(isMobile ? 0.05 : 0.03),
     itemEntryMb: `${itemEntryGapPx(jpLh, mainPx)}px`,

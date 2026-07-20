@@ -47,6 +47,8 @@ export function useInkEditSession({
   const [inkEditTarget, setInkEditTarget] = useState<InkEditTarget | null>(null);
   const [inkPopoverClosing, setInkPopoverClosing] = useState(false);
   const [inkToolboxOpen, setInkToolboxOpen] = useState(false);
+  /** 铅笔编辑模式（与工具条开合解耦，选工具后可收起侧栏） */
+  const [inkEditMode, setInkEditMode] = useState(false);
   const [canUndoInkEdit, setCanUndoInkEdit] = useState(false);
   const [inkDraftKanji, setInkDraftKanji] = useState('');
   const [inkDraftKana, setInkDraftKana] = useState('');
@@ -159,6 +161,7 @@ export function useInkEditSession({
 
   const resetInkSession = useCallback(() => {
     setInkToolboxOpen(false);
+    setInkEditMode(false);
     setInkEditTarget(null);
     undoStackRef.current = [];
     setCanUndoInkEdit(false);
@@ -174,6 +177,8 @@ export function useInkEditSession({
     inkPopoverClosing,
     inkToolboxOpen,
     setInkToolboxOpen,
+    inkEditMode,
+    setInkEditMode,
     canUndoInkEdit,
     inkDraftKanji,
     inkDraftKana,

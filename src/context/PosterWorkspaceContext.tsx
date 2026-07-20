@@ -13,6 +13,9 @@ import type {
 export type PosterWorkspaceInkSession = {
   inkToolboxOpen: boolean;
   setInkToolboxOpen: Dispatch<SetStateAction<boolean>>;
+  /** 铅笔编辑模式（与侧栏开合独立） */
+  inkEditMode: boolean;
+  setInkEditMode: Dispatch<SetStateAction<boolean>>;
   canUndoInkEdit: boolean;
   inkFocusGroupIndex: number | null;
   inkEditTarget: InkEditTarget | null;

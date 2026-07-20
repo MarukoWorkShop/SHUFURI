@@ -46,7 +46,8 @@ function AppShell({
     handleSettingsChange,
   } = settings;
 
-  const pasteLayoutReady = useClipboardStructuredLyrics();
+  const clipboardStructured = useClipboardStructuredLyrics();
+  const pasteLayoutReady = clipboardStructured.ready;
 
   const { storeMusicShare } = useChainLink({
     shareOcrData: homeSession.shareOcrData,
@@ -76,6 +77,7 @@ function AppShell({
           languageMatrixContext={languageMatrixContext}
           shareOcrData={homeSession.shareOcrData}
           pasteLayoutReady={pasteLayoutReady}
+          clipboardStreamTitle={clipboardStructured.title}
           libraryRefreshKey={libraryRefreshKey}
           onLanguageChange={(lang) => {
             handleSettingsChange(saveAppSettings({ lyricsLanguage: lang }));

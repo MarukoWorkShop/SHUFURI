@@ -65,8 +65,8 @@ export default function EditScreen() {
     appendExplainNote: appendExplainNoteAndScroll,
   });
 
-  /** 划词模式与铅笔点选互斥：划词开启时不武装墨水编辑 */
-  const inkEditArmed = ink.inkToolboxOpen && !explain.explainMode;
+  /** 划词开启时禁用铅笔点选；铅笔模式与侧栏开合解耦 */
+  const inkEditArmed = ink.inkEditMode && !explain.explainMode;
   useEditCanvasScrollPerfProbe(editCanvasRef);
   const closeInkOnScrollStart = useCallback(() => {
     if (ink.inkEditTarget) ink.closeInkPopover();
@@ -74,6 +74,10 @@ export default function EditScreen() {
   useEditCanvasScrollInteractionLock(editCanvasRef, {
     onScrollStart: closeInkOnScrollStart,
   });
+
+  const collapseToolbox = useCallback(() => {
+    ink.setInkToolboxOpen(false);
+  }, [ink]);
 
   const toggleInkToolbox = useCallback(() => {
     if (ink.inkToolboxOpen) {
@@ -84,37 +88,76 @@ export default function EditScreen() {
     ink.setInkToolboxOpen(true);
   }, [ink]);
 
+  const handleToggleInkEdit = useCallback(() => {
+    if (ink.inkEditMode) {
+      ink.setInkEditMode(false);
+      ink.closeInkPopover();
+      collapseToolbox();
+      showToast('已退出铅笔编辑');
+      return;
+    }
+    if (explain.explainMode) explain.disarm();
+    ink.setInkEditMode(true);
+    collapseToolbox();
+    showToast('铅笔编辑已开启：点选注音或译文');
+  }, [collapseToolbox, explain, ink, showToast]);
+
   const handleToggleExplain = useCallback(() => {
     if (explain.explainMode) {
       explain.disarm();
+      collapseToolbox();
       showToast('已退出划词解释');
       return;
     }
     ink.closeInkPopover();
-    if (!ink.inkToolboxOpen) ink.setInkToolboxOpen(true);
+    ink.setInkEditMode(false);
     explain.arm();
+    collapseToolbox();
     showToast('划词已开启：选中后先出本地释义，需要时再点 AI讲解');
-  }, [explain, ink, showToast]);
+  }, [collapseToolbox, explain, ink, showToast]);
+
+  const handleRubyChangeAndCollapse = useCallback(
+    (show: boolean) => {
+      handleShowRubyChange(show);
+      collapseToolbox();
+    },
+    [collapseToolbox, handleShowRubyChange],
+  );
 
   useEffect(() => {
     if (!explain.explainMode) return;
 
+    let timer = 0;
     const onUp = () => {
-      window.setTimeout(() => {
-        const picked = readSelectionForExplain();
-        if (!picked) return;
-        explain.analyzeSelection(picked.text, picked);
-      }, 0);
+      window.clearTimeout(timer);
+      // WKWebView 松手后选区可能略晚稳定
+      timer = window.setTimeout(() => {
+        void (async () => {
+          const snapJp = (lang ?? lyricsLanguage ?? 'jp') === 'jp';
+          const picked = await readSelectionForExplain({
+            enableJapaneseTokenSnap: snapJp,
+          });
+          if (!picked) return;
+          explain.analyzeSelection(picked.text, picked);
+        })();
+      }, 40);
     };
 
     const root = editCanvasRef.current;
     root?.addEventListener('mouseup', onUp);
     root?.addEventListener('touchend', onUp);
     return () => {
+      window.clearTimeout(timer);
       root?.removeEventListener('mouseup', onUp);
       root?.removeEventListener('touchend', onUp);
     };
-  }, [editCanvasRef, explain.explainMode, explain.analyzeSelection]);
+  }, [
+    editCanvasRef,
+    explain.explainMode,
+    explain.analyzeSelection,
+    lang,
+    lyricsLanguage,
+  ]);
 
   const scrollClass = [
     'edit-canvas-scroll',
@@ -129,13 +172,14 @@ export default function EditScreen() {
       <InkToolbox
         open={ink.inkToolboxOpen}
         canUndo={ink.canUndoInkEdit}
-        inkEditActive={ink.inkEditTarget !== null}
+        inkEditActive={ink.inkEditMode}
         showRuby={showRubyAnnotations}
         rubySupported={rubyToggleSupported}
         explainActive={explain.explainMode}
         onToggle={toggleInkToolbox}
         onUndo={ink.handleInkUndo}
-        onShowRubyChange={handleShowRubyChange}
+        onShowRubyChange={handleRubyChangeAndCollapse}
+        onToggleInkEdit={handleToggleInkEdit}
         onToggleExplain={handleToggleExplain}
       />
       <div className="edit-toolbar">

@@ -103,7 +103,7 @@ export function applyZhRubyMarkup(text: string): string {
   return out;
 }
 
-/** 教学例句：去掉 {汉字|拼音}，只保留汉字（海报不显示例句拼音） */
+/** 去掉 {汉字|拼音}，只保留汉字（歌词比对 / 无注音兜底） */
 export function stripZhRubyToPlain(text: string): string {
   const normalized = normalizeRubyMarkupText(text);
   return normalized.replace(RUBY_TOKEN_RE, '$1');

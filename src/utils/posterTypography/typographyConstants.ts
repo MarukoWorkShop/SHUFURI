@@ -3,6 +3,18 @@ export const BASE_MAIN_PX = 26;
 export const BASE_AUX_PX = 18;
 export const BASE_SECTION_TITLE_PX = 18;
 
+/**
+ * Kami 阅读档（编辑页宽行距）。
+ * mobilePoster / clipPosterPrint（拨轮「A5」纸型）共用；页级仍可通过 spacingScale（≥0.85）弹性收紧。
+ */
+export const KAMI_LINE_HEIGHT = 1.52;
+/** 译文 / gloss 行高（编辑页原 1.5） */
+export const KAMI_ZH_LYRICS_LINE_HEIGHT = 1.5;
+/** 歌词组间距 em（mobilePoster） */
+export const KAMI_GROUP_MB_EM = 1.7;
+/** 正文字距（mobilePoster，spacingScale=1 时） */
+export const KAMI_LETTER_SPACING_EM = 0.06;
+
 /** 中文主文相对 mainPx 的比例（1 = 与日文主文同字号） */
 export const ZH_OPTICAL_SCALE = 1;
 

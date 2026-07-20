@@ -13,6 +13,7 @@ type Props = {
   onToggle: () => void;
   onUndo: () => void;
   onShowRubyChange: (show: boolean) => void;
+  onToggleInkEdit?: () => void;
   onToggleExplain?: () => void;
 };
 
@@ -26,6 +27,7 @@ export default function InkToolbox({
   onToggle,
   onUndo,
   onShowRubyChange,
+  onToggleInkEdit,
   onToggleExplain,
 }: Props) {
   return (
@@ -43,9 +45,9 @@ export default function InkToolbox({
         <button
           type="button"
           className={`ink-toolbox__tool${inkEditActive ? ' is-active' : ''}`}
-          aria-label="铅笔编辑"
+          aria-label={inkEditActive ? '退出铅笔编辑' : '铅笔编辑'}
           aria-pressed={inkEditActive}
-          tabIndex={-1}
+          onClick={() => onToggleInkEdit?.()}
         >
           <SquarePenIcon className="ink-toolbox__icon" />
         </button>

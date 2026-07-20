@@ -133,7 +133,7 @@ npm run cap:sync:live   # 或 CAP_SERVER_URL=http://<LAN-IP>:5173
 |------|------|
 | 会话 | `src/hooks/useExplainSession.ts` |
 | 面板 | `src/components/ExplainMicroscopePanel.tsx` |
-| 选区 | `src/utils/readSelectionForExplain.ts` |
+| 选区 | `src/utils/readSelectionForExplain.ts` | 行级钳制；日语松手后 Kuromoji 词界吸附；读区去 ruby |
 | 笔记写入 | `src/utils/appendExplainNoteToBody.ts` |
 | AI 网关 | `src/services/ai/*` |
 | 编辑页接线 | `src/components/screens/EditScreen.tsx` |

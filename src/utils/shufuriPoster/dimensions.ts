@@ -1,9 +1,22 @@
+import {
+  KAMI_GROUP_MB_EM,
+  KAMI_LETTER_SPACING_EM,
+  KAMI_LINE_HEIGHT,
+  KAMI_ZH_LYRICS_LINE_HEIGHT,
+} from '../posterTypography/typographyConstants.ts';
 import type { FuriganaEngineDim, PosterLayoutProfile } from './types';
 
 /** 通用排版常量 */
 export const POSTER_ELASTIC_FONT_BASE_PX = 18;
 
-/** 打印排版 B5：600×852，左右内边距 45 */
+export {
+  KAMI_GROUP_MB_EM,
+  KAMI_LETTER_SPACING_EM,
+  KAMI_LINE_HEIGHT,
+  KAMI_ZH_LYRICS_LINE_HEIGHT,
+};
+
+/** 打印排版 B5/A5 纸型：600×852；行距对齐 Kami（与手机版面一致） */
 export const B5_DIM: FuriganaEngineDim = {
   profile: 'clipPosterPrint',
   canvasWidth: 600,
@@ -14,19 +27,17 @@ export const B5_DIM: FuriganaEngineDim = {
   textBottomClearance: 0,
   elasticFontBase: 12,
   elasticFontMin: 12,
-  elasticLhBase: 1.7,
+  elasticLhBase: KAMI_LINE_HEIGHT,
   titleFontSize: 17,
   titleLineHeightRatio: 1.22,
   titleToBodyGap: 14,
-  // 日语默认行距（含注音需求）
-  jpLineHeightBase: 1.75,
-  zhLineHeightBase: 1.35,
-  // 无注音语言紧凑行距（ENG/KOR）
-  compactLineHeightBase: 1.45,
-  compactZhLineHeightBase: 1.2,
+  jpLineHeightBase: KAMI_LINE_HEIGHT,
+  zhLineHeightBase: KAMI_ZH_LYRICS_LINE_HEIGHT,
+  compactLineHeightBase: KAMI_LINE_HEIGHT,
+  compactZhLineHeightBase: KAMI_ZH_LYRICS_LINE_HEIGHT,
 };
 
-/** 手机竖屏 1080×1920 */
+/** 手机竖屏 1080×1920 — 行距对齐编辑页 Kami 阅读档 */
 export const MOBILE_DIM: FuriganaEngineDim = {
   profile: 'mobilePoster',
   canvasWidth: 1080,
@@ -37,16 +48,16 @@ export const MOBILE_DIM: FuriganaEngineDim = {
   textBottomClearance: 56,
   elasticFontBase: 32,
   elasticFontMin: 28,
-  elasticLhBase: 1.48,
+  elasticLhBase: KAMI_LINE_HEIGHT,
   titleFontSize: 56,
   titleLineHeightRatio: 1.2,
   titleToBodyGap: 40,
-  // 日语默认行距（含注音需求）
-  jpLineHeightBase: 1.48,
-  zhLineHeightBase: 1.3,
-  // 无注音语言紧凑行距（ENG/KOR）
-  compactLineHeightBase: 1.25,
-  compactZhLineHeightBase: 1.15,
+  // 日语默认行距（含注音需求）— Kami
+  jpLineHeightBase: KAMI_LINE_HEIGHT,
+  zhLineHeightBase: KAMI_ZH_LYRICS_LINE_HEIGHT,
+  // 无注音语言：编辑页同样用 Kami 主行高
+  compactLineHeightBase: KAMI_LINE_HEIGHT,
+  compactZhLineHeightBase: KAMI_ZH_LYRICS_LINE_HEIGHT,
 };
 
 /** 1:1 方形 1080×1080（社媒 / 高清存图 + 方形 PDF） */

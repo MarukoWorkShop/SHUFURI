@@ -21,6 +21,7 @@ type Props = {
   languageMatrixContext: LanguageMatrixContext;
   shareOcrData: ShareOcrData | null;
   pasteLayoutReady: boolean;
+  clipboardStreamTitle?: string;
   libraryRefreshKey: number;
   onLanguageChange: (lang: LyricsLanguage) => void;
   onActivatePasteLayout: (formMeta?: StructuredLyricsCardFallbacks) => void;
@@ -43,6 +44,7 @@ export default function HomeScreen({
   languageMatrixContext,
   shareOcrData,
   pasteLayoutReady,
+  clipboardStreamTitle,
   libraryRefreshKey,
   onLanguageChange,
   onActivatePasteLayout,
@@ -94,6 +96,7 @@ export default function HomeScreen({
         ocrDetectedLanguage={shareOcrData?.detectedLanguage}
         ocrContext={shareOcrToEncoderContext(shareOcrData)}
         pasteLayoutReady={pasteLayoutReady}
+        clipboardStreamTitle={clipboardStreamTitle}
         onActivatePasteLayout={onActivatePasteLayout}
         onFormMetaChange={onFormMetaChange}
         externalPrompt={externalPrompt}

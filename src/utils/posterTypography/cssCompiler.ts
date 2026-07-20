@@ -165,7 +165,9 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
   ${scoped('.cn-line ' + ZH_CHAR_SLOT)},
   ${zhVocab('.vocab-word-cn ' + ZH_CHAR_SLOT)},
   ${zhVocab('.vocab-word ' + ZH_CHAR_SLOT)},
-  ${zhGrammar('.grammar-title-cn ' + ZH_CHAR_SLOT)} {
+  ${zhVocab('.vocab-ex-cn ' + ZH_CHAR_SLOT)},
+  ${zhGrammar('.grammar-title-cn ' + ZH_CHAR_SLOT)},
+  ${zhGrammar('.grammar-ex-cn ' + ZH_CHAR_SLOT)} {
     display: inline-block;
     margin-right: ${gap(zh.rubyGapEm)};
     vertical-align: bottom;
@@ -173,7 +175,9 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
   ${scoped('.cn-line ruby')},
   ${zhVocab('.vocab-word-cn ruby')},
   ${zhVocab('.vocab-word ruby')},
-  ${zhGrammar('.grammar-title-cn ruby')} {
+  ${zhVocab('.vocab-ex-cn ruby')},
+  ${zhGrammar('.grammar-title-cn ruby')},
+  ${zhGrammar('.grammar-ex-cn ruby')} {
     font-family: ${ZH_FONT_FAMILY} !important;
     font-weight: ${LYRIC_PRIMARY_WEIGHT} !important;
     ruby-position: over;
@@ -181,18 +185,12 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
     ruby-align: center;
     letter-spacing: 0 !important;
   }
-  ${zhVocab('.vocab-ex-cn ruby')},
-  ${zhGrammar('.grammar-ex-cn ruby')} {
-    font-family: ${ZH_FONT_FAMILY} !important;
-    font-weight: ${LYRIC_PRIMARY_WEIGHT} !important;
-    ruby-position: unset;
-    -webkit-ruby-position: unset;
-    letter-spacing: ${r.cjkLetterSpacing} !important;
-  }
   ${scoped('.cn-line ruby rt')},
   ${zhVocab('.vocab-word-cn ruby rt')},
   ${zhVocab('.vocab-word ruby rt')},
-  ${zhGrammar('.grammar-title-cn ruby rt')} {
+  ${zhVocab('.vocab-ex-cn ruby rt')},
+  ${zhGrammar('.grammar-title-cn ruby rt')},
+  ${zhGrammar('.grammar-ex-cn ruby rt')} {
     font-family: ${ZH_FONT_FAMILY} !important;
     font-size: ${zh.rtEm}em !important;
     font-weight: ${LYRIC_PRIMARY_WEIGHT} !important;
@@ -201,10 +199,6 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
     color: ${zh.pinyinColor} !important;
     line-height: 1.1 !important;
     user-select: none;
-  }
-  ${zhVocab('.vocab-ex-cn ruby rt')},
-  ${zhGrammar('.grammar-ex-cn ruby rt')} {
-    display: none !important;
   }
   ${scoped('.gloss-line')},
   ${scoped('.gloss-line *')} {
@@ -508,6 +502,10 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     max-width: 100%;
     ${latinWrap}
   }
+  /* 划词笔记等混排：谚文片段保持韩语正文字体（覆盖 .grammar-detail * 的中文栈） */
+  ${bodySel} .grammar-detail .ko-run {
+    font-family: ${KO_FONT_FAMILY} !important;
+  }
   ${bodySel} .vocab-ex-ja,
   ${bodySel} .vocab-ex-ko,
   ${bodySel} .vocab-ex-zh,
@@ -554,6 +552,15 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     color: ${r.vocabEmphasisColor} !important;
     line-height: ${L.koLh} !important;
   }
+  /* 旧划词笔记误用 vocab-word：韩语稿仍走韩语正文字体 */
+  ${r.lang === 'ko' ? `
+  ${bodySel} .lyrics-explain-notes .vocab-line1 .vocab-word,
+  ${bodySel} .lyrics-explain-notes .vocab-line1 .vocab-word *:not(rt):not(rp) {
+    font-family: ${KO_FONT_FAMILY} !important;
+    font-weight: ${koWght} !important;
+    color: ${r.vocabEmphasisColor} !important;
+    line-height: ${L.koLh} !important;
+  }` : ''}
   ${bodySel} .vocab-line1 .vocab-word ruby rt {
     font-family: ${KOZUKA_MINCHO_EL_FAMILY} !important;
     font-size: ${rtEm}em !important;
@@ -727,10 +734,8 @@ export function compilePosterCss(
   return `${fontFaces}${printShell}${bodyRules}${zhRules}${pageNo}${cjkNoBreak}${rubyVisibility}`;
 }
 
-/** 编辑页阅读档：主题令牌层级（仅 `.fv-edit-document-root`，不影响导出分页/PDF） */
+/** 编辑页：主题令牌 / 布局（行距已并入 mobilePoster Kami 基准，勿再 !important 覆盖） */
 const EDIT_CANVAS_BG = 'var(--color-edit-canvas-bg)';
-/** Kami 阅读档行高区间 1.50–1.55 取中位 */
-const EDIT_KAMI_LINE_HEIGHT = 1.52;
 /**
  * 编辑页固定 mobilePoster；标题相对海报基准 56px 放大，
  * 与正文 ~32px 拉开明显字号差。
@@ -761,7 +766,6 @@ export function compileEditCssOverrides(): string {
    */
   ${body} .lyrics-group {
     contain: style;
-    margin-bottom: 1.7em !important;
   }
 
   /* —— 歌名 / 歌手层级 —— */
@@ -783,7 +787,7 @@ export function compileEditCssOverrides(): string {
     color: var(--color-fg-faint) !important;
   }
 
-  /* —— 歌词正文 / 译文 —— */
+  /* —— 歌词正文 / 译文（行距/字距继承 poster Kami；此处只改主题色） —— */
   ${body} .jp-line,
   ${body} .jp-line *:not(rt):not(rp),
   ${body} .ko-line,
@@ -791,15 +795,12 @@ export function compileEditCssOverrides(): string {
   ${body} .cn-line,
   ${body} .cn-line *:not(rt):not(rp) {
     color: var(--color-edit-lyric) !important;
-    line-height: ${EDIT_KAMI_LINE_HEIGHT} !important;
-    letter-spacing: 0.06em !important;
   }
   ${body} .zh-line,
   ${body} .zh-line *,
   ${body} .gloss-line,
   ${body} .gloss-line * {
     color: var(--color-fg-secondary) !important;
-    line-height: 1.5 !important;
     margin-top: 0.28em !important;
   }
   ${body} ruby rt {

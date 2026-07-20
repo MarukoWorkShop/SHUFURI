@@ -1,6 +1,6 @@
 import { escapeHtml } from '../utils/escapeHtml';
 import { applyRubyMarkup } from '../utils/rubyMarkup';
-import { applyZhRubyMarkup, stripZhRubyToPlain } from '../utils/zhLayout/zhRubyMarkup';
+import { applyZhRubyMarkup } from '../utils/zhLayout/zhRubyMarkup';
 import { resolvePosterClass, usesPlainHtml, usesRubyMarkup } from './masterHandbook';
 import type { CompileOptions, StreamDocument } from './types';
 import type { PosterTextRole } from './masterHandbook';
@@ -16,7 +16,7 @@ function splitGrammarLabel(label: string): { orig: string; zh?: string } {
   }
   const spaced = trimmed.match(GRAMMAR_TITLE_SPACE_SPLIT_RE);
   if (spaced) {
-    return { orig: spaced[1]!.trim(), zh: spaced[2]!.trim() };
+    return { orig: spaced[1]!.trim(), zh: spaced[2]?.trim() };
   }
   return { orig: trimmed };
 }
@@ -28,9 +28,6 @@ function renderText(
 ): string {
   if (!text.trim()) return '';
   if (lang === 'zh') {
-    if (role === 'vocabExamplePrimary' || role === 'grammarExamplePrimary') {
-      return escapeHtml(stripZhRubyToPlain(text));
-    }
     if (usesRubyMarkup(role, lang)) return applyZhRubyMarkup(text);
     return escapeHtml(text);
   }
@@ -44,6 +41,10 @@ function taggedLine(className: string, innerHtml: string): string {
   return `<p class="${className}">${innerHtml}</p>`;
 }
 
+function zhSectionClass(base: string, lang: StreamDocument['header']['lang']): string {
+  return lang === 'zh' ? `${base} ${base}--zh` : base;
+}
+
 function buildLyricsSection(doc: StreamDocument, opts?: CompileOptions): string {
   const lang = doc.header.lang;
   const groups = doc.lyrics
@@ -55,7 +56,8 @@ function buildLyricsSection(doc: StreamDocument, opts?: CompileOptions): string 
       const secondary = secondaryClass && line.gloss
         ? taggedLine(secondaryClass, renderText(line.gloss, 'lyricSecondary', lang))
         : '';
-      return `<div class="lyrics-group">${primary}${secondary}</div>`;
+      const groupClass = zhSectionClass('lyrics-group', lang);
+      return `<div class="${groupClass}">${primary}${secondary}</div>`;
     })
     .join('');
   if (!groups) return '';
@@ -64,6 +66,7 @@ function buildLyricsSection(doc: StreamDocument, opts?: CompileOptions): string 
 
 function buildVocabularySection(doc: StreamDocument, opts?: CompileOptions): string {
   const lang = doc.header.lang;
+  const itemClass = zhSectionClass('lyrics-vocab-item', lang);
   const items = doc.vocab
     .sort((a, b) => a.seq - b.seq)
     .map((row) => {
@@ -82,12 +85,13 @@ function buildVocabularySection(doc: StreamDocument, opts?: CompileOptions): str
         ? taggedLine(exSecondaryClass, escapeHtml(exTrans))
         : '';
       const termHtml = `<span class="${resolvePosterClass('vocabTerm', lang, opts)}">${renderText(row.term, 'vocabTerm', lang)}</span>`;
-      return `<div class="lyrics-vocab-item"><p class="vocab-line1">${termHtml}${meaning}</p>${exOrig}${exZh}</div>`;
+      return `<div class="${itemClass}"><p class="vocab-line1">${termHtml}${meaning}</p>${exOrig}${exZh}</div>`;
     })
     .filter(Boolean)
     .join('');
   if (!items) return '';
-  return `<div class="lyrics-vocabulary" data-lyrics-force-next-page="1"><h2 class="lyrics-section-title">重点词汇</h2>${items}</div>`;
+  const sectionClass = zhSectionClass('lyrics-vocabulary', lang);
+  return `<div class="${sectionClass}" data-lyrics-force-next-page="1"><h2 class="lyrics-section-title">重点词汇</h2>${items}</div>`;
 }
 
 function buildGrammarTitle(label: string, lang: StreamDocument['header']['lang'], opts?: CompileOptions): string {
@@ -101,6 +105,7 @@ function buildGrammarTitle(label: string, lang: StreamDocument['header']['lang']
 
 function buildGrammarSection(doc: StreamDocument, opts?: CompileOptions): string {
   const lang = doc.header.lang;
+  const itemClass = zhSectionClass('lyrics-grammar-item', lang);
   const items = doc.grammar
     .sort((a, b) => a.seq - b.seq)
     .map((row) => {
@@ -119,12 +124,13 @@ function buildGrammarSection(doc: StreamDocument, opts?: CompileOptions): string
       const exZh = exTrans
         ? taggedLine(exSecondaryClass, escapeHtml(exTrans))
         : '';
-      return `<div class="lyrics-grammar-item"><h3 class="grammar-point-title">${title}</h3>${detail}${exOrig}${exZh}</div>`;
+      return `<div class="${itemClass}"><h3 class="grammar-point-title">${title}</h3>${detail}${exOrig}${exZh}</div>`;
     })
     .filter(Boolean)
     .join('');
   if (!items) return '';
-  return `<div class="lyrics-grammar" data-lyrics-force-next-page="1"><h2 class="lyrics-section-title">重点语法</h2>${items}</div>`;
+  const sectionClass = zhSectionClass('lyrics-grammar', lang);
+  return `<div class="${sectionClass}" data-lyrics-force-next-page="1"><h2 class="lyrics-section-title">重点语法</h2>${items}</div>`;
 }
 
 export function compileStreamDocument(doc: StreamDocument, opts?: CompileOptions): string {

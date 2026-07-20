@@ -78,7 +78,10 @@ export function buildLyricsLine4WireRule(
   activeTarget: SampleLang,
 ): string {
   if (activeTarget === 'en') {
-    return `  · L column 4 = ${gloss.label} gloss`;
+    if (interfaceLanguage === 'en') {
+      return '  · L column 4 = leave empty (trailing | when empty)';
+    }
+    return '  · L column 4 = Simplified Chinese line translation → frontend .zh-line';
   }
   if (activeTarget === 'zh') {
     if (interfaceLanguage === 'zh') {
@@ -89,7 +92,7 @@ export function buildLyricsLine4WireRule(
   if (interfaceLanguage === 'zh') {
     return '  · L column 4 = Simplified Chinese line translation → frontend .zh-line';
   }
-  return `  · L column 4 = natural English line translation → frontend .zh-line (DOM class unchanged)`;
+  return '  · L column 4 = natural English line translation → frontend .gloss-line';
 }
 
 export function buildOcrHintBlock(ctx: EncoderPromptOptions['ocrContext']): string {
@@ -180,19 +183,21 @@ export function buildZhColumnMapBlock(includeVocab: boolean): string {
 [Zh_column_map]
 | Row        | col3 (main/label/headword)     | col6 (pedagogical_example) |
 | L          | {字:pinyin} contiguous tokens  | —                          |
-| V headword | {字:pinyin} allowed            | plain Hanzi only           |
-| G label    | plain Hanzi + (gloss)          | plain Hanzi only           |
+| V headword | {字:pinyin} allowed            | {字:pinyin} contiguous     |
+| G label    | plain Hanzi + (gloss)          | {字:pinyin} contiguous     |
 See [Zh_ruby], [Zh_grammar]${pedRef} for details.`;
 }
 
 export function buildZhRubyLyricsBlock(): string {
   return `
-[Zh_ruby — L col3 and V headword col3 ONLY]
+[Zh_ruby — L col3, V headword col3, and V/G col6]
 - Format: {汉字:拼音}; emit ONLY back-to-back tokens + spaces/punctuation/Latin — NEVER bare CJK between tokens
 - Reading MUST be pinyin (Latin + tone marks/numbers) — NEVER another CJK character
-- WRONG: {藤:téng}蔓{蔓:màn}… → 藤蔓蔓… on screen | WRONG: {A:py}B{B:py}
+- Applies to: lyric lines (L col3), vocab headwords (V col3), and pedagogical examples (V/G col6)
+- WRONG: {藤:téng}蔓{蔓:màn}… → 藤蔓蔓… on screen | WRONG: {A:py}B{B:py} | WRONG: {郊:郊}{外:外}
 - CORRECT: L|1|{藤:téng}{蔓:màn}{植:zhí}{物:wù}|…
-- Self-check: delete all {…:…} from L col3 — zero CJK characters remain`;
+- CORRECT col6: {春:chūn}{天:tiān}{路:lù}{边:biān}{开:kāi}{满:mǎn}{小:xiǎo}{黄:huáng}{花:huā}
+- Self-check: delete all {…:…} from the field — zero CJK characters remain (punctuation/Latin/spaces OK)`;
 }
 
 export function buildZhGrammarLabelBlock(interfaceLanguage: InterfaceLanguage): string {
@@ -231,7 +236,7 @@ export function buildPedagogicalExampleBlock(activeTarget: SampleLang): string {
     jp: '- jp col6 may use {base:reading} ruby — still must be a NEW sentence, not a lyric paste',
     ko: '- ko col6: plain Korean sentence — no parenthetical readings',
     en: '- en col6: plain English sentence — no ruby',
-    zh: '- zh col6: plain Hanzi only — NO {汉字:拼音} ruby (see [Zh_column_map])',
+    zh: '- zh col6: full-line {汉字:拼音} like L/V headword — Latin pinyin only, NEVER Hanzi-as-reading (see [Zh_ruby])',
   };
   return `
 [Pedagogical_example — V/G col6 ALL target languages]
@@ -407,7 +412,7 @@ G|1|만의 (possessive)|marks belonging|1|우리만의 노래|our own song
 [Sample]
 @0
 H|Adele|Hello|en
-L|1|Hello from the other side|greeting from afar
+L|1|Hello from the other side|
 @1
 V|1|hello|greeting|1|She said hello to me|she greeted me
 @2
@@ -468,9 +473,9 @@ G|1|from（从）|表示来源|1|a letter from home|一封来自家的信
 H|周杰伦|晴天|zh
 L|1|{故:gù}{事:shì}{的:de}{小:xiǎo}{黄:huáng}{花:huā}|
 @1
-V|1|{黄:huáng}{花:huā}|小黄花|1|春天路边开满小黄花|路边春天开满小黄花
+V|1|{黄:huáng}{花:huā}|小黄花|1|{春:chūn}{天:tiān}{路:lù}{边:biān}{开:kāi}{满:mǎn}{小:xiǎo}{黄:huáng}{花:huā}|路边春天开满小黄花
 @2
-G|1|的（的）|表示领属或修饰|1|这是老师的书|这是老师的教材
+G|1|的（的）|表示领属或修饰|1|{这:zhè}{是:shì}{老:lǎo}{师:shī}{的:de}{书:shū}|这是老师的教材
 @9`;
   }
 }
