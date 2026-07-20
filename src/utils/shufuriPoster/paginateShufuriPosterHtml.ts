@@ -407,6 +407,10 @@ function ensureLyricPairsInBodyRoot(root: HTMLElement): void {
   root.replaceChildren(...rebuilt);
 }
 
+function isExplainNotesSection(el: HTMLElement): boolean {
+  return el.classList.contains('lyrics-explain-notes');
+}
+
 function mergeAdjacentSections(root: HTMLElement, sectionClass: string): void {
   let anchor: HTMLElement | null = null;
   for (const node of Array.from(root.children)) {
@@ -414,7 +418,16 @@ function mergeAdjacentSections(root: HTMLElement, sectionClass: string): void {
       anchor = null;
       continue;
     }
+    // 划词笔记区保持独立，不与重点词汇/其它 vocabulary 区块合并（保留 force-next-page 与标题）
+    if (sectionClass === 'lyrics-vocabulary' && isExplainNotesSection(node)) {
+      anchor = null;
+      continue;
+    }
     if (!anchor) {
+      anchor = node;
+      continue;
+    }
+    if (sectionClass === 'lyrics-vocabulary' && isExplainNotesSection(anchor)) {
       anchor = node;
       continue;
     }
@@ -589,6 +602,12 @@ function splitPaginationUnit(unit: HTMLElement): HTMLElement[] | null {
 
   const item = unit.querySelector(':scope .lyrics-vocab-item, :scope .lyrics-grammar-item');
   if (!(item instanceof HTMLElement)) {
+    return null;
+  }
+
+  // 划词笔记条目：保持整体，不拆分为 term/meaning/button 等子块
+  // 否则会把一条笔记拆到不同页，造成视觉“截断/切行”。
+  if (item.getAttribute('data-shufuri-explain-note') === '1') {
     return null;
   }
 
