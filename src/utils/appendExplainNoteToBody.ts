@@ -81,7 +81,7 @@ function parseExplainNotesRoot(bodyHtml: string): {
 
 function noteNodesInSection(section: HTMLElement): HTMLElement[] {
   return Array.from(
-    section.querySelectorAll('.shufuri-explain-note[data-shufuri-explain-note="1"]'),
+    section.querySelectorAll('[data-shufuri-explain-note="1"]'),
   ).filter((n): n is HTMLElement => n instanceof HTMLElement);
 }
 
