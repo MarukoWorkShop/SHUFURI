@@ -63,26 +63,55 @@ export function buildExplainNoteItemHtml(payload: ExplainNotePayload): string {
   );
 }
 
+/**
+ * 在内存节点上解析正文，避免 `parseFromString('<div>'+bodyHtml+'</div>')`
+ * 在标签不严格时把内容甩到 root 外导致 innerHTML 丢正文。
+ */
 function parseExplainNotesRoot(bodyHtml: string): {
-  doc: Document;
   root: HTMLElement;
+  host: HTMLElement;
   section: HTMLElement | null;
 } | null {
-  if (typeof DOMParser === 'undefined') return null;
-  const doc = new DOMParser().parseFromString(
-    `<div id="shufuri-note-root">${bodyHtml}</div>`,
-    'text/html',
+  if (typeof document === 'undefined') return null;
+  const root = document.createElement('div');
+  root.innerHTML = bodyHtml;
+
+  // 笔记必须写在 clip-body 内；若历史数据把笔记挂成兄弟节点，先并回 clip-body
+  const clip = Array.from(root.children).find(
+    (n): n is HTMLElement =>
+      n instanceof HTMLElement &&
+      (n.classList.contains('clip-body') || n.classList.contains('lyrics-notes-body')),
   );
-  const root = doc.getElementById('shufuri-note-root') as HTMLElement | null;
-  if (!root) return null;
-  const section = root.querySelector(`.${NOTES_SECTION_CLASS}`);
-  return { doc, root, section: section as HTMLElement | null };
+  if (clip) {
+    for (const kid of Array.from(root.children)) {
+      if (kid !== clip) {
+        clip.appendChild(kid);
+      }
+    }
+  }
+  const host = clip ?? root;
+
+  const section = host.querySelector(`.${NOTES_SECTION_CLASS}`);
+  return { root, host, section: section as HTMLElement | null };
 }
 
 function noteNodesInSection(section: HTMLElement): HTMLElement[] {
   return Array.from(
     section.querySelectorAll('[data-shufuri-explain-note="1"]'),
   ).filter((n): n is HTMLElement => n instanceof HTMLElement);
+}
+
+function serializeExplainNotesRoot(root: HTMLElement): string {
+  // 若仅有单个 clip-body 子节点，写回时保持单一根（与 normalizeLyricsBodyHtml 一致）
+  if (
+    root.children.length === 1 &&
+    root.firstElementChild instanceof HTMLElement &&
+    (root.firstElementChild.classList.contains('clip-body') ||
+      root.firstElementChild.classList.contains('lyrics-notes-body'))
+  ) {
+    return root.innerHTML;
+  }
+  return root.innerHTML;
 }
 
 /** 删除一条划词笔记条目（如果笔记区变空，会移除整个“划词笔记”区块） */
@@ -109,7 +138,7 @@ export function deleteExplainNoteFromBodyHtml(
     section.remove();
   }
 
-  return prepareBodyHtmlForPreview(root.innerHTML);
+  return prepareBodyHtmlForPreview(serializeExplainNotesRoot(root));
 }
 
 /** 用 payload 替换指定 noteId 的划词笔记条目 */
@@ -136,13 +165,13 @@ export function updateExplainNoteInBodyHtml(
   );
   if (!target) return bodyHtml;
 
-  const wrap = parsed.doc.createElement('div');
+  const wrap = document.createElement('div');
   wrap.innerHTML = item;
   const next = wrap.firstElementChild;
   if (!(next instanceof HTMLElement)) return bodyHtml;
 
   target.replaceWith(next);
-  return prepareBodyHtmlForPreview(root.innerHTML);
+  return prepareBodyHtmlForPreview(serializeExplainNotesRoot(root));
 }
 
 /**
@@ -152,23 +181,19 @@ export function normalizeExplainNoteVocabClasses(
   bodyHtml: string,
   lang: LangCode,
 ): string {
-  if (typeof DOMParser === 'undefined') return bodyHtml;
-
   const targetClass = resolvePosterClass('vocabTerm', lang);
   if (targetClass === 'vocab-word') return bodyHtml;
 
-  const doc = new DOMParser().parseFromString(
-    `<div id="shufuri-note-root">${bodyHtml}</div>`,
-    'text/html',
-  );
-  const root = doc.getElementById('shufuri-note-root');
-  if (!root) return bodyHtml;
-
-  const section = root.querySelector(`.${NOTES_SECTION_CLASS}`);
+  const parsed = parseExplainNotesRoot(bodyHtml);
+  if (!parsed) return bodyHtml;
+  const { root, section } = parsed;
   if (!section) return bodyHtml;
 
   let changed = false;
-  section.querySelectorAll('.vocab-line1 .vocab-word, .vocab-line1 .vocab-word-ko, .vocab-line1 .vocab-word-cn')
+  section
+    .querySelectorAll(
+      '.vocab-line1 .vocab-word, .vocab-line1 .vocab-word-ko, .vocab-line1 .vocab-word-cn',
+    )
     .forEach((el) => {
       if (el.classList.contains(targetClass)) return;
       el.classList.remove('vocab-word', 'vocab-word-ko', 'vocab-word-cn');
@@ -176,17 +201,22 @@ export function normalizeExplainNoteVocabClasses(
       changed = true;
     });
 
-  return changed ? root.innerHTML : bodyHtml;
+  // 即便 class 未变，也可能刚把笔记兄弟节点并回 clip-body，需要写回
+  const next = serializeExplainNotesRoot(root);
+  if (!changed && next === bodyHtml) return bodyHtml;
+  return next;
 }
 
 /**
  * 将笔记条追加到正文末尾的「划词笔记」区（无则新建，样式同 lyrics-vocabulary）。
+ * 必须挂在 `.clip-body` 内部，否则分页会把整块 clip-body 当成单一 atom，导致全书挤进第 1 页。
  */
 export function appendExplainNoteToBodyHtml(bodyHtml: string, itemHtml: string): string {
   const item = itemHtml.trim();
   if (!item) return bodyHtml;
 
-  if (typeof DOMParser === 'undefined') {
+  const parsed = parseExplainNotesRoot(bodyHtml);
+  if (!parsed) {
     // SSR / 非浏览器兜底：直接拼接区块
     if (bodyHtml.includes(NOTES_SECTION_CLASS)) {
       return bodyHtml.replace(
@@ -201,31 +231,25 @@ export function appendExplainNoteToBodyHtml(bodyHtml: string, itemHtml: string):
     );
   }
 
-  const doc = new DOMParser().parseFromString(
-    `<div id="shufuri-note-root">${bodyHtml}</div>`,
-    'text/html',
-  );
-  const root = doc.getElementById('shufuri-note-root');
-  if (!root) return bodyHtml;
-
-  let section = root.querySelector(`.${NOTES_SECTION_CLASS}`);
+  const { root, host } = parsed;
+  let section = parsed.section;
   if (!section) {
-    section = doc.createElement('div');
+    section = document.createElement('div');
     section.className = `lyrics-vocabulary ${NOTES_SECTION_CLASS}`;
     section.setAttribute('data-lyrics-force-next-page', '1');
-    const h2 = doc.createElement('h2');
+    const h2 = document.createElement('h2');
     h2.className = 'lyrics-section-title';
     h2.textContent = NOTES_SECTION_TITLE;
     section.appendChild(h2);
-    root.appendChild(section);
+    host.appendChild(section);
   }
 
-  const wrap = doc.createElement('div');
+  const wrap = document.createElement('div');
   wrap.innerHTML = item;
   const node = wrap.firstElementChild;
   if (node) section.appendChild(node);
 
-  return root.innerHTML;
+  return serializeExplainNotesRoot(root);
 }
 
 export function commitExplainNoteToBody(

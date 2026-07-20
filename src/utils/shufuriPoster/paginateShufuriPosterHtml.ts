@@ -46,18 +46,19 @@ type PagePack = {
  * 保证 body.clientHeight 被约束到固定值。否则在离屏 DOM 上 flex 布局
  * 可能不会正确收缩 body，导致 clientHeight=scrollHeight 始终不溢出。
  */
-function bodyContentOverflows(body: HTMLElement, profile: PosterLayoutProfile): boolean {
+function bodyContentOverflows(body: HTMLElement, _profile: PosterLayoutProfile): boolean {
   void body.offsetHeight;
   const clientH = body.clientHeight;
-  const slack =
-    profile === 'mobilePoster' || profile === 'squarePoster' ? 10 : FIT_EPSILON_PX;
+  // 全 profile 统一 1px 容差；过大的 slack 会把接近满页的内容误判为「装得下」
+  const slack = FIT_EPSILON_PX;
   if (clientH >= 1) {
     return body.scrollHeight > clientH + slack;
   }
   const maxH =
     parseFloat(body.dataset.posterBodyMaxHeight || '') || parseFloat(body.style.maxHeight);
+  // 无有效 maxHeight 时绝不当作「不溢出」（否则会整页装箱）
   if (!Number.isFinite(maxH) || maxH <= 0) {
-    return false;
+    return true;
   }
   return measurePosterBodyNaturalHeightPx(body) > maxH + slack;
 }
@@ -78,16 +79,15 @@ export function createPosterMeasurer(
   // wrapper 提供固定尺寸的 containing block，避免 shell 用 position:fixed
   // 导致内部 max-width:100% 按视口宽度计算而低估实际高度
   const wrapper = doc.createElement('div');
-  // 不要用 fixed：百分比布局会退化为按视口计算，导致高度测量低估（分页偏少 -> overflow:hidden 截断）
-  wrapper.style.position = 'absolute';
-  wrapper.style.left = '0';
+  // relative + 离屏：提供固定尺寸 containing block；避免 fixed 按视口算宽、
+  // 也避免 visibility:hidden 在部分引擎里影响 scrollHeight 测量
+  wrapper.style.position = 'relative';
+  wrapper.style.left = '-99999px';
   wrapper.style.top = '0';
   wrapper.style.width = canvasW + 'px';
   wrapper.style.height = canvasH + 'px';
   wrapper.style.overflow = 'hidden';
-  wrapper.style.visibility = 'hidden';
   wrapper.style.pointerEvents = 'none';
-  wrapper.style.zIndex = '-1';
 
   const shell = doc.createElement('div');
   shell.className = 'fv-html-poster-root';
@@ -862,6 +862,22 @@ function createMeasurerAtScale(
   );
 }
 
+function pageBlocksHaveExplainNotes(blocks: HTMLElement[]): boolean {
+  return blocks.some(
+    (b) =>
+      b.classList.contains('lyrics-explain-notes') ||
+      !!b.querySelector?.('.lyrics-explain-notes, [data-shufuri-explain-note="1"]'),
+  );
+}
+
+function pageBlocksForceNewPage(blocks: HTMLElement[]): boolean {
+  return blocks.some(
+    (b) =>
+      b.getAttribute('data-lyrics-force-next-page') === '1' ||
+      !!b.querySelector?.('[data-lyrics-force-next-page="1"]'),
+  );
+}
+
 /** 末页 ≤2 行时尝试收紧行距并并回上一页；行距不低于 0.9，否则保留孤页 */
 function preventOrphanPages(
   pages: HTMLElement[][],
@@ -883,6 +899,10 @@ function preventOrphanPages(
 
     const lastIdx = packs.length - 1;
     const last = packs[lastIdx]!;
+    // 划词笔记页 / 强制换页板块不并回上一页，避免把笔记或词汇区吞进已过满的歌词页
+    if (pageBlocksHaveExplainNotes(last.blocks) || pageBlocksForceNewPage(last.blocks)) {
+      break;
+    }
     if (countPageContentLines(last.blocks) > ORPHAN_MAX_LINES) {
       break;
     }
@@ -995,13 +1015,24 @@ function resolvePaginationBodyRoot(wrapper: HTMLElement): HTMLElement {
   if (topKids.length === 0) {
     return wrapper;
   }
+
+  // 历史数据：划词笔记曾被写成 clip-body 的兄弟节点，分页会把整块 clip-body
+  // 当成单一 atom → 全书挤进第 1 页。先把兄弟并回 clip-body 再展开。
+  const clip = topKids.find(
+    (k) => k.classList.contains('clip-body') || k.classList.contains('lyrics-notes-body'),
+  );
+  if (clip) {
+    for (const kid of topKids) {
+      if (kid !== clip) {
+        clip.appendChild(kid);
+      }
+    }
+    return clip;
+  }
+
   if (topKids.length === 1) {
     const only = topKids[0]!;
-    if (
-      only.classList.contains('clip-body') ||
-      only.classList.contains('lyrics-notes-body') ||
-      !only.classList.contains('lyrics-group')
-    ) {
+    if (!only.classList.contains('lyrics-group')) {
       return only;
     }
   }

@@ -85,11 +85,29 @@ function ensureSectionPageBreakAttrs(html: string): string {
   return s;
 }
 
+function absorbOrphanSiblingsIntoClipBody(html: string): string {
+  if (typeof document === 'undefined') return html;
+  const root = document.createElement('div');
+  root.innerHTML = html;
+  const kids = Array.from(root.children).filter(
+    (n): n is HTMLElement => n instanceof HTMLElement,
+  );
+  if (kids.length <= 1) return html;
+  const clip = kids.find(
+    (k) => k.classList.contains('clip-body') || k.classList.contains('lyrics-notes-body'),
+  );
+  if (!clip) return html;
+  for (const kid of kids) {
+    if (kid !== clip) clip.appendChild(kid);
+  }
+  return root.innerHTML;
+}
+
 function wrapClipBody(html: string): string {
   const inner = html.trim();
   if (!inner) return '<div class="clip-body lyrics-notes-body"></div>';
   if (/class\s*=\s*["'][^"']*clip-body/i.test(inner)) {
-    return ensureSectionPageBreakAttrs(inner);
+    return ensureSectionPageBreakAttrs(absorbOrphanSiblingsIntoClipBody(inner));
   }
   return ensureSectionPageBreakAttrs(`<div class="clip-body lyrics-notes-body">${inner}</div>`);
 }
