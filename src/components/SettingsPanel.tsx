@@ -4,7 +4,6 @@ import {
   getAppSettings,
   saveAppSettings,
   type AppSettings,
-  type ColorTheme,
   type InterfaceLanguage,
   type LearningTargetLanguage,
   type PedagogicalLevel,
@@ -32,12 +31,6 @@ type Props = {
 };
 
 const APP_VERSION = '1.0.0';
-
-const COLOR_THEMES: { id: ColorTheme; label: string }[] = [
-  { id: 'mono', label: '墨' },
-  { id: 'blue', label: '绀' },
-  { id: 'red', label: '赤' },
-];
 
 const LEARNING_TARGET_OPTIONS: { id: LearningTargetLanguage; label: string }[] = [
   { id: 'jp', label: 'JAP' },
@@ -157,25 +150,6 @@ export default function SettingsPanel({
         </header>
 
         <div className="app-settings__body">
-          <section className="app-settings__section">
-            <p className="app-settings__label">界面配色</p>
-            <div className="app-settings__theme-row">
-              {COLOR_THEMES.map(({ id, label }) => (
-                <PressedButton
-                  key={id}
-                  className={`app-settings__theme-btn${settings.colorTheme === id ? ' is-active' : ''}`}
-                  data-theme-preview={id}
-                  pressed={settings.colorTheme === id}
-                  onClick={() => patch({ colorTheme: id })}
-                >
-                  <span className="app-settings__theme-swatch" aria-hidden />
-                  <span className="app-settings__theme-label">{label}</span>
-                </PressedButton>
-              ))}
-            </div>
-            <p className="app-settings__hint">切换全局按钮、输入框与面板色调</p>
-          </section>
-
           <section className="app-settings__section">
             <p className="app-settings__label">语言矩阵</p>
             <p className="app-settings__sublabel">使用语言</p>

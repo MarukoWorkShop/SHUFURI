@@ -41,16 +41,8 @@ import type {
   ZhLayoutTokens,
 } from './tokenRegistry.ts';
 
-export function resolvePinyinAccentColor(theme: ColorTheme = 'mono'): string {
-  switch (theme) {
-    case 'red':
-      return '#8b3535';
-    case 'blue':
-      return '#1b365d';
-    case 'mono':
-    default:
-      return '#000000';
-  }
+export function resolvePinyinAccentColor(_theme: ColorTheme = 'mono'): string {
+  return '#000000';
 }
 
 export interface ResolverContext {

@@ -1,7 +1,5 @@
-import type { ColorTheme } from '../services/appSettings';
-
-/** 将换肤主题应用到 documentElement（data-theme） */
-export function applyColorTheme(theme: ColorTheme): void {
+/** 固定墨色主题（清除历史 data-theme=blue/red） */
+export function applyColorTheme(_theme?: 'mono'): void {
   if (typeof document === 'undefined') return;
-  document.documentElement.dataset.theme = theme;
+  document.documentElement.dataset.theme = 'mono';
 }

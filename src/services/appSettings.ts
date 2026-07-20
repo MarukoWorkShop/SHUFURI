@@ -16,13 +16,13 @@ export type LyricsLanguage = LearningTargetLanguage;
 /** 排版管线语言编码：由大模型声明或自动检测，决定走哪条排版管线（与波轮解耦） */
 export type LangCode = 'jp' | 'ko' | 'en' | 'zh';
 
-/** 全局换肤：mono 墨 | blue 绀 | red 赤 */
-export type ColorTheme = 'mono' | 'blue' | 'red';
+/** 界面配色固定为墨色（历史 blue/red 已移除） */
+export type ColorTheme = 'mono';
 
 export type { InterfaceLanguage, LearningTargetLanguage, PedagogicalLevel };
 
 export type AppSettings = {
-  /** 界面配色主题 */
+  /** @deprecated 固定为 mono；保留字段以兼容本地存储与海报管线 */
   colorTheme: ColorTheme;
   /** 首页「一键生成指令」默认是否附带词解与语法 */
   defaultIncludeVocabAndGrammar: boolean;
@@ -50,10 +50,6 @@ function buildDefaults(): AppSettings {
     lyricsLanguage: 'jp',
     interactionSoundsEnabled: true,
   };
-}
-
-function isColorTheme(v: unknown): v is ColorTheme {
-  return v === 'mono' || v === 'blue' || v === 'red';
 }
 
 function readStored(): Partial<AppSettings> & Record<string, unknown> | null {
@@ -99,7 +95,8 @@ export function getAppSettings(): AppSettings {
       : stored.lyricsLanguage;
 
   return {
-    colorTheme: isColorTheme(stored.colorTheme) ? stored.colorTheme : DEFAULTS.colorTheme,
+    /* 历史 blue/red 一律回落墨色 */
+    colorTheme: 'mono',
     defaultIncludeVocabAndGrammar: includeVocabAndGrammar,
     defaultPedagogicalLevel: isPedagogicalLevel(stored.defaultPedagogicalLevel)
       ? stored.defaultPedagogicalLevel
@@ -116,7 +113,7 @@ export function getAppSettings(): AppSettings {
 
 export function saveAppSettings(partial: Partial<AppSettings>): AppSettings {
   const current = getAppSettings();
-  const merged = { ...current, ...partial };
+  const merged = { ...current, ...partial, colorTheme: 'mono' as const };
 
   if (partial.learningTargetLanguages || partial.lyricsLanguage !== undefined) {
     const targets = partial.learningTargetLanguages ?? merged.learningTargetLanguages;
