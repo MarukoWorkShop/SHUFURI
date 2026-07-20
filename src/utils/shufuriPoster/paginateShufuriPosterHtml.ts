@@ -78,7 +78,8 @@ export function createPosterMeasurer(
   // wrapper 提供固定尺寸的 containing block，避免 shell 用 position:fixed
   // 导致内部 max-width:100% 按视口宽度计算而低估实际高度
   const wrapper = doc.createElement('div');
-  wrapper.style.position = 'fixed';
+  // 不要用 fixed：百分比布局会退化为按视口计算，导致高度测量低估（分页偏少 -> overflow:hidden 截断）
+  wrapper.style.position = 'absolute';
   wrapper.style.left = '0';
   wrapper.style.top = '0';
   wrapper.style.width = canvasW + 'px';
