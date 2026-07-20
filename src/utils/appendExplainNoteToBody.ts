@@ -4,6 +4,8 @@ import { escapeHtml } from './escapeHtml';
 import { prepareBodyHtmlForPreview } from './inkEditUtils';
 
 export type ExplainNotePayload = {
+  /** 单条笔记的唯一标识（编辑/删除定位用）；旧笔记可能没有 id */
+  id?: string;
   term: string;
   contextSense: string;
   grammar?: string;
@@ -27,6 +29,7 @@ export function buildExplainNoteItemHtml(payload: ExplainNotePayload): string {
   const term = payload.term.replace(/\s+/g, '').trim();
   if (!term) return '';
 
+  const id = payload.id ?? '';
   const lang = payload.lang ?? 'jp';
   const vocabWordClass = resolvePosterClass('vocabTerm', lang);
   const sense = payload.contextSense.trim();
@@ -46,12 +49,100 @@ export function buildExplainNoteItemHtml(payload: ExplainNotePayload): string {
     : '';
 
   return (
-    `<div class="lyrics-vocab-item" data-shufuri-explain-note="1">` +
+    `<div class="lyrics-vocab-item shufuri-explain-note" data-shufuri-explain-note="1" data-shufuri-explain-note-id="${escapeHtml(
+      id,
+    )}">` +
+    // 默认在导出/海报模式隐藏；编辑页通过覆盖样式显示
+    `<button type="button" class="shufuri-explain-note__delete" data-shufuri-explain-note-id="${escapeHtml(
+      id,
+    )}" aria-label="删除划词笔记" style="display:none">×</button>` +
     `<p class="vocab-line1"><span class="${vocabWordClass}">${escapeHtml(term)}</span>${meaning}</p>` +
     detail +
     moodLine +
     `</div>`
   );
+}
+
+function parseExplainNotesRoot(bodyHtml: string): {
+  doc: Document;
+  root: HTMLElement;
+  section: HTMLElement | null;
+} | null {
+  if (typeof DOMParser === 'undefined') return null;
+  const doc = new DOMParser().parseFromString(
+    `<div id="shufuri-note-root">${bodyHtml}</div>`,
+    'text/html',
+  );
+  const root = doc.getElementById('shufuri-note-root') as HTMLElement | null;
+  if (!root) return null;
+  const section = root.querySelector(`.${NOTES_SECTION_CLASS}`);
+  return { doc, root, section: section as HTMLElement | null };
+}
+
+function noteNodesInSection(section: HTMLElement): HTMLElement[] {
+  return Array.from(
+    section.querySelectorAll('.shufuri-explain-note[data-shufuri-explain-note="1"]'),
+  ).filter((n): n is HTMLElement => n instanceof HTMLElement);
+}
+
+/** 删除一条划词笔记条目（如果笔记区变空，会移除整个“划词笔记”区块） */
+export function deleteExplainNoteFromBodyHtml(
+  bodyHtml: string,
+  noteId: string,
+): string {
+  if (!noteId.trim()) return bodyHtml;
+  const parsed = parseExplainNotesRoot(bodyHtml);
+  if (!parsed) return bodyHtml;
+  const { root, section } = parsed;
+  if (!section) return bodyHtml;
+
+  const nodes = noteNodesInSection(section);
+  const target = nodes.find(
+    (n) => n.getAttribute('data-shufuri-explain-note-id') === noteId,
+  );
+  if (!target) return bodyHtml;
+
+  target.remove();
+
+  const remaining = noteNodesInSection(section);
+  if (remaining.length === 0) {
+    section.remove();
+  }
+
+  return prepareBodyHtmlForPreview(root.innerHTML);
+}
+
+/** 用 payload 替换指定 noteId 的划词笔记条目 */
+export function updateExplainNoteInBodyHtml(
+  bodyHtml: string,
+  noteId: string,
+  payload: Omit<ExplainNotePayload, 'id'> & { id?: string },
+  lang?: LangCode,
+): string {
+  if (!noteId.trim()) return bodyHtml;
+  const resolvedLang = payload.lang ?? lang ?? 'jp';
+  const withId: ExplainNotePayload = { ...payload, id: noteId, lang: resolvedLang };
+  const item = buildExplainNoteItemHtml(withId);
+  if (!item) return bodyHtml;
+
+  const parsed = parseExplainNotesRoot(bodyHtml);
+  if (!parsed) return bodyHtml;
+  const { root, section } = parsed;
+  if (!section) return bodyHtml;
+
+  const nodes = noteNodesInSection(section);
+  const target = nodes.find(
+    (n) => n.getAttribute('data-shufuri-explain-note-id') === noteId,
+  );
+  if (!target) return bodyHtml;
+
+  const wrap = parsed.doc.createElement('div');
+  wrap.innerHTML = item;
+  const next = wrap.firstElementChild;
+  if (!(next instanceof HTMLElement)) return bodyHtml;
+
+  target.replaceWith(next);
+  return prepareBodyHtmlForPreview(root.innerHTML);
 }
 
 /**

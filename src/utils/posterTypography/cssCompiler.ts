@@ -870,5 +870,34 @@ export function compileEditCssOverrides(): string {
   ${body} .grammar-ex-gloss,
   ${body} .grammar-ex-gloss * {
     color: var(--color-fg-muted) !important;
+  }
+
+  /* —— 划词笔记条目：右上角删除按钮（导出默认隐藏） —— */
+  ${body} .shufuri-explain-note {
+    position: relative !important;
+    padding-right: 2.2em !important;
+  }
+  ${body} .shufuri-explain-note__delete {
+    display: inline-flex !important; /* 覆盖内联 style="display:none" */
+    position: absolute !important;
+    top: 0.2em !important;
+    right: 0.2em !important;
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 999px;
+    border: none;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    background: rgba(148, 163, 184, 0.22) !important;
+    color: rgba(15, 23, 42, 0.8) !important;
+    cursor: pointer;
+    z-index: 5;
+    font-size: 16px;
+    line-height: 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+  ${body} .shufuri-explain-note__delete:hover {
+    background: rgba(148, 163, 184, 0.35) !important;
   }`;
 }

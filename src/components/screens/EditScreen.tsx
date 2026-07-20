@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import InkFineTuneEditor from '../InkFineTuneEditor';
 import InkToolbox from '../InkToolbox';
 import ShufuriPosterEditCanvas from '../ShufuriPosterEditCanvas';
@@ -32,6 +32,8 @@ export default function EditScreen() {
     editCanvasRef,
     editScale,
     appendExplainNote,
+    removeExplainNote,
+    updateExplainNote,
   } = usePosterDocumentContext();
 
   const { showRubyAnnotations, rubyToggleSupported, handleShowRubyChange } =
@@ -41,6 +43,7 @@ export default function EditScreen() {
   const showToast = useAppToast();
   const appendExplainNoteAndScroll = useCallback(
     (payload: {
+      id: string;
       term: string;
       contextSense: string;
       grammar?: string;
@@ -64,6 +67,69 @@ export default function EditScreen() {
     showToast,
     appendExplainNote: appendExplainNoteAndScroll,
   });
+
+  // —— 划词笔记条目：删除 / 自主编辑 ——
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [draftTerm, setDraftTerm] = useState('');
+  const [draftContextSense, setDraftContextSense] = useState('');
+  const [draftGrammar, setDraftGrammar] = useState('');
+  const [draftMood, setDraftMood] = useState('');
+
+  const canEditNotes = !explain.explainMode;
+
+  const openEditForNoteEl = useCallback((noteEl: HTMLElement) => {
+    const noteId = noteEl.getAttribute('data-shufuri-explain-note-id') ?? '';
+    if (!noteId) return;
+
+    const termEl = noteEl.querySelector('.vocab-line1 span[class^="vocab-word"]') as HTMLElement | null;
+    const meaningEl = noteEl.querySelector('.vocab-line1 .vocab-meaning') as HTMLElement | null;
+    const grammarEl = noteEl.querySelector('.grammar-detail') as HTMLElement | null;
+    const moodEl = noteEl.querySelector('.vocab-ex-zh') as HTMLElement | null;
+
+    setEditingNoteId(noteId);
+    setDraftTerm(termEl?.textContent?.trim() ?? '');
+    setDraftContextSense(meaningEl?.textContent?.trim() ?? '');
+    setDraftGrammar(grammarEl?.textContent?.trim() ?? '');
+    setDraftMood(moodEl?.textContent?.trim() ?? '');
+  }, []);
+
+  useEffect(() => {
+    const root = editCanvasRef.current;
+    if (!root) return;
+
+    const onClickCapture = (e: MouseEvent) => {
+      const target = e.target as Element | null;
+      if (!target) return;
+
+      const deleteBtn = target.closest('.shufuri-explain-note__delete') as HTMLElement | null;
+      if (deleteBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const noteId = deleteBtn.getAttribute('data-shufuri-explain-note-id') ?? '';
+        if (noteId) {
+          removeExplainNote(noteId);
+          if (editingNoteId === noteId) setEditingNoteId(null);
+        }
+        return;
+      }
+
+      if (!canEditNotes) return;
+      const noteEl = target.closest(
+        '.shufuri-explain-note[data-shufuri-explain-note="1"]',
+      ) as HTMLElement | null;
+      if (!noteEl) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      openEditForNoteEl(noteEl);
+    };
+
+    const options = { capture: true } as const;
+    root.addEventListener('click', onClickCapture, options);
+    return () => {
+      root.removeEventListener('click', onClickCapture, options);
+    };
+  }, [canEditNotes, editCanvasRef, openEditForNoteEl, removeExplainNote, editingNoteId]);
 
   /** 划词开启时禁用铅笔点选；铅笔模式与侧栏开合解耦 */
   const inkEditArmed = ink.inkEditMode && !explain.explainMode;
@@ -248,6 +314,117 @@ export default function EditScreen() {
         </div>
 
         <ExplainMicroscopePanel session={explain} />
+
+        {editingNoteId && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="shufuri-explain-note-editor-overlay"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setEditingNoteId(null);
+            }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 200,
+              background: 'rgba(15, 23, 42, 0.35)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'center',
+              paddingTop: 84,
+              overflowY: 'auto',
+            }}
+          >
+            <div
+              className="shufuri-explain-note-editor-panel"
+              style={{
+                width: 'min(560px, calc(100vw - 32px))',
+                background: '#ffffff',
+                borderRadius: 14,
+                boxShadow: '0 16px 48px rgba(15, 23, 42, 0.18)',
+                border: '1px solid rgba(148, 163, 184, 0.35)',
+                padding: 16,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>编辑划词笔记</h3>
+                <button
+                  type="button"
+                  aria-label="关闭"
+                  className="btn-tonal"
+                  onClick={() => setEditingNoteId(null)}
+                  style={{ minHeight: 30, padding: '0 10px' }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  词条
+                  <input
+                    className="shufuri-explain-note-editor__input"
+                    value={draftTerm}
+                    onChange={(ev) => setDraftTerm(ev.target.value)}
+                    style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px' }}
+                  />
+                </label>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  语境释义
+                  <textarea
+                    value={draftContextSense}
+                    rows={2}
+                    onChange={(ev) => setDraftContextSense(ev.target.value)}
+                    style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
+                  />
+                </label>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  语法
+                  <textarea
+                    value={draftGrammar}
+                    rows={2}
+                    onChange={(ev) => setDraftGrammar(ev.target.value)}
+                    style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
+                  />
+                </label>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  意境
+                  <textarea
+                    value={draftMood}
+                    rows={2}
+                    onChange={(ev) => setDraftMood(ev.target.value)}
+                    style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
+                  />
+                </label>
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                  <button type="button" className="btn-tonal" onClick={() => setEditingNoteId(null)}>
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-export btn-export-primary"
+                    disabled={!draftTerm.trim()}
+                    onClick={() => {
+                      updateExplainNote(editingNoteId, {
+                        term: draftTerm.trim(),
+                        contextSense: draftContextSense.trim(),
+                        grammar: draftGrammar.trim() || undefined,
+                        mood: draftMood.trim() || undefined,
+                      });
+                      setEditingNoteId(null);
+                    }}
+                  >
+                    保存
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

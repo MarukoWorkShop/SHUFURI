@@ -24,7 +24,11 @@ import {
 } from './PosterWorkspaceContext';
 import type { LangCode } from '../services/appSettings';
 import type { ShowAppToast } from './AppToastContext';
-import { commitExplainNoteToBody } from '../utils/appendExplainNoteToBody';
+import {
+  commitExplainNoteToBody,
+  deleteExplainNoteFromBodyHtml,
+  updateExplainNoteInBodyHtml,
+} from '../utils/appendExplainNoteToBody';
 
 const EDIT_LAYOUT: PosterLayoutProfile = 'mobilePoster';
 
@@ -315,12 +319,41 @@ export default function PosterWorkspaceProvider({
 
   const appendExplainNote = useCallback(
     (payload: {
+      id: string;
       term: string;
       contextSense: string;
       grammar?: string;
       mood?: string;
     }) => {
       const next = commitExplainNoteToBody(bodyHtmlRef.current, payload, lang);
+      bodyHtmlRef.current = next;
+      setBodyHtml(next);
+    },
+    [bodyHtmlRef, lang, setBodyHtml],
+  );
+
+  const removeExplainNote = useCallback(
+    (noteId: string) => {
+      const next = deleteExplainNoteFromBodyHtml(bodyHtmlRef.current, noteId);
+      if (next === bodyHtmlRef.current) return;
+      bodyHtmlRef.current = next;
+      setBodyHtml(next);
+    },
+    [bodyHtmlRef, setBodyHtml],
+  );
+
+  const updateExplainNote = useCallback(
+    (
+      noteId: string,
+      payload: {
+        term: string;
+        contextSense: string;
+        grammar?: string;
+        mood?: string;
+      },
+    ) => {
+      const next = updateExplainNoteInBodyHtml(bodyHtmlRef.current, noteId, payload, lang);
+      if (next === bodyHtmlRef.current) return;
       bodyHtmlRef.current = next;
       setBodyHtml(next);
     },
@@ -376,6 +409,8 @@ export default function PosterWorkspaceProvider({
       handleSave,
       handleExportPdf: exportCtrl.handleExportPdf,
       appendExplainNote,
+      removeExplainNote,
+      updateExplainNote,
     }),
     [
       mode,
@@ -404,6 +439,8 @@ export default function PosterWorkspaceProvider({
       openProject,
       handleSave,
       appendExplainNote,
+      removeExplainNote,
+      updateExplainNote,
     ],
   );
 

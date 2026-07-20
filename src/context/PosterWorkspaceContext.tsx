@@ -75,11 +75,24 @@ export type PosterDocumentContextValue = {
   handleExportPdf: () => Promise<void>;
   /** 将划词 AI 笔记条追加到歌词正文末尾（词汇条样式） */
   appendExplainNote: (payload: {
+    id: string;
     term: string;
     contextSense: string;
     grammar?: string;
     mood?: string;
   }) => void;
+  /** 删除单条划词笔记 */
+  removeExplainNote: (noteId: string) => void;
+  /** 编辑单条划词笔记 */
+  updateExplainNote: (
+    noteId: string,
+    payload: {
+      term: string;
+      contextSense: string;
+      grammar?: string;
+      mood?: string;
+    },
+  ) => void;
 };
 
 export type PosterTypographyContextValue = {
