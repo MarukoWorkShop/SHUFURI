@@ -8,35 +8,62 @@
   min-width: 0;
 }
 
-.export-area {
-  flex: 1 1 0;
+/*
+ * 导出页纵向滚动：与编辑页 .edit-canvas-scroll 同构。
+ * 关键：flex 子项默认 min-height:auto 会按内容撑开，导致 overflow-y:auto
+ * 永不出现滚动条；对整条链使用 height:0 + flex-grow 强制吃掉剩余视口高度。
+ */
+.app--export .app-screen__body {
+  flex: 1 1 auto;
   min-height: 0;
+  height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.app--export .app-main--preview {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: var(--ui-space-2);
+}
+
+.export-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-/*
- * 导出页滚动容器：必须用 flex-basis:0 约束高度，否则会被多页内容撑满，
- * 外层 app-screen__body 又是 overflow:hidden，导致桌面端完全无法滚动。
- */
-.export-area .preview-pages-fit {
-  flex: 1 1 0;
+.export-area .export-pages-scroll,
+.export-area .preview-pages-fit.export-pages-scroll {
+  flex: 1 1 auto;
   min-height: 0;
+  height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   touch-action: pan-y;
+  /* 桌面端露出细滚动条，避免「藏条」后误以为不能滚 */
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
 }
 
-.app--export .app-main--preview {
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding-bottom: var(--ui-space-2);
+.export-area .export-pages-scroll::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+}
+
+.export-area .export-pages-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ui-fg) 28%, transparent);
+  border-radius: 999px;
 }
 
 /* Edit layer — 羊皮纸浅底铺满整屏（含品牌栏），消除顶栏/工具栏色块断层 */
@@ -50,14 +77,6 @@ html:has(.app--edit) body,
 }
 
 .app--edit .app-screen__body {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.app--export .app-screen__body {
   flex: 1;
   min-height: 0;
   overflow: hidden;

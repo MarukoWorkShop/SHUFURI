@@ -70,7 +70,7 @@ export default function ExportPreviewPanel() {
         </div>
       </div>
 
-      <div ref={exportPagesRef} className="preview-pages-fit">
+      <div ref={exportPagesRef} className="preview-pages-fit export-pages-scroll">
         <ShufuriPosterPreview
           title={title}
           artist={artist}
