@@ -60,7 +60,7 @@ function ensureDeleteButton(item: HTMLElement, id: string, kind: StudyItemKind):
   let btn = item.querySelector(`.${DELETE_CLASS}`) as HTMLElement | null;
   if (!btn) {
     btn = document.createElement('button');
-    btn.type = 'button';
+    (btn as HTMLButtonElement).type = 'button';
     btn.className = DELETE_CLASS;
     btn.setAttribute('style', 'display:none');
     btn.setAttribute('aria-label', kind === 'vocab' ? '删除词汇' : '删除语法点');

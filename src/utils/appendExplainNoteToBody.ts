@@ -119,7 +119,7 @@ function ensureNoteDeleteButton(note: HTMLElement, noteId: string): boolean {
   let btn = note.querySelector('.shufuri-explain-note__delete') as HTMLElement | null;
   if (!btn) {
     btn = document.createElement('button');
-    btn.type = 'button';
+    (btn as HTMLButtonElement).type = 'button';
     btn.className = 'shufuri-explain-note__delete';
     btn.setAttribute('aria-label', '删除划词笔记');
     btn.setAttribute('style', 'display:none');
