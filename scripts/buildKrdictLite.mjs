@@ -81,10 +81,12 @@ function decodeXml(s) {
     .replace(/&#39;/g, "'");
 }
 
-function extractChineseGloss(entry) {
+function extractEquivalentGloss(entry, language) {
   const eqBlocks = entry.match(/<Equivalent>[\s\S]*?<\/Equivalent>/g) || [];
   for (const eq of eqBlocks) {
-    if (!eq.includes('val="중국어"') && !eq.includes("val='중국어'")) continue;
+    if (!eq.includes(`val="${language}"`) && !eq.includes(`val='${language}'`)) {
+      continue;
+    }
     const lemma = decodeXml(feat(eq, 'lemma'));
     const def = decodeXml(feat(eq, 'definition'));
     const parts = [];
@@ -94,6 +96,44 @@ function extractChineseGloss(entry) {
     if (g) return g.slice(0, 80);
   }
   return '';
+}
+
+/** 韩语 Sense 释义（无外语 Equivalent 时的兜底） */
+function extractKoreanSenseGloss(entry) {
+  const senseBlocks = entry.match(/<Sense\b[\s\S]*?<\/Sense>/g) || [];
+  for (const sense of senseBlocks) {
+    const def = decodeXml(feat(sense, 'definition'));
+    if (def) return `（韩义）${def.replace(/\s+/g, ' ').trim()}`.slice(0, 80);
+  }
+  // 少数条目 definition 不在 Sense 包裹内
+  const loose = entry.match(
+    /<Sense\b[^>]*>\s*<feat\s+att="definition"\s+val="([^"]*)"/,
+  );
+  if (loose?.[1]) {
+    return `（韩义）${decodeXml(loose[1]).replace(/\s+/g, ' ').trim()}`.slice(0, 80);
+  }
+  return '';
+}
+
+/**
+ * 释义优先级：中文 Equivalent → 英语 Equivalent → 韩语 Sense。
+ * 不再因缺少中文义丢弃整条（此前会导致 항상／하나 等基础词缺失）。
+ */
+function extractGloss(entry) {
+  return (
+    extractEquivalentGloss(entry, '중국어') ||
+    extractEquivalentGloss(entry, '영어') ||
+    extractKoreanSenseGloss(entry) ||
+    ''
+  );
+}
+
+function glossRank(g) {
+  if (!g) return 9;
+  if (g.startsWith('（韩义）')) return 2;
+  // 英义粗判：无 CJK 且含拉丁字母
+  if (/[A-Za-z]/.test(g) && !/[\u4e00-\u9fff]/.test(g)) return 1;
+  return 0; // 中文优先
 }
 
 function parseEntry(entry) {
@@ -108,7 +148,7 @@ function parseEntry(entry) {
     entry.match(/<WordForm>[\s\S]*?<\/WordForm>/)?.[0] ||
     '';
   const reading = decodeXml(feat(pronBlock, 'pronunciation')) || head;
-  const gloss = extractChineseGloss(entry);
+  const gloss = extractGloss(entry);
   if (!gloss) return null;
 
   const forms = [head];
@@ -125,6 +165,7 @@ function parseEntry(entry) {
     p: POS_ZH[posKo] || posKo || '词',
     g: gloss,
     _level: level,
+    _glossRank: glossRank(gloss),
   };
 }
 
@@ -201,7 +242,13 @@ async function buildFromDir(dir) {
       }
       const pr = LEVEL_RANK[prev._level] ?? 9;
       const cr = LEVEL_RANK[row._level] ?? 9;
-      if (cr < pr) byHead.set(row.h, row);
+      if (cr < pr) {
+        byHead.set(row.h, row);
+        continue;
+      }
+      if (cr === pr && (row._glossRank ?? 9) < (prev._glossRank ?? 9)) {
+        byHead.set(row.h, row);
+      }
     }
     console.log('  blocks', n, 'unique so far', byHead.size);
   }
@@ -210,12 +257,15 @@ async function buildFromDir(dir) {
     const la = LEVEL_RANK[a._level] ?? 9;
     const lb = LEVEL_RANK[b._level] ?? 9;
     if (la !== lb) return la - lb;
+    const ga = a._glossRank ?? 9;
+    const gb = b._glossRank ?? 9;
+    if (ga !== gb) return ga - gb;
     return a.h.localeCompare(b.h, 'ko');
   });
 
-  // 优先初/中级；收录全部含中文义条目（当前源约 3.7 万，gzip ≈1–1.5MB）
-  const MAX = 50000;
-  const picked = ranked.slice(0, MAX).map(({ _level, ...rest }) => rest);
+  // 收录有释义的条目（中文优先，其次英语，再次韩语 Sense）；上限防爆
+  const MAX = 80000;
+  const picked = ranked.slice(0, MAX).map(({ _level, _glossRank, ...rest }) => rest);
 
   return {
     v: 1,

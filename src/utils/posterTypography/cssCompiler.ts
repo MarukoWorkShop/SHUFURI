@@ -286,8 +286,9 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   const jpLyricFont = F.isEnglish ? EN_FONT_FAMILY : KOZMIN_PRO_REGULAR_FAMILY;
   const jpStudyFont = F.isEnglish ? EN_FONT_FAMILY : KOZMIN_PRO_REGULAR_FAMILY;
   const primaryWght = LYRIC_PRIMARY_WEIGHT;
-  const zhAuxWght = LYRIC_SECONDARY_WEIGHT;
   const zhLineWght = R.lyricSecondary.fontWeight;
+  /** 旁注 / 词解辅文：与歌词译文（.zh-line）同字重 */
+  const zhAuxWght = zhLineWght;
   const koWght = KO_PRIMARY_WEIGHT;
   const rtEm = L.mainRtEm;
 
@@ -648,7 +649,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     letter-spacing: ${r.cjkLetterSpacing};
     ${cjkWrap}
   }
-  /* 语法点旁释义 / 详细说明：与重点词 vocab-meaning 同级（aux 字号、轻字重） */
+  /* 语法点旁释义 / 详细说明：与重点词 vocab-meaning、歌词译文同级（aux 字号 + 译文字重） */
   ${bodySel} h3.grammar-point-title .grammar-title-zh,
   ${bodySel} h3.grammar-point-title .grammar-title-zh *,
   ${bodySel} h3.grammar-point-title .grammar-title-gloss,

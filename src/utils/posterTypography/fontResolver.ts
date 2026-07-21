@@ -299,7 +299,8 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   roles.studyAux = baseToken({
     fontFamily: ZH_FONT_FAMILY,
     fontSize: auxPx,
-    fontWeight: isZhPipeline ? LYRIC_SECONDARY_WEIGHT : AUX_WEIGHT,
+    /** 与歌词译文 lyricSecondary 同字重（日语稿 JP_ZH_LINE_WEIGHT=400） */
+    fontWeight: lang === 'jp' ? JP_ZH_LINE_WEIGHT : LYRIC_SECONDARY_WEIGHT,
     lineHeight: zhLyricsLh,
     color: isZhPipeline ? GLOSS_COLOR : '#0a0a0a',
     letterSpacing: isZhPipeline ? '0' : cjkLs,

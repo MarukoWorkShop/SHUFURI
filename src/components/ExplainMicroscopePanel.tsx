@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useId } from 'react';
 import type { UseExplainSessionResult } from '../hooks/useExplainSession';
-import { parseAiExplainParts } from '../codec/prompt/buildMicroscopePrompt';
+import {
+  langCodeToMicroscopeLanguage,
+  parseAiExplainParts,
+  type AiGrammarCapsule,
+} from '../codec/prompt/buildMicroscopePrompt';
 import './ExplainMicroscopePanel.css';
 
 type Props = {
@@ -19,6 +23,32 @@ function highlightFocusInSentence(sentence: string, focus: string): { before: st
   };
 }
 
+function GrammarFormulaView({
+  tokens,
+  fallback,
+}: {
+  tokens: { surface: string; label: string }[];
+  fallback: string;
+}) {
+  if (tokens.length === 0) {
+    if (!fallback) return null;
+    return <p className="microscope-formula__fallback">{fallback}</p>;
+  }
+  return (
+    <div className="microscope-formula" role="group" aria-label="语法分子式">
+      {tokens.map((tok, i) => (
+        <span key={`${tok.surface}-${i}`} className="microscope-formula__chip-wrap">
+          {i > 0 ? <span className="microscope-formula__plus" aria-hidden>+</span> : null}
+          <span className="microscope-formula__chip">
+            <span className="microscope-formula__surface">{tok.surface}</span>
+            {tok.label ? <span className="microscope-formula__label">{tok.label}</span> : null}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function ExplainMicroscopePanel({ session }: Props) {
   const titleId = useId();
   const {
@@ -26,6 +56,7 @@ export default function ExplainMicroscopePanel({ session }: Props) {
     closePanel,
     targetPhrase,
     surroundingLine,
+    lang,
     result,
     resultSource,
     aiExplain,
@@ -38,6 +69,12 @@ export default function ExplainMicroscopePanel({ session }: Props) {
     retryAnalyze,
     requestAiDeepDive,
     addToLyricsNote,
+    requestGrammarExamples,
+    clearGrammarExamples,
+    activeGrammarCapsule,
+    grammarLesson,
+    grammarExamplesLoading,
+    grammarExamplesError,
   } = session;
 
   useEffect(() => {
@@ -56,6 +93,27 @@ export default function ExplainMicroscopePanel({ session }: Props) {
     [closePanel],
   );
 
+  const onCapsuleClick = useCallback(
+    (capsule: AiGrammarCapsule) => {
+      if (
+        activeGrammarCapsule?.term === capsule.term &&
+        activeGrammarCapsule?.title === capsule.title &&
+        (grammarLesson || grammarExamplesLoading)
+      ) {
+        clearGrammarExamples();
+        return;
+      }
+      requestGrammarExamples(capsule);
+    },
+    [
+      activeGrammarCapsule,
+      clearGrammarExamples,
+      grammarLesson,
+      grammarExamplesLoading,
+      requestGrammarExamples,
+    ],
+  );
+
   if (!panelOpen) return null;
 
   const sentence = surroundingLine || targetPhrase;
@@ -63,11 +121,19 @@ export default function ExplainMicroscopePanel({ session }: Props) {
   const micro = result?.micro_analysis;
   const busy = loading || deepDiveLoading;
   const canAi = !loading && !deepDiveLoading && Boolean(targetPhrase);
-  const aiParts = aiExplain ? parseAiExplainParts(aiExplain) : null;
+  const aiParts = aiExplain
+    ? parseAiExplainParts(aiExplain, { language: langCodeToMicroscopeLanguage(lang) })
+    : null;
   const showStructuredAi =
     !deepDiveLoading &&
     aiParts &&
-    (aiParts.contextSense || aiParts.grammar || aiParts.mood);
+    (aiParts.contextSense ||
+      aiParts.grammar ||
+      aiParts.mood ||
+      aiParts.slang ||
+      aiParts.formula.length > 0 ||
+      aiParts.formulaRaw ||
+      aiParts.capsules.length > 0);
 
   return (
     <div className="microscope-root" role="presentation">
@@ -203,10 +269,46 @@ export default function ExplainMicroscopePanel({ session }: Props) {
                     <p className="microscope-ai-card__body">{aiParts.contextSense}</p>
                   </div>
                 ) : null}
+                {aiParts.formula.length > 0 || aiParts.formulaRaw ? (
+                  <div className="microscope-ai-card__row">
+                    <p className="microscope-ai-card__label">语法分子式</p>
+                    <GrammarFormulaView tokens={aiParts.formula} fallback={aiParts.formulaRaw} />
+                  </div>
+                ) : null}
                 {aiParts.grammar ? (
                   <div className="microscope-ai-card__row">
                     <p className="microscope-ai-card__label">语法拆解</p>
                     <p className="microscope-ai-card__body">{aiParts.grammar}</p>
+                  </div>
+                ) : null}
+                {aiParts.capsules.length > 0 ? (
+                  <div className="microscope-ai-card__row microscope-ai-card__row--capsules">
+                    <p className="microscope-ai-card__label">核心语法点</p>
+                    <div className="microscope-capsules">
+                      {aiParts.capsules.map((cap) => {
+                        const active =
+                          activeGrammarCapsule?.term === cap.term &&
+                          activeGrammarCapsule?.title === cap.title;
+                        return (
+                          <button
+                            key={`${cap.exam}|${cap.term}|${cap.title}`}
+                            type="button"
+                            className={
+                              active
+                                ? 'microscope-capsule is-active'
+                                : 'microscope-capsule'
+                            }
+                            disabled={grammarExamplesLoading && !active}
+                            onClick={() => onCapsuleClick(cap)}
+                          >
+                            <span className="microscope-capsule__exam">{cap.exam}</span>
+                            <span className="microscope-capsule__text">
+                              点击查看：{cap.title}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : null}
                 {aiParts.mood ? (
@@ -215,8 +317,82 @@ export default function ExplainMicroscopePanel({ session }: Props) {
                     <p className="microscope-ai-card__body">{aiParts.mood}</p>
                   </div>
                 ) : null}
+                {aiParts.slang ? (
+                  <div className="microscope-ai-card__row">
+                    <p className="microscope-ai-card__label">歌词黑话</p>
+                    <p className="microscope-ai-card__body">{aiParts.slang}</p>
+                  </div>
+                ) : null}
               </div>
             ) : null}
+
+            {(grammarExamplesLoading || grammarLesson || grammarExamplesError) &&
+            activeGrammarCapsule ? (
+              <div className="microscope-examples" aria-live="polite">
+                <div className="microscope-examples__head">
+                  <p className="microscope-examples__title">
+                    「{activeGrammarCapsule.term}」用法讲解
+                  </p>
+                  <button
+                    type="button"
+                    className="microscope-examples__close"
+                    onClick={clearGrammarExamples}
+                  >
+                    收起
+                  </button>
+                </div>
+                {grammarExamplesLoading ? (
+                  <p className="microscope-panel__follow-hint">正在生成讲解…</p>
+                ) : null}
+                {grammarExamplesError ? (
+                  <p className="microscope-examples__error">{grammarExamplesError}</p>
+                ) : null}
+                {grammarLesson ? (
+                  <div className="microscope-lesson">
+                    {grammarLesson.meaning ? (
+                      <div className="microscope-lesson__row">
+                        <p className="microscope-lesson__label">通常含义</p>
+                        <p className="microscope-lesson__body">{grammarLesson.meaning}</p>
+                      </div>
+                    ) : null}
+                    {grammarLesson.usage ? (
+                      <div className="microscope-lesson__row">
+                        <p className="microscope-lesson__label">如何使用</p>
+                        <p className="microscope-lesson__body">{grammarLesson.usage}</p>
+                      </div>
+                    ) : null}
+                    {grammarLesson.emotion ? (
+                      <div className="microscope-lesson__row">
+                        <p className="microscope-lesson__label">情感语气</p>
+                        <p className="microscope-lesson__body">{grammarLesson.emotion}</p>
+                      </div>
+                    ) : null}
+                    {grammarLesson.example ? (
+                      <div className="microscope-lesson__row">
+                        <p className="microscope-lesson__label">例句</p>
+                        <p className="microscope-examples__source">
+                          {grammarLesson.example.source}
+                          <span className="microscope-examples__via">
+                            {grammarLesson.example.via === 'local'
+                              ? '学习卡'
+                              : grammarLesson.example.via === 'crafted'
+                                ? '造句'
+                                : 'AI'}
+                          </span>
+                        </p>
+                        <p className="microscope-examples__text">
+                          {grammarLesson.example.text}
+                        </p>
+                        {grammarLesson.example.zh ? (
+                          <p className="microscope-examples__zh">{grammarLesson.example.zh}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
             {!deepDiveLoading && !aiExplain && (
               <button
                 type="button"
