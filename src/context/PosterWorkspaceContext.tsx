@@ -75,10 +75,41 @@ export type PosterDocumentContextValue = {
   handleExportPdf: () => Promise<void>;
   /** 将划词 AI 笔记条追加到歌词正文末尾（词汇条样式） */
   appendExplainNote: (payload: {
+    id: string;
     term: string;
     contextSense: string;
     grammar?: string;
     mood?: string;
+  }) => void;
+  /** 删除单条划词笔记 */
+  removeExplainNote: (noteId: string) => void;
+  /** 编辑单条划词笔记 */
+  updateExplainNote: (
+    noteId: string,
+    payload: {
+      term: string;
+      contextSense: string;
+      grammar?: string;
+      mood?: string;
+    },
+  ) => void;
+  /** 为旧划词笔记补齐 id（进入编辑页时调用） */
+  ensureExplainNoteIds: () => void;
+  /** 为重点词汇/语法条目补齐 id */
+  ensureStudyItemIds: () => void;
+  removeStudyItem: (itemId: string) => void;
+  updateVocabItem: (itemId: string, payload: {
+    term: string;
+    meaning: string;
+    example: string;
+    translation: string;
+  }) => void;
+  updateGrammarItem: (itemId: string, payload: {
+    titlePrimary: string;
+    titleSecondary: string;
+    detail: string;
+    example: string;
+    translation: string;
   }) => void;
 };
 

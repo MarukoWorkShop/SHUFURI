@@ -2,11 +2,12 @@ import {
   EN_FONT_FAMILY,
   KO_FONT_FAMILY,
   KOZMIN_PRO_REGULAR_FAMILY,
-  KOZUKA_MINCHO_EL_FAMILY,
   ZH_FONT_FAMILY,
+  ZH_SONGTI_FONT_FAMILY,
   getPosterEnglishFontFaceCss,
   getPosterJapaneseFontsFaceCss,
   getPosterKoreanFontFaceCss,
+  getPosterSourceHanSerifScFontFaceCss,
 } from '../shufuriPoster/fonts.ts';
 import { dimForProfile } from '../shufuriPoster/dimensions.ts';
 import {
@@ -269,6 +270,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   const jpStudyFont = F.isEnglish ? EN_FONT_FAMILY : KOZMIN_PRO_REGULAR_FAMILY;
   const primaryWght = LYRIC_PRIMARY_WEIGHT;
   const zhAuxWght = LYRIC_SECONDARY_WEIGHT;
+  const zhLineWght = R.lyricSecondary.fontWeight;
   const koWght = KO_PRIMARY_WEIGHT;
   const rtEm = L.mainRtEm;
 
@@ -316,6 +318,13 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   ${root}.fv-title-artist--placeholder {
     color: #cbd5e1;
     font-weight: 400;
+  }
+  /* 歌名/歌手：简体中文形 → 思源宋体；日文汉字形 → KozMin */
+  ${root}.fv-title-serif--source-han {
+    font-family: ${ZH_SONGTI_FONT_FAMILY};
+  }
+  ${root}.fv-title-serif--kozmin {
+    font-family: ${KOZMIN_PRO_REGULAR_FAMILY};
   }
   ${bodySel} {
     font-family: ${ZH_FONT_FAMILY};
@@ -402,7 +411,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   ${bodySel} .lyrics-group .zh-line,
   ${bodySel} .lyrics-group .zh-line * {
     font-size: ${auxFs} !important;
-    font-weight: ${zhAuxWght} !important;
+    font-weight: ${zhLineWght} !important;
     color: #0a0a0a !important;
     line-height: ${L.zhLyricsLh} !important;
     font-family: ${ZH_FONT_FAMILY} !important;
@@ -465,7 +474,13 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   ${bodySel} .vocab-ex-zh,
   ${bodySel} .vocab-ex-zh *,
   ${bodySel} .grammar-ex-zh,
-  ${bodySel} .grammar-ex-zh *,
+  ${bodySel} .grammar-ex-zh * {
+    font-size: ${auxFs} !important;
+    font-weight: ${primaryWght} !important;
+    color: #0a0a0a !important;
+    line-height: ${L.zhLyricsLh} !important;
+    font-family: ${ZH_FONT_FAMILY} !important;
+  }
   ${bodySel} .grammar-detail,
   ${bodySel} .grammar-detail *:not(rt):not(rp)${F.isZhPipeline ? '' : `,\n  ${bodySel} .vocab-line1`} {
     font-size: ${auxFs} !important;
@@ -487,12 +502,11 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   }
   ${bodySel} .vocab-ex-gloss,
   ${bodySel} .vocab-ex-gloss *,
-  ${bodySel} .grammar-title-gloss,
   ${bodySel} .grammar-ex-gloss,
   ${bodySel} .grammar-ex-gloss * {
     font-family: ${ZH_FONT_FAMILY} !important;
     font-size: ${auxFs} !important;
-    font-weight: ${zhAuxWght} !important;
+    font-weight: ${primaryWght} !important;
     color: #0a0a0a !important;
     line-height: ${L.zhLyricsLh} !important;
     ${latinWrap}
@@ -562,7 +576,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     line-height: ${L.koLh} !important;
   }` : ''}
   ${bodySel} .vocab-line1 .vocab-word ruby rt {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY} !important;
+    font-family: ${KOZMIN_PRO_REGULAR_FAMILY} !important;
     font-size: ${rtEm}em !important;
     font-weight: ${JP_RUBY_WEIGHT} !important;
     color: #64748b !important;
@@ -576,7 +590,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     ruby-align: start;
   }
   ${bodySel} ruby rt {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY};
+    font-family: ${KOZMIN_PRO_REGULAR_FAMILY};
     font-size: ${rtEm}em;
     font-weight: ${JP_RUBY_WEIGHT};
     color: #64748b;
@@ -617,6 +631,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     letter-spacing: ${r.cjkLetterSpacing};
     ${cjkWrap}
   }
+  /* 语法点旁释义 / 详细说明：与重点词 vocab-meaning 同级（aux 字号、轻字重） */
   ${bodySel} h3.grammar-point-title .grammar-title-zh,
   ${bodySel} h3.grammar-point-title .grammar-title-zh *,
   ${bodySel} h3.grammar-point-title .grammar-title-gloss,
@@ -630,16 +645,20 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     ${latinWrap}
   }
   ${bodySel} h3.grammar-point-title ruby rt {
-    font-family: ${KOZUKA_MINCHO_EL_FAMILY};
+    font-family: ${KOZMIN_PRO_REGULAR_FAMILY};
     font-size: ${rtEm}em;
     font-weight: ${JP_RUBY_WEIGHT};
     color: #64748b;
     line-height: 1.1;
     max-width: 100%;
   }
-  ${bodySel} .vocab-line1 .vocab-meaning {
+  ${bodySel} .vocab-line1 .vocab-meaning,
+  ${bodySel} .vocab-line1 .vocab-meaning * {
     font-family: ${ZH_FONT_FAMILY} !important;
+    font-size: ${auxFs} !important;
     font-weight: ${zhAuxWght} !important;
+    line-height: ${L.zhLyricsLh} !important;
+    color: #0a0a0a !important;
   }`;
 }
 
@@ -718,7 +737,7 @@ export function compilePosterCss(
   const includeFontFaces = options.includeFontFaces ?? unit === 'px';
 
   const fontFaces = includeFontFaces
-    ? `${getPosterJapaneseFontsFaceCss()}${getPosterKoreanFontFaceCss()}${getPosterEnglishFontFaceCss()}`
+    ? `${getPosterJapaneseFontsFaceCss()}${getPosterKoreanFontFaceCss()}${getPosterSourceHanSerifScFontFaceCss()}${getPosterEnglishFontFaceCss()}`
     : '';
 
   const printShell = unit === 'mm' && spec ? compilePrintPageShell(spec) : '';
@@ -828,16 +847,16 @@ export function compileEditCssOverrides(): string {
   ${body} h3.grammar-point-title .grammar-title-ko,
   ${body} h3.grammar-point-title .grammar-title-ko *,
   ${body} h3.grammar-point-title .grammar-title-cn,
-  ${body} h3.grammar-point-title .grammar-title-cn *:not(rt):not(rp),
-  ${body} h3.grammar-point-title .grammar-title-zh,
-  ${body} h3.grammar-point-title .grammar-title-zh * {
+  ${body} h3.grammar-point-title .grammar-title-cn *:not(rt):not(rp) {
     color: var(--color-edit-study-term) !important;
   }
+  /* 语法点旁释义 = 重点词释义：次级字色 */
   ${body} .vocab-line1 .vocab-meaning,
+  ${body} .vocab-line1 .vocab-meaning *,
+  ${body} h3.grammar-point-title .grammar-title-zh,
+  ${body} h3.grammar-point-title .grammar-title-zh *,
   ${body} h3.grammar-point-title .grammar-title-gloss,
-  ${body} h3.grammar-point-title .grammar-title-gloss * {
-    color: var(--color-fg-secondary) !important;
-  }
+  ${body} h3.grammar-point-title .grammar-title-gloss *,
   ${body} .grammar-detail,
   ${body} .grammar-detail *:not(rt):not(rp) {
     color: var(--color-fg-secondary) !important;
@@ -858,9 +877,7 @@ export function compileEditCssOverrides(): string {
   ${body} .grammar-ex-ja,
   ${body} .grammar-ex-ja *:not(rt):not(rp),
   ${body} .grammar-ex-ko,
-  ${body} .grammar-ex-ko * {
-    color: var(--color-edit-lyric) !important;
-  }
+  ${body} .grammar-ex-ko *,
   ${body} .vocab-ex-zh,
   ${body} .vocab-ex-zh *,
   ${body} .grammar-ex-zh,
@@ -869,6 +886,39 @@ export function compileEditCssOverrides(): string {
   ${body} .vocab-ex-gloss *,
   ${body} .grammar-ex-gloss,
   ${body} .grammar-ex-gloss * {
-    color: var(--color-fg-muted) !important;
+    color: var(--color-edit-lyric) !important;
+  }
+
+  /* —— 划词笔记 / 学习条目：右上角删除按钮（导出默认隐藏） —— */
+  ${body} .shufuri-explain-note,
+  ${body} .shufuri-study-item {
+    position: relative !important;
+    padding-right: 2.2em !important;
+    cursor: pointer;
+  }
+  ${body} .shufuri-explain-note__delete,
+  ${body} .shufuri-study-item__delete {
+    display: inline-flex !important; /* 覆盖内联 style="display:none" */
+    position: absolute !important;
+    top: 0.2em !important;
+    right: 0.2em !important;
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 999px;
+    border: none;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    background: rgba(148, 163, 184, 0.22) !important;
+    color: rgba(15, 23, 42, 0.8) !important;
+    cursor: pointer;
+    z-index: 5;
+    font-size: 16px;
+    line-height: 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+  ${body} .shufuri-explain-note__delete:hover,
+  ${body} .shufuri-study-item__delete:hover {
+    background: rgba(148, 163, 184, 0.35) !important;
   }`;
 }

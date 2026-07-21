@@ -144,7 +144,7 @@ export function mountPosterExportPage(
   if (showTitle) {
     const h1 = doc.createElement('h1');
     h1.className = 'fv-title-h';
-    applyPosterTitleElement(h1, title, artist);
+    applyPosterTitleElement(h1, title, artist, pipelineLang ?? 'jp');
     shell.appendChild(h1);
   }
 

@@ -24,7 +24,18 @@ import {
 } from './PosterWorkspaceContext';
 import type { LangCode } from '../services/appSettings';
 import type { ShowAppToast } from './AppToastContext';
-import { commitExplainNoteToBody } from '../utils/appendExplainNoteToBody';
+import {
+  commitExplainNoteToBody,
+  deleteExplainNoteFromBodyHtml,
+  updateExplainNoteInBodyHtml,
+  ensureExplainNoteIdsInBodyHtml,
+} from '../utils/appendExplainNoteToBody';
+import {
+  ensureStudyItemIdsInBodyHtml,
+  deleteStudyItemFromBodyHtml,
+  updateVocabItemInBodyHtml,
+  updateGrammarItemInBodyHtml,
+} from '../utils/studySectionItems';
 
 const EDIT_LAYOUT: PosterLayoutProfile = 'mobilePoster';
 
@@ -315,6 +326,7 @@ export default function PosterWorkspaceProvider({
 
   const appendExplainNote = useCallback(
     (payload: {
+      id: string;
       term: string;
       contextSense: string;
       grammar?: string;
@@ -325,6 +337,95 @@ export default function PosterWorkspaceProvider({
       setBodyHtml(next);
     },
     [bodyHtmlRef, lang, setBodyHtml],
+  );
+
+  const removeExplainNote = useCallback(
+    (noteId: string) => {
+      const next = deleteExplainNoteFromBodyHtml(bodyHtmlRef.current, noteId);
+      if (next === bodyHtmlRef.current) return;
+      bodyHtmlRef.current = next;
+      setBodyHtml(next);
+    },
+    [bodyHtmlRef, setBodyHtml],
+  );
+
+  const updateExplainNote = useCallback(
+    (
+      noteId: string,
+      payload: {
+        term: string;
+        contextSense: string;
+        grammar?: string;
+        mood?: string;
+      },
+    ) => {
+      const next = updateExplainNoteInBodyHtml(bodyHtmlRef.current, noteId, payload, lang);
+      if (next === bodyHtmlRef.current) return;
+      bodyHtmlRef.current = next;
+      setBodyHtml(next);
+    },
+    [bodyHtmlRef, lang, setBodyHtml],
+  );
+
+  const ensureExplainNoteIds = useCallback(() => {
+    const next = ensureExplainNoteIdsInBodyHtml(bodyHtmlRef.current);
+    if (next === bodyHtmlRef.current) return;
+    bodyHtmlRef.current = next;
+    setBodyHtml(next);
+  }, [bodyHtmlRef, setBodyHtml]);
+
+  const ensureStudyItemIds = useCallback(() => {
+    const next = ensureStudyItemIdsInBodyHtml(bodyHtmlRef.current);
+    if (next === bodyHtmlRef.current) return;
+    bodyHtmlRef.current = next;
+    setBodyHtml(next);
+  }, [bodyHtmlRef, setBodyHtml]);
+
+  const removeStudyItem = useCallback(
+    (itemId: string) => {
+      const next = deleteStudyItemFromBodyHtml(bodyHtmlRef.current, itemId);
+      if (next === bodyHtmlRef.current) return;
+      bodyHtmlRef.current = next;
+      setBodyHtml(next);
+    },
+    [bodyHtmlRef, setBodyHtml],
+  );
+
+  const updateVocabItem = useCallback(
+    (
+      itemId: string,
+      payload: {
+        term: string;
+        meaning: string;
+        example: string;
+        translation: string;
+      },
+    ) => {
+      const next = updateVocabItemInBodyHtml(bodyHtmlRef.current, itemId, payload);
+      if (next === bodyHtmlRef.current) return;
+      bodyHtmlRef.current = next;
+      setBodyHtml(next);
+    },
+    [bodyHtmlRef, setBodyHtml],
+  );
+
+  const updateGrammarItem = useCallback(
+    (
+      itemId: string,
+      payload: {
+        titlePrimary: string;
+        titleSecondary: string;
+        detail: string;
+        example: string;
+        translation: string;
+      },
+    ) => {
+      const next = updateGrammarItemInBodyHtml(bodyHtmlRef.current, itemId, payload);
+      if (next === bodyHtmlRef.current) return;
+      bodyHtmlRef.current = next;
+      setBodyHtml(next);
+    },
+    [bodyHtmlRef, setBodyHtml],
   );
 
   const typographyValue: PosterTypographyContextValue = useMemo(
@@ -376,6 +477,13 @@ export default function PosterWorkspaceProvider({
       handleSave,
       handleExportPdf: exportCtrl.handleExportPdf,
       appendExplainNote,
+      removeExplainNote,
+      updateExplainNote,
+      ensureExplainNoteIds,
+      ensureStudyItemIds,
+      removeStudyItem,
+      updateVocabItem,
+      updateGrammarItem,
     }),
     [
       mode,
@@ -404,6 +512,13 @@ export default function PosterWorkspaceProvider({
       openProject,
       handleSave,
       appendExplainNote,
+      removeExplainNote,
+      updateExplainNote,
+      ensureExplainNoteIds,
+      ensureStudyItemIds,
+      removeStudyItem,
+      updateVocabItem,
+      updateGrammarItem,
     ],
   );
 

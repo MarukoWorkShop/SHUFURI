@@ -6,11 +6,9 @@ import {
   KO_FONT_FAMILY,
   KO_POSTER_TITLE_FONT_FAMILY,
   KOZMIN_PRO_REGULAR_FAMILY,
-  KOZUKA_MINCHO_EL_FAMILY,
   UI_FONT_FAMILY,
   ZH_FONT_FAMILY,
   ZH_POSTER_TITLE_FONT_FAMILY,
-  ZH_SONGTI_FONT_FAMILY,
 } from '../shufuriPoster/fonts.ts';
 import { cjkFontScale, cjkLetterSpacingEm, kamiLetterSpacingEm } from '../shufuriPoster/cjkTypography.ts';
 import {
@@ -30,6 +28,7 @@ import {
   LANG_WHEEL_INDICATOR_LEG_PX,
   LYRIC_PRIMARY_WEIGHT,
   LYRIC_SECONDARY_WEIGHT,
+  JP_ZH_LINE_WEIGHT,
   VOCAB_EMPHASIS_COLOR,
   ZH_OPTICAL_SCALE,
   ZH_VOCAB_ITEM_MB_EM,
@@ -75,7 +74,11 @@ export function resolveLangFromOptions(options: {
   return 'jp';
 }
 
-/** 歌名区字体：jp 汉字标题优先宋体+KozMin 回退 · ko 宋体+Batang · zh 宋体 · en KozMin */
+/**
+ * 歌名区默认字体（整段 h1 继承）。
+ * jp 默认 KozMin；简体中译歌名/歌手由 `.fv-title-serif--source-han` 覆盖为思源宋体。
+ * zh 一律思源；ko 思源+Batang；en KozMin。
+ */
 export function resolvePosterTitleFont(lang: LangCode): string {
   switch (lang) {
     case 'ko':
@@ -86,7 +89,7 @@ export function resolvePosterTitleFont(lang: LangCode): string {
       return KOZMIN_PRO_REGULAR_FAMILY;
     case 'jp':
     default:
-      return `${ZH_SONGTI_FONT_FAMILY}, ${KOZMIN_PRO_REGULAR_FAMILY}`;
+      return KOZMIN_PRO_REGULAR_FAMILY;
   }
 }
 
@@ -249,7 +252,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   roles.lyricSecondary = baseToken({
     fontFamily: lyricSecondaryFont,
     fontSize: auxPx,
-    fontWeight: LYRIC_SECONDARY_WEIGHT,
+    fontWeight: lang === 'jp' ? JP_ZH_LINE_WEIGHT : LYRIC_SECONDARY_WEIGHT,
     lineHeight: zhLyricsLh,
     color: isZhPipeline ? GLOSS_COLOR : '#0a0a0a',
     letterSpacing: isZhPipeline ? '0' : cjkLs,
@@ -257,7 +260,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   });
 
   roles.rubyAnnotation = baseToken({
-    fontFamily: isZhPipeline ? ZH_FONT_FAMILY : KOZUKA_MINCHO_EL_FAMILY,
+    fontFamily: isZhPipeline ? ZH_FONT_FAMILY : KOZMIN_PRO_REGULAR_FAMILY,
     fontSize: lyricPrimarySize,
     fontWeight: isZhPipeline ? LYRIC_PRIMARY_WEIGHT : JP_RUBY_WEIGHT,
     lineHeight: 1.1,

@@ -34,10 +34,11 @@ function buildSinglePrintPageHtml(
   artist: string | undefined,
   showTitle: boolean,
   showRuby: boolean,
+  lang: LangCode = 'jp',
 ): string {
   const safeBody = sanitizeShufuriPosterHtml(slice.html);
   const titleBlock = showTitle
-    ? `<h1 class="fv-title-h">${buildPosterTitleInnerHtml(title, artist)}</h1>`
+    ? `<h1 class="fv-title-h">${buildPosterTitleInnerHtml(title, artist, lang)}</h1>`
     : '';
   const pageNo = formatPosterPageNo(pageIndex + 1, pageCount);
   const exportScale = slice.spacingScale * EXPORT_HTML2CANVAS_SCALE_FUDGE;
@@ -98,7 +99,9 @@ export async function buildPrintDocumentHtml(
 
   const n = pageSlices.length;
   const pagesHtml = pageSlices
-    .map((slice, i) => buildSinglePrintPageHtml(slice, i, n, title, artist, i === 0, showRuby))
+    .map((slice, i) =>
+      buildSinglePrintPageHtml(slice, i, n, title, artist, i === 0, showRuby, lang ?? 'jp'),
+    )
     .join('\n');
 
   return `<!DOCTYPE html>

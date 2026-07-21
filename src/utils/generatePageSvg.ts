@@ -15,6 +15,7 @@ import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
 import {
   getPosterJapaneseFontsFaceCss,
   getPosterKoreanFontFaceCss,
+  getPosterSourceHanSerifScFontFaceCss,
   ZH_FONT_FAMILY,
 } from './shufuriPoster/fonts';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
@@ -90,6 +91,7 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
 
   const jpFontCss = getPosterJapaneseFontsFaceCss();
   const koFontCss = getPosterKoreanFontFaceCss();
+  const zhSerifFontCss = getPosterSourceHanSerifScFontFaceCss();
 
   const pageNoText = `— ${String(pageIndex + 1).padStart(2, '0')} / ${String(pageCount).padStart(2, '0')} —`;
   const pageNoBottom = layoutProfile === 'mobilePoster'
@@ -102,7 +104,7 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
   if (showTitle) {
     const tmp = document.createElement('h1');
     tmp.className = 'fv-title-h';
-    applyPosterTitleElement(tmp, title, artist);
+    applyPosterTitleElement(tmp, title, artist, pipelineLang ?? 'jp');
     titleHtml = `\n    ${tmp.outerHTML}`;
   }
 
@@ -121,6 +123,7 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
     <style>
       ${xmlEscape(jpFontCss)}
       ${xmlEscape(koFontCss)}
+      ${xmlEscape(zhSerifFontCss)}
       ${xmlEscape(innerCss)}
       .fv-poster-page-no {
         position: absolute;

@@ -123,7 +123,9 @@ export function buildStrictRaw(includeVocab: boolean): string {
 [STRICT_RAW]
 - Forbidden: markdown code fences (\`\`\`), HTML, explanatory prefix/suffix text.
 - One record per line; column separator is unescaped |; literal | inside a field MUST be written as \\|.
-- Ruby micro-syntax: {base:reading} (colon, NOT pipe); e.g. {秋桜:コスモス}, {淡:あわ}.
+- Ruby micro-syntax: {漢字:かな} ONLY (colon, NOT pipe). NEVER bare braces {…} without ":reading".
+  · CORRECT: {秋桜:コスモス}, {淡:あわ}い, {出:で}る
+  · FORBIDDEN bare braces: {アルバム}, {る}, {の}, 語{る} — these print as literal {} on screen
 ${vocabNote}`;
 }
 
@@ -174,7 +176,17 @@ export function buildJpRubyBlock(includeVocab: boolean): string {
     : '';
   return `
 [Jp_ruby]
-- L col3 / V headword col3: {漢字:かな} on kanji; kana-only / digits / punctuation unchanged${col6Line}`;
+- ONLY valid token: {漢字:かな} — base MUST contain ≥1 kanji; reading after a colon
+- Okurigana / particles / katakana loanwords stay OUTSIDE braces as plain text
+- CORRECT:
+  · {揺:ゆ}れている   · {出:で}る   · {語:かた}る   · {想:おも}い{出:だ}
+  · {薄紅:うすべに}の{秋桜:コスモス}   · 縁側でアルバムを{開:ひら}いては
+- FORBIDDEN (causes literal "{…}" on screen — "裸括号"):
+  · {る} {い} {て} {の} {が} — never wrap okurigana/particles alone
+  · {出:で}{る} / {語:かた}{る} — never brace okurigana after a ruby token; write {出:で}る
+  · {アルバム} / {アルバム:あるばむ} — katakana loanwords are plain アルバム, no braces
+  · {の:の} {揺れている:ゆれている} — never kana-only base; never swallow okurigana into base
+- Self-check L col3: every "{" MUST contain a ":" and a kanji before the colon; zero bare {kana} remain${col6Line}`;
 }
 
 export function buildZhColumnMapBlock(includeVocab: boolean): string {
@@ -339,11 +351,16 @@ export function buildSelfCheckBlock(
     activeTarget === 'zh'
       ? `\n${zhNum}. zh L col3: zero bare CJK after removing all {…:…} tokens`
       : '';
+  const jpNum = includeVocab ? (pedagogicalLevel ? 6 : 5) : 4;
+  const jpLine =
+    activeTarget === 'jp'
+      ? `\n${jpNum}. jp L/V/G ruby: every "{" has ":" + kanji base; NO bare {る}/{アルバム}; okurigana plain after ruby ({出:で}る not {出:で}{る})`
+      : '';
   return `
 [Self_Check — before send]
 1. Last non-empty line is exactly @9
 2. L line numbers contiguous 1..N
-3. H col3 = prompt title; L|1 exists; L lyrics transcribed from web search — not memory recall${col6Line}${levelLine}${zhLine}`;
+3. H col3 = prompt title; L|1 exists; L lyrics transcribed from web search — not memory recall${col6Line}${levelLine}${zhLine}${jpLine}`;
 }
 
 export function buildModelComplianceBlock(modelHint?: EncoderPromptOptions['modelHint']): string {

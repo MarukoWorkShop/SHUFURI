@@ -15,6 +15,6 @@ Encode "${artist} - ${title}" as a jp record stream.
 ${buildLearnerGlossBlock(gloss, options.matrix)}
 [Lang: jp]
 - H col3 = song title from prompt; H col4 (lang code) MUST be jp
-- L col3: Japanese main line; kanji MUST use {base:reading} ruby; kana-only / digits / punctuation unchanged
+- L col3: {漢字:かな} on kanji ONLY; okurigana/particles/katakana plain (never {る} / {アルバム} bare braces)
 ${buildVocabGrammarIncludeRule(include, iface)}`;
 }

@@ -417,8 +417,8 @@ function ShufuriPosterSinglePage({
           <style>{innerCss}</style>
           {showTitle ? (
             <h1 className="fv-title-h">
-              <span className={getPosterTitleNameClass(title)}>{resolveDisplayTitle(title)}</span>
-              <span className={getPosterTitleArtistClass(artist)}>{resolveDisplayArtist(artist)}</span>
+              <span className={getPosterTitleNameClass(title, pipelineLang ?? 'jp')}>{resolveDisplayTitle(title)}</span>
+              <span className={getPosterTitleArtistClass(artist, pipelineLang ?? 'jp')}>{resolveDisplayArtist(artist)}</span>
             </h1>
           ) : null}
           <div

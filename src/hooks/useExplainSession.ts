@@ -39,6 +39,7 @@ export type UseExplainSessionOptions = {
   showToast: (msg: string) => void;
   /** 将 AI 讲解写入歌词正文笔记区 */
   appendExplainNote?: (payload: {
+    id: string;
     term: string;
     contextSense: string;
     grammar?: string;
@@ -420,6 +421,7 @@ export function useExplainSession({
       showToast('当前页面无法添加笔记');
       return;
     }
+    const noteId = nanoid();
     const micro = result?.micro_analysis;
     const aiParts = aiExplain ? parseAiExplainParts(aiExplain) : null;
     const contextSense = aiParts?.contextSense?.trim() || '';
@@ -435,6 +437,7 @@ export function useExplainSession({
       return;
     }
     appendExplainNote({
+      id: noteId,
       term,
       contextSense: contextSense || micro?.direct_meaning?.trim() || term,
       grammar: grammar || undefined,

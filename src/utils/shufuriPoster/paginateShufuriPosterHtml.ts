@@ -5,7 +5,8 @@ import {
   measurePosterBodyNaturalHeightPx,
   getShufuriPosterCanvasDimensions,
 } from './shufuriPosterShared';
-import { applyPosterTitleElement, resolveDisplayArtist, resolveDisplayTitle } from './posterTitle';
+import { applyPosterTitleElement, resolveDisplayArtist, resolveDisplayTitle, stampPosterTitleSerifClasses } from './posterTitle';
+import { resolvePosterPipelineLang } from './inferPosterLang';
 import type { PosterLayoutProfile, PosterPageSlice, PosterRenderOptions } from './types';
 import type { LyricsLanguage, LangCode } from '../../services/appSettings';
 import { getAppSettings } from '../../services/appSettings';
@@ -46,18 +47,19 @@ type PagePack = {
  * 保证 body.clientHeight 被约束到固定值。否则在离屏 DOM 上 flex 布局
  * 可能不会正确收缩 body，导致 clientHeight=scrollHeight 始终不溢出。
  */
-function bodyContentOverflows(body: HTMLElement, profile: PosterLayoutProfile): boolean {
+function bodyContentOverflows(body: HTMLElement, _profile: PosterLayoutProfile): boolean {
   void body.offsetHeight;
   const clientH = body.clientHeight;
-  const slack =
-    profile === 'mobilePoster' || profile === 'squarePoster' ? 10 : FIT_EPSILON_PX;
+  // 全 profile 统一 1px 容差；过大的 slack 会把接近满页的内容误判为「装得下」
+  const slack = FIT_EPSILON_PX;
   if (clientH >= 1) {
     return body.scrollHeight > clientH + slack;
   }
   const maxH =
     parseFloat(body.dataset.posterBodyMaxHeight || '') || parseFloat(body.style.maxHeight);
+  // 无有效 maxHeight 时绝不当作「不溢出」（否则会整页装箱）
   if (!Number.isFinite(maxH) || maxH <= 0) {
-    return false;
+    return true;
   }
   return measurePosterBodyNaturalHeightPx(body) > maxH + slack;
 }
@@ -78,15 +80,15 @@ export function createPosterMeasurer(
   // wrapper 提供固定尺寸的 containing block，避免 shell 用 position:fixed
   // 导致内部 max-width:100% 按视口宽度计算而低估实际高度
   const wrapper = doc.createElement('div');
-  wrapper.style.position = 'fixed';
-  wrapper.style.left = '0';
+  // relative + 离屏：提供固定尺寸 containing block；避免 fixed 按视口算宽、
+  // 也避免 visibility:hidden 在部分引擎里影响 scrollHeight 测量
+  wrapper.style.position = 'relative';
+  wrapper.style.left = '-99999px';
   wrapper.style.top = '0';
   wrapper.style.width = canvasW + 'px';
   wrapper.style.height = canvasH + 'px';
   wrapper.style.overflow = 'hidden';
-  wrapper.style.visibility = 'hidden';
   wrapper.style.pointerEvents = 'none';
-  wrapper.style.zIndex = '-1';
 
   const shell = doc.createElement('div');
   shell.className = 'fv-html-poster-root';
@@ -96,10 +98,11 @@ export function createPosterMeasurer(
   shell.dataset.rubyVisible = (renderOptions?.showRuby ?? true) ? 'true' : 'false';
 
   const styleEl = doc.createElement('style');
+  const pipelineLang = resolvePosterPipelineLang(lang, '', language) ?? 'jp';
   styleEl.textContent = buildShufuriPosterInnerCss(profile, {
     spacingScale,
     language,
-    lang,
+    lang: pipelineLang,
     colorTheme: getAppSettings().colorTheme,
     showRuby: renderOptions?.showRuby,
     userFontScale: renderOptions?.userFontScale,
@@ -127,8 +130,9 @@ export function createPosterMeasurer(
       titleEl.style.display = '';
       if (titleMarkupHtml?.trim()) {
         titleEl.innerHTML = titleMarkupHtml;
+        stampPosterTitleSerifClasses(titleEl, pipelineLang);
       } else {
-        applyPosterTitleElement(titleEl, normalizedTitle, displayArtist);
+        applyPosterTitleElement(titleEl, normalizedTitle, displayArtist, pipelineLang);
       }
     } else {
       titleEl.style.display = 'none';
@@ -406,6 +410,10 @@ function ensureLyricPairsInBodyRoot(root: HTMLElement): void {
   root.replaceChildren(...rebuilt);
 }
 
+function isExplainNotesSection(el: HTMLElement): boolean {
+  return el.classList.contains('lyrics-explain-notes');
+}
+
 function mergeAdjacentSections(root: HTMLElement, sectionClass: string): void {
   let anchor: HTMLElement | null = null;
   for (const node of Array.from(root.children)) {
@@ -413,7 +421,16 @@ function mergeAdjacentSections(root: HTMLElement, sectionClass: string): void {
       anchor = null;
       continue;
     }
+    // 划词笔记区保持独立，不与重点词汇/其它 vocabulary 区块合并（保留 force-next-page 与标题）
+    if (sectionClass === 'lyrics-vocabulary' && isExplainNotesSection(node)) {
+      anchor = null;
+      continue;
+    }
     if (!anchor) {
+      anchor = node;
+      continue;
+    }
+    if (sectionClass === 'lyrics-vocabulary' && isExplainNotesSection(anchor)) {
       anchor = node;
       continue;
     }
@@ -591,12 +608,23 @@ function splitPaginationUnit(unit: HTMLElement): HTMLElement[] | null {
     return null;
   }
 
+  // 划词笔记条目：保持整体，不拆分为 term/meaning/button 等子块
+  // 否则会把一条笔记拆到不同页，造成视觉“截断/切行”。
+  if (item.getAttribute('data-shufuri-explain-note') === '1') {
+    return null;
+  }
+
   // 中文语法条目不拆子块，避免标题/解释/例句各自带上项目符号
   if (item.classList.contains('lyrics-grammar-item--zh')) {
     return null;
   }
 
-  const children = Array.from(item.children).filter((n): n is Element => n instanceof Element);
+  const children = Array.from(item.children).filter(
+    (n): n is Element =>
+      n instanceof Element &&
+      !n.classList.contains('shufuri-explain-note__delete') &&
+      !n.classList.contains('shufuri-study-item__delete'),
+  );
   if (children.length <= 1) {
     return null;
   }
@@ -842,6 +870,22 @@ function createMeasurerAtScale(
   );
 }
 
+function pageBlocksHaveExplainNotes(blocks: HTMLElement[]): boolean {
+  return blocks.some(
+    (b) =>
+      b.classList.contains('lyrics-explain-notes') ||
+      !!b.querySelector?.('.lyrics-explain-notes, [data-shufuri-explain-note="1"]'),
+  );
+}
+
+function pageBlocksForceNewPage(blocks: HTMLElement[]): boolean {
+  return blocks.some(
+    (b) =>
+      b.getAttribute('data-lyrics-force-next-page') === '1' ||
+      !!b.querySelector?.('[data-lyrics-force-next-page="1"]'),
+  );
+}
+
 /** 末页 ≤2 行时尝试收紧行距并并回上一页；行距不低于 0.9，否则保留孤页 */
 function preventOrphanPages(
   pages: HTMLElement[][],
@@ -863,6 +907,10 @@ function preventOrphanPages(
 
     const lastIdx = packs.length - 1;
     const last = packs[lastIdx]!;
+    // 划词笔记页 / 强制换页板块不并回上一页，避免把笔记或词汇区吞进已过满的歌词页
+    if (pageBlocksHaveExplainNotes(last.blocks) || pageBlocksForceNewPage(last.blocks)) {
+      break;
+    }
     if (countPageContentLines(last.blocks) > ORPHAN_MAX_LINES) {
       break;
     }
@@ -975,13 +1023,24 @@ function resolvePaginationBodyRoot(wrapper: HTMLElement): HTMLElement {
   if (topKids.length === 0) {
     return wrapper;
   }
+
+  // 历史数据：划词笔记曾被写成 clip-body 的兄弟节点，分页会把整块 clip-body
+  // 当成单一 atom → 全书挤进第 1 页。先把兄弟并回 clip-body 再展开。
+  const clip = topKids.find(
+    (k) => k.classList.contains('clip-body') || k.classList.contains('lyrics-notes-body'),
+  );
+  if (clip) {
+    for (const kid of topKids) {
+      if (kid !== clip) {
+        clip.appendChild(kid);
+      }
+    }
+    return clip;
+  }
+
   if (topKids.length === 1) {
     const only = topKids[0]!;
-    if (
-      only.classList.contains('clip-body') ||
-      only.classList.contains('lyrics-notes-body') ||
-      !only.classList.contains('lyrics-group')
-    ) {
+    if (!only.classList.contains('lyrics-group')) {
       return only;
     }
   }

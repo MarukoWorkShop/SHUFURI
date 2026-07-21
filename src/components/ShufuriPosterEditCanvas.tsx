@@ -10,6 +10,7 @@ import {
   getPosterTitleNameClass,
   resolveDisplayArtist,
   resolveDisplayTitle,
+  stampTitleMarkupSerifHtml,
 } from '../utils/shufuriPoster/posterTitle';
 import type { PosterLayoutProfile } from '../utils/shufuriPoster/types';
 import type { ColorTheme, LangCode, LyricsLanguage } from '../services/appSettings';
@@ -47,14 +48,17 @@ export default function ShufuriPosterEditCanvas({
   showRuby = true,
 }: Props) {
   const safeBody = useMemo(() => sanitizeShufuriPosterHtml(bodyHtml), [bodyHtml]);
-  const safeTitleMarkup = useMemo(
-    () => (titleMarkupHtml ? sanitizeShufuriPosterHtml(titleMarkupHtml) : undefined),
-    [titleMarkupHtml],
-  );
   const pipelineLang = useMemo(
     () => resolvePosterPipelineLang(lang, safeBody, language),
     [lang, safeBody, language],
   );
+  const safeTitleMarkup = useMemo(() => {
+    if (!titleMarkupHtml) return undefined;
+    return stampTitleMarkupSerifHtml(
+      sanitizeShufuriPosterHtml(titleMarkupHtml),
+      pipelineLang ?? 'jp',
+    );
+  }, [titleMarkupHtml, pipelineLang]);
   const innerCss = useMemo(
     () =>
       `${buildShufuriPosterInnerCss(layoutProfile, {
@@ -187,8 +191,8 @@ export default function ShufuriPosterEditCanvas({
             />
           ) : (
             <h1 className="fv-title-h" data-ink-title>
-              <span className={getPosterTitleNameClass(title)}>{resolveDisplayTitle(title)}</span>
-              <span className={getPosterTitleArtistClass(artist)}>{resolveDisplayArtist(artist)}</span>
+              <span className={getPosterTitleNameClass(title, pipelineLang ?? 'jp')}>{resolveDisplayTitle(title)}</span>
+              <span className={getPosterTitleArtistClass(artist, pipelineLang ?? 'jp')}>{resolveDisplayArtist(artist)}</span>
             </h1>
           )}
           <div

@@ -20,13 +20,16 @@ export const ZH_OPTICAL_SCALE = 1;
 
 /** 歌词行字重 — 全语言统一 */
 export const LYRIC_PRIMARY_WEIGHT = 400;
+/** 译文 / gloss 默认轻字重 */
 export const LYRIC_SECONDARY_WEIGHT = 300;
+/** 日语歌中文译文字重（字号/颜色不变，仅加重） */
+export const JP_ZH_LINE_WEIGHT = 400;
 
 /** 辅助文案 / 标题轻字重 */
 export const AUX_WEIGHT = 300;
 
-/** 日文 ruby 注音层 */
-export const JP_RUBY_WEIGHT = 200;
+/** 日文 ruby 注音层（KozMin Pro R，与主文同族、略浅色） */
+export const JP_RUBY_WEIGHT = 400;
 export const JP_RUBY_COLOR = '#64748b';
 export const JP_RUBY_RT_EM_MOBILE = 0.54;
 export const JP_RUBY_RT_EM_PRINT = 0.58;

@@ -2,7 +2,6 @@ import { resolvePosterTypography } from '../src/utils/posterTypography/fontResol
 import { compilePosterCss } from '../src/utils/posterTypography/cssCompiler.ts';
 import {
   LYRIC_PRIMARY_WEIGHT,
-  LYRIC_SECONDARY_WEIGHT,
 } from '../src/utils/posterTypography/typographyConstants.ts';
 import { KOZMIN_PRO_REGULAR_FAMILY, KO_POSTER_TITLE_FONT_FAMILY, ZH_POSTER_TITLE_FONT_FAMILY } from '../src/utils/shufuriPoster/fonts.ts';
 
@@ -45,12 +44,12 @@ assert(
   'lyricPrimary weight 400',
 );
 assert(
-  mobileJp.roles.lyricSecondary.fontWeight === LYRIC_SECONDARY_WEIGHT,
-  'lyricSecondary weight 300',
+  mobileJp.roles.lyricSecondary.fontWeight === LYRIC_PRIMARY_WEIGHT,
+  'jp lyricSecondary (zh-line) weight 400',
 );
 assert(
-  mobileJp.roles.rubyAnnotation.fontFamily.includes('Kozuka Mincho Pro EL'),
-  'jp ruby uses ExtraLight',
+  mobileJp.roles.rubyAnnotation.fontFamily.includes('Kozuka Mincho Pro R'),
+  'jp ruby uses KozMin Pro R',
 );
 
 const zhTight = resolvePosterTypography({ profile: 'mobilePoster', lang: 'zh', spacingScale: 0.9 });

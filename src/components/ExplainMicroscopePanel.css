@@ -315,7 +315,7 @@
 }
 
 .microscope-section--macro {
-  font-family: 'Songti SC', 'Noto Serif SC', 'Source Han Serif SC', 'Hiragino Mincho ProN',
+  font-family: 'Source Han Serif SC', 'Songti SC', 'Noto Serif SC', 'Hiragino Mincho ProN',
     'Georgia', serif;
 }
 
@@ -503,7 +503,9 @@
     left: 0;
     right: 0;
     bottom: 0;
-    max-height: min(88vh, 720px);
+    /* 约页面 2/3，抬高顶边，避免与右侧文具盒三角叠在关闭键附近 */
+    height: 66.666vh;
+    max-height: 66.666vh;
     border-radius: 18px 18px 0 0;
     pointer-events: auto;
     animation: microscope-sheet-up 0.28s ease;
@@ -511,6 +513,13 @@
 
   .microscope-panel__handle {
     display: block;
+  }
+
+  /* 抽屉打开时隐藏文具盒三角，避免与关闭键抢点 */
+  .edit-area--explain .ink-toolbox,
+  .export-area--explain .ink-toolbox {
+    visibility: hidden;
+    pointer-events: none;
   }
 }
 

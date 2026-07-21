@@ -45,9 +45,9 @@ export function getFuriganaBodyBottomPaddingPx(profile: PosterLayoutProfile): nu
 
 /** 分页测量与预览共用的正文区安全余量（吸收 WebKit 字体/ruby 子像素误差） */
 export function getPosterBodySafetyMarginPx(profile: PosterLayoutProfile): number {
-  if (profile === 'mobilePoster') return 12;
-  if (profile === 'squarePoster') return 10;
-  return 8;
+  if (profile === 'mobilePoster') return 20;
+  if (profile === 'squarePoster') return 24;
+  return 12;
 }
 
 /** 计算 fv-body-h 的 max-height（px），测量与预览共用同一公式 */
@@ -118,8 +118,7 @@ export function detectFuriganaPosterBodyOverflow(
   void body.offsetHeight;
   const clientH = body.clientHeight;
   if (clientH < 1) return false;
-  const slack = profile === 'mobilePoster' || profile === 'squarePoster' ? 10 : 1;
-  return body.scrollHeight > clientH + slack;
+  return body.scrollHeight > clientH + 1;
 }
 
 export type FuriganaPosterCssOptions = {
