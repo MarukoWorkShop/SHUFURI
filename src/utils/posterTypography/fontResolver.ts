@@ -9,6 +9,7 @@ import {
   UI_FONT_FAMILY,
   ZH_FONT_FAMILY,
   ZH_POSTER_TITLE_FONT_FAMILY,
+  ZH_SONGTI_FONT_FAMILY,
 } from '../shufuriPoster/fonts.ts';
 import { cjkFontScale, cjkLetterSpacingEm, kamiLetterSpacingEm } from '../shufuriPoster/cjkTypography.ts';
 import {
@@ -203,13 +204,14 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   }
 
   const lyricPrimarySize = isZhPipeline ? zhMainPx : mainPx;
+  /** 中文歌词正文用思源宋体；PingFang 仅留给 UI / 辅文 / 词解 */
   const lyricPrimaryFont =
     lang === 'ko'
       ? KO_FONT_FAMILY
       : lang === 'en'
         ? EN_FONT_FAMILY
         : lang === 'zh'
-          ? ZH_FONT_FAMILY
+          ? ZH_SONGTI_FONT_FAMILY
           : jpLyricFont;
   const lyricPrimaryWeight =
     lang === 'ko' ? KO_PRIMARY_WEIGHT : LYRIC_PRIMARY_WEIGHT;

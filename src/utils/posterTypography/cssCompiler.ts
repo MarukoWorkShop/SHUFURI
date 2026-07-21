@@ -83,8 +83,18 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
     display: flex;
     flex-direction: column;
   }
+  /* 中文歌词正文：思源宋体 */
   ${scoped('.cn-line')},
-  ${scoped('.cn-line *:not(rt):not(rp):not(' + ZH_CHAR_SLOT + ')')},
+  ${scoped('.cn-line *:not(rt):not(rp):not(' + ZH_CHAR_SLOT + ')')} {
+    font-family: ${ZH_SONGTI_FONT_FAMILY} !important;
+    font-size: ${fs(zh.cnFs)} !important;
+    font-weight: ${LYRIC_PRIMARY_WEIGHT} !important;
+    line-height: ${zh.mainLh} !important;
+    color: #0a0a0a !important;
+    letter-spacing: ${r.cjkLetterSpacing} !important;
+    ${cjkWrap}
+  }
+  /* 重点词 / 语法点标题仍用 PingFang（与正文衬线分流） */
   ${zhVocab('.vocab-word-cn')},
   ${zhVocab('.vocab-word-cn *:not(rt):not(rp):not(' + ZH_CHAR_SLOT + ')')},
   ${zhVocab('.vocab-word')},
@@ -173,7 +183,14 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
     margin-right: ${gap(zh.rubyGapEm)};
     vertical-align: bottom;
   }
-  ${scoped('.cn-line ruby')},
+  ${scoped('.cn-line ruby')} {
+    font-family: ${ZH_SONGTI_FONT_FAMILY} !important;
+    font-weight: ${LYRIC_PRIMARY_WEIGHT} !important;
+    ruby-position: over;
+    -webkit-ruby-position: over;
+    ruby-align: center;
+    letter-spacing: 0 !important;
+  }
   ${zhVocab('.vocab-word-cn ruby')},
   ${zhVocab('.vocab-word ruby')},
   ${zhVocab('.vocab-ex-cn ruby')},
