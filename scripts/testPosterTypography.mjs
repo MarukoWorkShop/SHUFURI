@@ -3,7 +3,12 @@ import { compilePosterCss } from '../src/utils/posterTypography/cssCompiler.ts';
 import {
   LYRIC_PRIMARY_WEIGHT,
 } from '../src/utils/posterTypography/typographyConstants.ts';
-import { KOZMIN_PRO_REGULAR_FAMILY, KO_POSTER_TITLE_FONT_FAMILY, ZH_POSTER_TITLE_FONT_FAMILY } from '../src/utils/shufuriPoster/fonts.ts';
+import {
+  KOZMIN_PRO_REGULAR_FAMILY,
+  KO_POSTER_TITLE_FONT_FAMILY,
+  ZH_POSTER_TITLE_FONT_FAMILY,
+  ZH_SONGTI_FONT_FAMILY,
+} from '../src/utils/shufuriPoster/fonts.ts';
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
@@ -75,6 +80,10 @@ assert(
 );
 
 const mobileZh = resolvePosterTypography({ profile: 'mobilePoster', lang: 'zh', spacingScale: 1 });
+assert(
+  mobileZh.roles.lyricPrimary.fontFamily === ZH_SONGTI_FONT_FAMILY,
+  'zh lyricPrimary (.cn-line) uses Source Han Serif SC',
+);
 assert(
   mobileZh.roles.lyricSecondary.fontFamily === KOZMIN_PRO_REGULAR_FAMILY,
   'zh gloss-line uses KozMin Pro Light',
