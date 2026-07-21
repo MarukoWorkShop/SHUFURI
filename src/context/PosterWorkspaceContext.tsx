@@ -93,6 +93,24 @@ export type PosterDocumentContextValue = {
       mood?: string;
     },
   ) => void;
+  /** 为旧划词笔记补齐 id（进入编辑页时调用） */
+  ensureExplainNoteIds: () => void;
+  /** 为重点词汇/语法条目补齐 id */
+  ensureStudyItemIds: () => void;
+  removeStudyItem: (itemId: string) => void;
+  updateVocabItem: (itemId: string, payload: {
+    term: string;
+    meaning: string;
+    example: string;
+    translation: string;
+  }) => void;
+  updateGrammarItem: (itemId: string, payload: {
+    titlePrimary: string;
+    titleSecondary: string;
+    detail: string;
+    example: string;
+    translation: string;
+  }) => void;
 };
 
 export type PosterTypographyContextValue = {

@@ -46,8 +46,8 @@
   --font-serif-jp: "Kozuka Mincho Pro R", "Kozuka Mincho Pro", "YuMincho", "Yu Mincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", serif;
   /** 韩文学习区衬线（词卡） */
   --font-serif-ko: "HCR Batang", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", serif;
-  /** 中文学习区衬线 / 背面汉语大号释义 */
-  --font-serif-zh: "Songti SC", "STSong", "Songti TC", "SimSun", serif;
+  /** 中文学习区衬线 / 歌名汉字 / 背面汉语大号释义 — 随包思源宋体优先 */
+  --font-serif-zh: "Source Han Serif SC", "Songti SC", "STSong", "Songti TC", "SimSun", serif;
   --font-brand: "Sansation Light", sans-serif;
   --font-mono: "SF Mono", "Menlo", monospace;
 

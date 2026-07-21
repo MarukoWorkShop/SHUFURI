@@ -1,5 +1,6 @@
 import type { LangCode } from '../services/appSettings';
 import { resolvePosterClass } from '../codec/masterHandbook';
+import { nanoid } from 'nanoid';
 import { escapeHtml } from './escapeHtml';
 import { prepareBodyHtmlForPreview } from './inkEditUtils';
 
@@ -112,6 +113,49 @@ function serializeExplainNotesRoot(root: HTMLElement): string {
     return root.innerHTML;
   }
   return root.innerHTML;
+}
+
+function ensureNoteDeleteButton(note: HTMLElement, noteId: string): boolean {
+  let btn = note.querySelector('.shufuri-explain-note__delete') as HTMLElement | null;
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'shufuri-explain-note__delete';
+    btn.setAttribute('aria-label', '删除划词笔记');
+    btn.setAttribute('style', 'display:none');
+    btn.textContent = '×';
+    note.insertBefore(btn, note.firstChild);
+    btn.setAttribute('data-shufuri-explain-note-id', noteId);
+    return true;
+  }
+  if (btn.getAttribute('data-shufuri-explain-note-id') !== noteId) {
+    btn.setAttribute('data-shufuri-explain-note-id', noteId);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * 为缺少 id / 删除按钮的旧划词笔记补齐，便于编辑页点选与删除。
+ * 不调用 prepareBodyHtmlForPreview，避免与 inkEditUtils 循环依赖。
+ */
+export function ensureExplainNoteIdsInBodyHtml(bodyHtml: string): string {
+  if (!bodyHtml.trim() || typeof document === 'undefined') return bodyHtml;
+  const parsed = parseExplainNotesRoot(bodyHtml);
+  if (!parsed?.section) return bodyHtml;
+
+  let changed = false;
+  for (const note of noteNodesInSection(parsed.section)) {
+    let id = note.getAttribute('data-shufuri-explain-note-id')?.trim() ?? '';
+    if (!id) {
+      id = nanoid();
+      note.setAttribute('data-shufuri-explain-note-id', id);
+      changed = true;
+    }
+    if (ensureNoteDeleteButton(note, id)) changed = true;
+  }
+
+  return changed ? serializeExplainNotesRoot(parsed.root) : bodyHtml;
 }
 
 /** 删除一条划词笔记条目（如果笔记区变空，会移除整个“划词笔记”区块） */

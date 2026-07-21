@@ -61,6 +61,10 @@ for (const lang of ['jp', 'ko', 'en', 'zh']) {
   }
   if (lang === 'jp') {
     assert(prompt.includes('[Jp_ruby]'), `${lang} jp ruby block`);
+    assert(prompt.includes('FORBIDDEN'), `${lang} jp ruby forbids bare braces`);
+    assert(prompt.includes('{出:で}る'), `${lang} jp okurigana example`);
+    assert(prompt.includes('裸括号') || prompt.includes('bare braces') || prompt.includes('{アルバム}'), `${lang} bare brace warning`);
+    assert(prompt.includes('every "{" has ":"'), `${lang} self-check bare braces`);
   } else {
     assert(!prompt.includes('[Jp_ruby]'), `${lang} no jp ruby block`);
   }

@@ -5,7 +5,8 @@ import {
   measurePosterBodyNaturalHeightPx,
   getShufuriPosterCanvasDimensions,
 } from './shufuriPosterShared';
-import { applyPosterTitleElement, resolveDisplayArtist, resolveDisplayTitle } from './posterTitle';
+import { applyPosterTitleElement, resolveDisplayArtist, resolveDisplayTitle, stampPosterTitleSerifClasses } from './posterTitle';
+import { resolvePosterPipelineLang } from './inferPosterLang';
 import type { PosterLayoutProfile, PosterPageSlice, PosterRenderOptions } from './types';
 import type { LyricsLanguage, LangCode } from '../../services/appSettings';
 import { getAppSettings } from '../../services/appSettings';
@@ -97,10 +98,11 @@ export function createPosterMeasurer(
   shell.dataset.rubyVisible = (renderOptions?.showRuby ?? true) ? 'true' : 'false';
 
   const styleEl = doc.createElement('style');
+  const pipelineLang = resolvePosterPipelineLang(lang, '', language) ?? 'jp';
   styleEl.textContent = buildShufuriPosterInnerCss(profile, {
     spacingScale,
     language,
-    lang,
+    lang: pipelineLang,
     colorTheme: getAppSettings().colorTheme,
     showRuby: renderOptions?.showRuby,
     userFontScale: renderOptions?.userFontScale,
@@ -128,8 +130,9 @@ export function createPosterMeasurer(
       titleEl.style.display = '';
       if (titleMarkupHtml?.trim()) {
         titleEl.innerHTML = titleMarkupHtml;
+        stampPosterTitleSerifClasses(titleEl, pipelineLang);
       } else {
-        applyPosterTitleElement(titleEl, normalizedTitle, displayArtist);
+        applyPosterTitleElement(titleEl, normalizedTitle, displayArtist, pipelineLang);
       }
     } else {
       titleEl.style.display = 'none';
@@ -616,7 +619,12 @@ function splitPaginationUnit(unit: HTMLElement): HTMLElement[] | null {
     return null;
   }
 
-  const children = Array.from(item.children).filter((n): n is Element => n instanceof Element);
+  const children = Array.from(item.children).filter(
+    (n): n is Element =>
+      n instanceof Element &&
+      !n.classList.contains('shufuri-explain-note__delete') &&
+      !n.classList.contains('shufuri-study-item__delete'),
+  );
   if (children.length <= 1) {
     return null;
   }

@@ -28,7 +28,14 @@ import {
   commitExplainNoteToBody,
   deleteExplainNoteFromBodyHtml,
   updateExplainNoteInBodyHtml,
+  ensureExplainNoteIdsInBodyHtml,
 } from '../utils/appendExplainNoteToBody';
+import {
+  ensureStudyItemIdsInBodyHtml,
+  deleteStudyItemFromBodyHtml,
+  updateVocabItemInBodyHtml,
+  updateGrammarItemInBodyHtml,
+} from '../utils/studySectionItems';
 
 const EDIT_LAYOUT: PosterLayoutProfile = 'mobilePoster';
 
@@ -360,6 +367,67 @@ export default function PosterWorkspaceProvider({
     [bodyHtmlRef, lang, setBodyHtml],
   );
 
+  const ensureExplainNoteIds = useCallback(() => {
+    const next = ensureExplainNoteIdsInBodyHtml(bodyHtmlRef.current);
+    if (next === bodyHtmlRef.current) return;
+    bodyHtmlRef.current = next;
+    setBodyHtml(next);
+  }, [bodyHtmlRef, setBodyHtml]);
+
+  const ensureStudyItemIds = useCallback(() => {
+    const next = ensureStudyItemIdsInBodyHtml(bodyHtmlRef.current);
+    if (next === bodyHtmlRef.current) return;
+    bodyHtmlRef.current = next;
+    setBodyHtml(next);
+  }, [bodyHtmlRef, setBodyHtml]);
+
+  const removeStudyItem = useCallback(
+    (itemId: string) => {
+      const next = deleteStudyItemFromBodyHtml(bodyHtmlRef.current, itemId);
+      if (next === bodyHtmlRef.current) return;
+      bodyHtmlRef.current = next;
+      setBodyHtml(next);
+    },
+    [bodyHtmlRef, setBodyHtml],
+  );
+
+  const updateVocabItem = useCallback(
+    (
+      itemId: string,
+      payload: {
+        term: string;
+        meaning: string;
+        example: string;
+        translation: string;
+      },
+    ) => {
+      const next = updateVocabItemInBodyHtml(bodyHtmlRef.current, itemId, payload);
+      if (next === bodyHtmlRef.current) return;
+      bodyHtmlRef.current = next;
+      setBodyHtml(next);
+    },
+    [bodyHtmlRef, setBodyHtml],
+  );
+
+  const updateGrammarItem = useCallback(
+    (
+      itemId: string,
+      payload: {
+        titlePrimary: string;
+        titleSecondary: string;
+        detail: string;
+        example: string;
+        translation: string;
+      },
+    ) => {
+      const next = updateGrammarItemInBodyHtml(bodyHtmlRef.current, itemId, payload);
+      if (next === bodyHtmlRef.current) return;
+      bodyHtmlRef.current = next;
+      setBodyHtml(next);
+    },
+    [bodyHtmlRef, setBodyHtml],
+  );
+
   const typographyValue: PosterTypographyContextValue = useMemo(
     () => ({
       showRubyAnnotations,
@@ -411,6 +479,11 @@ export default function PosterWorkspaceProvider({
       appendExplainNote,
       removeExplainNote,
       updateExplainNote,
+      ensureExplainNoteIds,
+      ensureStudyItemIds,
+      removeStudyItem,
+      updateVocabItem,
+      updateGrammarItem,
     }),
     [
       mode,
@@ -441,6 +514,11 @@ export default function PosterWorkspaceProvider({
       appendExplainNote,
       removeExplainNote,
       updateExplainNote,
+      ensureExplainNoteIds,
+      ensureStudyItemIds,
+      removeStudyItem,
+      updateVocabItem,
+      updateGrammarItem,
     ],
   );
 

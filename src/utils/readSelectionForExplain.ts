@@ -346,9 +346,10 @@ export function clampSelectionToExplainBlock(sel: Selection): boolean {
       clamped.setEnd(original.endContainer, original.endOffset);
     }
 
-    if (clamped.collapsed || clamped.compareBoundaryPoints(Range.START_TO_END, clamped) >= 0) {
+    if (clamped.collapsed) {
       return false;
     }
+    // 勿用 START_TO_END 自比：部分引擎（含 happy-dom）对有效 Range 也返回 ≥0
     if (!textWithoutRubyNotes(clamped.cloneContents())) return false;
 
     sel.removeAllRanges();
@@ -362,6 +363,7 @@ export function clampSelectionToExplainBlock(sel: Selection): boolean {
 /**
  * 从编辑画布选区读取划选 + 前后句。
  * 日语可开启词界吸附（async）。
+ * 拖选长句不强制吸附，避免松手后选区突然跳大；点选/短选才吸附到词。
  */
 export async function readSelectionForExplain(
   opts?: ReadSelectionForExplainOptions,
@@ -370,6 +372,7 @@ export async function readSelectionForExplain(
   if (!sel || sel.rangeCount < 1) return null;
 
   const enableSnap = opts?.enableJapaneseTokenSnap === true;
+  const wasCollapsed = sel.isCollapsed;
 
   // 非折叠：先钳行；折叠点击：若在日语块内则靠吸附扩词
   if (!sel.isCollapsed) {
@@ -379,7 +382,15 @@ export async function readSelectionForExplain(
   }
 
   if (enableSnap) {
-    await snapSelectionToJapaneseTokens(sel);
+    let shouldSnap = wasCollapsed;
+    if (!shouldSnap && sel.rangeCount >= 1) {
+      const preview = textWithoutRubyNotes(sel.getRangeAt(0).cloneContents());
+      // 短拖选（约一词）才吸附；整句拖选保持用户边界
+      shouldSnap = preview.length > 0 && preview.length <= 8;
+    }
+    if (shouldSnap) {
+      await snapSelectionToJapaneseTokens(sel);
+    }
   }
 
   if (sel.isCollapsed || sel.rangeCount < 1) return null;

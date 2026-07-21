@@ -10,6 +10,8 @@ import {
   prepareBodyHtmlForPreview,
   prepareTitleMarkupHtml,
 } from '../utils/inkEditUtils';
+import { ensureExplainNoteIdsInBodyHtml } from '../utils/appendExplainNoteToBody';
+import { ensureStudyItemIdsInBodyHtml } from '../utils/studySectionItems';
 import type { SetContentPayload } from '../bridge/nativeBridge';
 import type {
   PosterLayoutProfile,
@@ -90,7 +92,9 @@ export function usePosterWorkspace({
       nextTitleMarkupHtml?: string,
     ) => {
       await ensurePosterFontsLoaded();
-      const normalized = prepareBodyHtmlForPreview(nextBodyHtml);
+      const normalized = ensureStudyItemIdsInBodyHtml(
+        ensureExplainNoteIdsInBodyHtml(prepareBodyHtmlForPreview(nextBodyHtml)),
+      );
       const trimmedTitle = nextTitle.trim();
       const trimmedArtist = nextArtist?.trim() || '';
       const preparedTitleMarkup = prepareTitleMarkupHtml(nextTitleMarkupHtml);

@@ -1,4 +1,9 @@
+import type { LangCode } from '../../services/appSettings';
 import { escapeHtml } from '../escapeHtml.ts';
+import {
+  resolveTitleFieldSerifOverride,
+  titleSerifClassName,
+} from './titleSerifScript.ts';
 
 export const DEFAULT_ARTIST = '佚名';
 /** 预览区歌名缺失时的占位文案（浅灰显示，非报错） */
@@ -39,36 +44,89 @@ export function isArtistPlaceholder(artist?: string | null): boolean {
   return !normalizeArtistName(artist);
 }
 
-export function buildPosterTitleInnerHtml(title: string, artist?: string | null): string {
-  const titleClass = isTitlePlaceholder(title)
-    ? 'fv-title-name fv-title-name--placeholder'
-    : 'fv-title-name';
-  const artistClass = isArtistPlaceholder(artist)
-    ? 'fv-title-artist fv-title-artist--placeholder'
-    : 'fv-title-artist';
+function joinTitleClasses(...parts: Array<string | false | null | undefined>): string {
+  return parts.filter(Boolean).join(' ');
+}
+
+export function getPosterTitleNameClass(
+  title?: string | null,
+  lang: LangCode = 'jp',
+): string {
+  const display = resolveDisplayTitle(title);
+  const serif = isTitlePlaceholder(title)
+    ? ''
+    : titleSerifClassName(resolveTitleFieldSerifOverride(lang, display));
+  return joinTitleClasses(
+    'fv-title-name',
+    isTitlePlaceholder(title) && 'fv-title-name--placeholder',
+    serif,
+  );
+}
+
+export function getPosterTitleArtistClass(
+  artist?: string | null,
+  lang: LangCode = 'jp',
+): string {
+  const display = resolveDisplayArtist(artist);
+  const serif = isArtistPlaceholder(artist)
+    ? ''
+    : titleSerifClassName(resolveTitleFieldSerifOverride(lang, display));
+  return joinTitleClasses(
+    'fv-title-artist',
+    isArtistPlaceholder(artist) && 'fv-title-artist--placeholder',
+    serif,
+  );
+}
+
+export function buildPosterTitleInnerHtml(
+  title: string,
+  artist?: string | null,
+  lang: LangCode = 'jp',
+): string {
   const t = escapeHtml(resolveDisplayTitle(title));
   const a = escapeHtml(resolveDisplayArtist(artist));
-  return `<span class="${titleClass}">${t}</span><span class="${artistClass}">${a}</span>`;
+  return `<span class="${getPosterTitleNameClass(title, lang)}">${t}</span><span class="${getPosterTitleArtistClass(artist, lang)}">${a}</span>`;
 }
 
 export function applyPosterTitleElement(
   h1: HTMLElement,
   title: string,
   artist?: string | null,
+  lang: LangCode = 'jp',
 ): void {
-  h1.innerHTML = buildPosterTitleInnerHtml(title, artist);
+  h1.innerHTML = buildPosterTitleInnerHtml(title, artist, lang);
 }
 
-export function getPosterTitleNameClass(title?: string | null): string {
-  return isTitlePlaceholder(title)
-    ? 'fv-title-name fv-title-name--placeholder'
-    : 'fv-title-name';
+/** 对已有歌名 markup（微调 HTML）按文案补打衬线 class */
+export function stampPosterTitleSerifClasses(h1: HTMLElement, lang: LangCode): void {
+  const nameEl = h1.querySelector('.fv-title-name');
+  const artistEl = h1.querySelector('.fv-title-artist');
+  if (nameEl) {
+    const text = nameEl.textContent ?? '';
+    nameEl.className = getPosterTitleNameClass(
+      isTitlePlaceholder(text) ? '' : text,
+      lang,
+    );
+  }
+  if (artistEl) {
+    const text = artistEl.textContent ?? '';
+    artistEl.className = getPosterTitleArtistClass(
+      isArtistPlaceholder(text) ? null : text,
+      lang,
+    );
+  }
 }
 
-export function getPosterTitleArtistClass(artist?: string | null): string {
-  return isArtistPlaceholder(artist)
-    ? 'fv-title-artist fv-title-artist--placeholder'
-    : 'fv-title-artist';
+/** 对 titleMarkupHtml 字符串补打衬线 class（浏览器 DOM） */
+export function stampTitleMarkupSerifHtml(
+  html: string,
+  lang: LangCode,
+): string {
+  if (typeof document === 'undefined' || !html.trim()) return html;
+  const wrap = document.createElement('h1');
+  wrap.innerHTML = html;
+  stampPosterTitleSerifClasses(wrap, lang);
+  return wrap.innerHTML;
 }
 
 export function readPosterTitleFromElement(h1: HTMLElement): { title: string; artist: string } {

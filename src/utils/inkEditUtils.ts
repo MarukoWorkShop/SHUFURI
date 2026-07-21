@@ -2,11 +2,14 @@ import { normalizeLyricsBodyHtml } from '../services/lyricsHtml';
 import { annotateInkEditTargets } from './inkFineTune/annotateInkEditTargets';
 import { stripLegacyInkHighlightsFromHtml } from './inkFineTune/stripInkHighlights';
 import { wrapUncoveredKanjiAsRuby } from './inkFineTune/wrapUncoveredKanjiAsRuby';
+import { sanitizeJpRubyInBodyHtml } from './rubyMarkup';
 
 export function prepareBodyHtmlForPreview(rawBodyHtml: string): string {
   return annotateInkEditTargets(
     wrapUncoveredKanjiAsRuby(
-      normalizeLyricsBodyHtml(stripLegacyInkHighlightsFromHtml(rawBodyHtml)),
+      sanitizeJpRubyInBodyHtml(
+        normalizeLyricsBodyHtml(stripLegacyInkHighlightsFromHtml(rawBodyHtml)),
+      ),
     ),
   );
 }
@@ -21,6 +24,8 @@ export async function prepareBridgedRawText(rawText: string): Promise<string> {
   const { preparePasteForLayout } = await import('../services/lyricsHtml');
   const parsed = preparePasteForLayout(rawText);
   return annotateInkEditTargets(
-    wrapUncoveredKanjiAsRuby(normalizeLyricsBodyHtml(parsed.bodyHtml)),
+    wrapUncoveredKanjiAsRuby(
+      sanitizeJpRubyInBodyHtml(normalizeLyricsBodyHtml(parsed.bodyHtml)),
+    ),
   );
 }

@@ -181,7 +181,7 @@ App 壳层**不得**显示可见滚动条（含抽屉、下拉列表、文本域
 | 角色 | 字体 | 来源 |
 |------|------|------|
 | 日文歌词主文 | Kozuka Mincho Pro R (Regular) | `KozMinPro-Regular.otf` |
-| 日文注音 rt | Kozuka Mincho Pro EL | `KozMinPro-ExtraLight.otf` |
+| 日文注音 rt | Kozuka Mincho Pro R | `KozMinPro-Light.otf` |
 | 韩文歌词 | HCR Batang | `HCRBatang.ttf` |
 | 英文歌词 | Sansation Light | `Sansation-Light.ttf` |
 | 中文翻译/释义 | PingFang SC | 系统 |
