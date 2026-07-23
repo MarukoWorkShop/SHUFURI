@@ -174,6 +174,43 @@
   white-space: pre-wrap;
 }
 
+.microscope-loanwords {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.microscope-loanwords__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #1e293b;
+}
+
+.microscope-loanwords__surface {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.microscope-loanwords__arrow {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.microscope-loanwords__src {
+  color: #475569;
+}
+
+.microscope-loanwords__gloss {
+  color: #334155;
+}
+
 .microscope-formula {
   display: flex;
   flex-wrap: wrap;
@@ -671,10 +708,10 @@
   }
 }
 
-/* 桌面：右侧并列，无遮罩 */
+/* 桌面：右侧并列，无遮罩（仅非嵌入的旧路径 / 导出页） */
 @media (min-width: 900px) {
   .export-area--explain .microscope-root,
-  .edit-area--explain .microscope-root {
+  .edit-area--explain:not(.edit-area--desktop-split) .microscope-root {
     position: relative;
     flex: 0 0 min(380px, 38vw);
     width: min(380px, 38vw);
@@ -684,12 +721,12 @@
   }
 
   .export-area--explain .microscope-overlay,
-  .edit-area--explain .microscope-overlay {
+  .edit-area--explain:not(.edit-area--desktop-split) .microscope-overlay {
     display: none;
   }
 
   .export-area--explain .microscope-panel,
-  .edit-area--explain .microscope-panel {
+  .edit-area--explain:not(.edit-area--desktop-split) .microscope-panel {
     position: absolute;
     inset: 0;
     border-radius: 16px 0 0 16px;
@@ -744,7 +781,7 @@
   }
 
   /* 抽屉打开时隐藏文具盒三角，避免与关闭键抢点 */
-  .edit-area--explain .ink-toolbox,
+  .edit-area--explain:not(.edit-area--desktop-split) .ink-toolbox,
   .export-area--explain .ink-toolbox {
     visibility: hidden;
     pointer-events: none;

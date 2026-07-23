@@ -416,6 +416,21 @@ html:has(.app--edit) body,
   position: relative;
 }
 
+.edit-area__lyrics-pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.edit-area__lyrics-pane > .edit-canvas-scroll {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
 .edit-area__workspace > .edit-canvas-scroll {
   flex: 1;
   min-width: 0;
@@ -425,6 +440,58 @@ html:has(.app--edit) body,
 .edit-area--explain .edit-area__workspace {
   flex-direction: row;
   align-items: stretch;
+}
+
+/* 桌面双栏：始终 歌词 | 笔记本（与 --edit-split-min / 900px 对齐） */
+@media (min-width: 900px) {
+  .edit-area--desktop-split .edit-area__workspace {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .edit-area--desktop-split .edit-area__lyrics-pane {
+    flex: 1 1 50%;
+    max-width: 50%;
+  }
+
+  .edit-area--desktop-split .edit-notebook {
+    flex: 1 1 50%;
+    max-width: 50%;
+    align-self: stretch;
+  }
+
+  /* 左栏兜底：隐藏学习区块（主路径已用 extractLyricsOnlyBodyHtml 剥离） */
+  .edit-area--desktop-split .edit-area__lyrics-pane .lyrics-vocabulary,
+  .edit-area--desktop-split .edit-area__lyrics-pane .lyrics-grammar,
+  .edit-area--desktop-split .edit-area__lyrics-pane .lyrics-grammar-spacer,
+  .edit-area--desktop-split .edit-area__lyrics-pane .lyrics-vocab-item,
+  .edit-area--desktop-split .edit-area__lyrics-pane .lyrics-grammar-item,
+  .edit-area--desktop-split .edit-area__lyrics-pane .lyrics-section-title {
+    display: none !important;
+  }
+
+  .edit-area--desktop-split .ink-toolbox {
+    position: absolute;
+    right: var(--ui-space-1, 8px);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .edit-area--desktop-split .edit-canvas-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ui-fg) 22%, transparent) transparent;
+  }
+
+  .edit-area--desktop-split .edit-canvas-scroll::-webkit-scrollbar {
+    display: block;
+    width: 8px;
+  }
+
+  .edit-area--desktop-split .edit-canvas-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--ui-fg) 22%, transparent);
+    border-radius: 999px;
+  }
 }
 
 /* 漏标汉字空注音：不占行高；仅编辑武装态显示可补音提示 */

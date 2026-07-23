@@ -412,14 +412,16 @@ html:has(.app--export) {
   font-size: 11px;
 }
 
-.app--home .home-body > .saved-library:not(.study-cards-library) {
+.app--home .home-body > .saved-library:not(.study-cards-library),
+.home-libraries-grid > .saved-library:not(.study-cards-library) {
   flex-shrink: 0;
   padding-top: 20px;
   padding-bottom: 0;
   position: relative;
 }
 
-.app--home .home-body > .study-cards-library {
+.app--home .home-body > .study-cards-library,
+.home-libraries-grid > .study-cards-library {
   flex-shrink: 0;
   padding-bottom: 0;
 }
@@ -427,6 +429,18 @@ html:has(.app--export) {
 .app--home .home-body > .home-daily-quote {
   flex: 1 1 auto;
   min-height: 0;
+}
+
+/* 在 home-libraries-grid 内的分割线 */
+.home-libraries-grid .saved-library::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--color-border-faint);
+  pointer-events: none;
 }
 
 .app--home .saved-library::before {
@@ -486,5 +500,64 @@ html.saved-library-drawer-open .home-body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.4s ease-in-out;
+}
+
+/* ==============================================
+   桌面端适配 (≥ 768px)
+   ============================================== */
+
+@media (min-width: 768px) {
+  .app-main {
+    max-width: 960px;
+  }
+
+  /* 首页 header 更大气 */
+  .app--home .app-header {
+    padding-top: calc(36px + var(--safe-top));
+    padding-bottom: 20px;
+    border-bottom: none;
+  }
+
+  .app-brand-bar__inner {
+    position: relative;
+    max-width: 960px;
+  }
+
+  /* 大号品牌，水平绝对居中 */
+  .app-brand-stack {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .app-brand {
+    font-size: 40px;
+    letter-spacing: 0.02em;
+  }
+
+  /* 标题后的说明文字已移除 */
+  .app-brand-tagline {
+    display: none !important;
+  }
+
+  /* header 按钮调整 */
+  .app-settings-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* body 不再 fixed padding-top，调整滚动区域 */
+  .app--home .app-screen__body {
+    padding-top: calc(80px + var(--safe-top));
+  }
+
+  /* 桌面端库卡片取消移动端 padding/margin，避免高度不一致 */
+  .home-libraries-grid > .saved-library,
+  .home-libraries-grid > .saved-library:not(.study-cards-library),
+  .home-libraries-grid > .study-cards-library {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
 }
 

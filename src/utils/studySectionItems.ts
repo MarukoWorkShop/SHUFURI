@@ -349,3 +349,49 @@ export function readGrammarItemFromElement(item: HTMLElement): GrammarItemPayloa
       item.querySelector('.grammar-ex-zh, .grammar-ex-gloss')?.textContent?.trim() ?? '',
   };
 }
+
+export type NotebookVocabEntry = VocabItemPayload & {
+  id: string;
+  /** 词条 HTML（可含 ruby），供笔记本展示 */
+  termHtml: string;
+};
+
+export type NotebookGrammarEntry = GrammarItemPayload & {
+  id: string;
+  titlePrimaryHtml: string;
+};
+
+/** 桌面笔记本：列出正文内重点词汇 / 语法点（不含划词笔记） */
+export function listStudyEntriesFromBodyHtml(bodyHtml: string): {
+  vocab: NotebookVocabEntry[];
+  grammar: NotebookGrammarEntry[];
+} {
+  const root = parseBodyRoot(bodyHtml);
+  if (!root) return { vocab: [], grammar: [] };
+
+  const vocab: NotebookVocabEntry[] = [];
+  const grammar: NotebookGrammarEntry[] = [];
+
+  studyItems(root).forEach((item, index) => {
+    const kind = kindOfItem(item);
+    const id = item.getAttribute(STUDY_ID_ATTR)?.trim() || `orphan-study-${kind}-${index}`;
+    if (kind === 'vocab') {
+      const payload = readVocabItemFromElement(item);
+      const termHtml =
+        item.querySelector('.vocab-line1 [class*="vocab-word"]')?.innerHTML?.trim() ||
+        payload.term;
+      vocab.push({ id, ...payload, termHtml });
+      return;
+    }
+    const payload = readGrammarItemFromElement(item);
+    const titlePrimaryHtml =
+      item
+        .querySelector(
+          'h3.grammar-point-title .grammar-title-ja, h3.grammar-point-title .grammar-title-ko, h3.grammar-point-title .grammar-title-cn',
+        )
+        ?.innerHTML?.trim() || payload.titlePrimary;
+    grammar.push({ id, ...payload, titlePrimaryHtml });
+  });
+
+  return { vocab, grammar };
+}

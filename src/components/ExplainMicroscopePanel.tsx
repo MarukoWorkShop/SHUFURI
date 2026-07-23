@@ -9,6 +9,8 @@ import './ExplainMicroscopePanel.css';
 
 type Props = {
   session: UseExplainSessionResult;
+  /** sheet：移动底抽屉；embedded：桌面笔记本内嵌（无遮罩） */
+  variant?: 'sheet' | 'embedded';
 };
 
 function highlightFocusInSentence(sentence: string, focus: string): { before: string; focus: string; after: string } {
@@ -49,8 +51,9 @@ function GrammarFormulaView({
   );
 }
 
-export default function ExplainMicroscopePanel({ session }: Props) {
+export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: Props) {
   const titleId = useId();
+  const embedded = variant === 'embedded';
   const {
     panelOpen,
     closePanel,
@@ -128,6 +131,8 @@ export default function ExplainMicroscopePanel({ session }: Props) {
     !deepDiveLoading &&
     aiParts &&
     (aiParts.contextSense ||
+      aiParts.loanwords.length > 0 ||
+      aiParts.loanwordsRaw ||
       aiParts.grammar ||
       aiParts.mood ||
       aiParts.slang ||
@@ -136,12 +141,17 @@ export default function ExplainMicroscopePanel({ session }: Props) {
       aiParts.capsules.length > 0);
 
   return (
-    <div className="microscope-root" role="presentation">
-      <div className="microscope-overlay" onClick={handleOverlayClick} aria-hidden />
+    <div
+      className={`microscope-root${embedded ? ' microscope-root--embedded' : ''}`}
+      role="presentation"
+    >
+      {embedded ? null : (
+        <div className="microscope-overlay" onClick={handleOverlayClick} aria-hidden />
+      )}
       <aside
         className="microscope-panel"
         role="dialog"
-        aria-modal="true"
+        aria-modal={embedded ? undefined : true}
         aria-labelledby={titleId}
       >
         <div className="microscope-panel__handle" aria-hidden />
@@ -267,6 +277,32 @@ export default function ExplainMicroscopePanel({ session }: Props) {
                   <div className="microscope-ai-card__row">
                     <p className="microscope-ai-card__label">语境释义</p>
                     <p className="microscope-ai-card__body">{aiParts.contextSense}</p>
+                  </div>
+                ) : null}
+                {aiParts.loanwords.length > 0 || aiParts.loanwordsRaw ? (
+                  <div className="microscope-ai-card__row">
+                    <p className="microscope-ai-card__label">外来语原词</p>
+                    {aiParts.loanwords.length > 0 ? (
+                      <ul className="microscope-loanwords">
+                        {aiParts.loanwords.map((lw) => (
+                          <li key={lw.raw} className="microscope-loanwords__item">
+                            <span className="microscope-loanwords__surface">{lw.surface}</span>
+                            <span className="microscope-loanwords__arrow" aria-hidden>
+                              ←
+                            </span>
+                            <span className="microscope-loanwords__src">
+                              {lw.sourceLang} {lw.original}
+                            </span>
+                            <span className="microscope-loanwords__arrow" aria-hidden>
+                              →
+                            </span>
+                            <span className="microscope-loanwords__gloss">{lw.gloss}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="microscope-ai-card__body">{aiParts.loanwordsRaw}</p>
+                    )}
                   </div>
                 ) : null}
                 {aiParts.formula.length > 0 || aiParts.formulaRaw ? (

@@ -6,6 +6,16 @@
   gap: 0;
 }
 
+/* ---- Hero Section (桌面显示, 移动隐藏) ---- */
+.home-hero {
+  display: none;
+}
+
+/* ---- Footer (桌面显示, 移动隐藏) ---- */
+.home-footer {
+  display: none;
+}
+
 /* ---- 极简输入区（Figma 设计） ---- */
 .ext-pipeline__head {
   display: flex;
@@ -730,4 +740,207 @@
   letter-spacing: 0.06em;
   color: var(--color-fg-faint);
   text-align: center;
+}
+
+/* ==============================================
+   桌面端适配 (≥ 768px)
+   ============================================== */
+
+@media (min-width: 768px) {
+  /* Hero 区域 */
+  .home-hero {
+    display: block;
+    text-align: center;
+    padding: 0 0 48px;
+  }
+
+  .home-hero__tagline {
+    margin: 0;
+    font-family: var(--ui-font-sans);
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    line-height: 1.5;
+    color: var(--color-fg-secondary);
+    text-align: center;
+  }
+
+  /* 输入卡片 - 下沉到中部, 抬高成卡片 */
+  .app--home .ext-pipeline {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 20px;
+    padding: 40px 48px 36px;
+    box-shadow: var(--shadow-md);
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .app--home .ext-pipeline__meta {
+    gap: 32px;
+  }
+
+  .app--home .ext-pipeline__input {
+    font-size: 18px !important;
+  }
+
+  .app--home .ext-pipeline__input::placeholder {
+    font-size: 14px;
+  }
+
+  .app--home .ext-pipeline__actions {
+    margin-top: 32px;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .app--home .ext-pipeline__action-row {
+    flex: 1;
+  }
+
+  .app--home .ext-pipeline__action-btn {
+    height: 52px;
+    font-size: 15px;
+    border-radius: 14px;
+  }
+
+  .app--home .ext-pipeline__paste {
+    margin-top: 24px;
+  }
+
+  /* 歌词库 + 词卡 左右并排（Grid 保证等高列） */
+  .home-libraries-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    gap: 24px;
+    max-width: 640px;
+    margin: 36px auto 0;
+    width: 100%;
+  }
+
+  /* 高 specificity 覆盖所有 padding/margin，强制等高 */
+  .app--home .home-body .home-libraries-grid > .saved-library,
+  .app--home .home-body .home-libraries-grid > .saved-library:not(.study-cards-library),
+  .app--home .home-body .home-libraries-grid > .study-cards-library {
+    display: flex;
+    min-width: 0;
+    min-height: 96px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 16px;
+    background: var(--color-bg-surface);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+  }
+
+  .app--home .home-body .home-libraries-grid > .saved-library:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .app--home .home-body .home-libraries-grid > .saved-library:active {
+    transform: translateY(0);
+  }
+
+  /* 移除卡片的顶部分割线 */
+  .home-libraries-grid > .saved-library::before {
+    display: none !important;
+  }
+
+  /* 库卡片内按钮：填满卡片并垂直居中对齐 */
+  .home-libraries-grid .saved-library-toggle,
+  .home-libraries-grid > .study-cards-library .saved-library-toggle {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    min-height: 96px;
+    margin: 0 !important;
+    padding: 18px 22px !important;
+    border: none !important;
+    border-radius: 16px;
+    background: transparent;
+    box-sizing: border-box;
+  }
+
+  /* 缩小卡片内数字 */
+  .home-libraries-grid .saved-library-count__num {
+    font-size: 26px;
+  }
+
+  .home-libraries-grid .saved-library-count__unit {
+    font-size: 13px;
+  }
+
+  /* 防止标题和统计换行导致对齐错乱 */
+  .home-libraries-grid .saved-library-title,
+  .home-libraries-grid .saved-library-toggle__aside {
+    white-space: nowrap;
+  }
+
+  /* 每日一言 */
+  .app--home .home-body > .home-daily-quote {
+    flex: 0 1 auto;
+    max-width: 640px;
+    margin: 40px auto 0;
+    width: 100%;
+    padding: 28px 32px;
+    border: 1px solid var(--color-border-faint);
+    border-radius: 16px;
+    background: var(--color-bg-surface);
+  }
+
+  /* Footer 备案信息 */
+  .home-footer {
+    display: block;
+    text-align: center;
+    padding: 56px 24px 32px;
+    max-width: 640px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .home-footer__icp {
+    margin: 0 0 6px;
+  }
+
+  .home-footer__icp a {
+    font-size: 12px;
+    font-weight: 300;
+    letter-spacing: 0.02em;
+    color: var(--color-fg-faint);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .home-footer__icp a:hover {
+    color: var(--color-fg-muted);
+  }
+
+  .home-footer__copy {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+    color: var(--color-fg-faint);
+  }
+
+  /* 首页 body 不再 overflow:visible, 改为正常滚动 */
+  .app--home .home-body {
+    padding-bottom: 0;
+  }
+
+  /* 移除旧的分割线样式（被卡片替代） */
+  .app--home .home-body > .saved-library:not(.study-cards-library) {
+    padding-top: 0;
+  }
+
+  .app--home .home-body > .saved-library::before {
+    display: none;
+  }
 }

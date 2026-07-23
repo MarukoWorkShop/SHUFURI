@@ -1,0 +1,334 @@
+/* 桌面编辑右栏：空白笔记本 / 笔记列表 / 嵌入 AI */
+
+.edit-notebook {
+  --notebook-line: color-mix(in srgb, var(--ui-fg, #1a1a1a) 8%, transparent);
+  --notebook-margin: color-mix(in srgb, #b91c1c 28%, transparent);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  background: var(--color-bg-elevated, #fff);
+  color: var(--ui-fg, #1a1a1a);
+  border-left: 1px solid color-mix(in srgb, var(--color-border, #e5e7eb) 90%, transparent);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.edit-notebook__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border, #e5e7eb) 80%, transparent);
+}
+
+.edit-notebook__title {
+  margin: 0;
+  font-family: var(--ui-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ui-fg-secondary, #64748b);
+}
+
+.edit-notebook__count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--ui-fg-muted, #94a3b8);
+  letter-spacing: 0.04em;
+}
+
+.edit-notebook__body {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* 纸感横线 + 左侧装订红线 */
+.edit-notebook__body--ruled {
+  background-color: var(--color-bg-elevated, #fff);
+  background-image:
+    linear-gradient(
+      to right,
+      transparent 0,
+      transparent 28px,
+      var(--notebook-margin) 28px,
+      var(--notebook-margin) 29px,
+      transparent 29px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 27px,
+      var(--notebook-line) 27px,
+      var(--notebook-line) 28px
+    );
+  background-attachment: local;
+}
+
+@media (pointer: fine) {
+  .edit-notebook__body {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ui-fg) 22%, transparent) transparent;
+  }
+
+  .edit-notebook__body::-webkit-scrollbar {
+    display: block;
+    width: 8px;
+  }
+
+  .edit-notebook__body::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--ui-fg) 22%, transparent);
+    border-radius: 999px;
+  }
+}
+
+.edit-notebook__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 100%;
+  padding: 36px 24px 40px 40px;
+  box-sizing: border-box;
+}
+
+.edit-notebook__empty-kicker {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ui-fg-muted, #94a3b8);
+}
+
+.edit-notebook__empty-title {
+  margin: 0;
+  font-family: var(--font-serif-zh, "Songti SC", serif);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--ui-fg, #1a1a1a);
+}
+
+.edit-notebook__empty-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 28em;
+}
+
+.edit-notebook__empty-list li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ui-fg-secondary, #64748b);
+}
+
+.edit-notebook__empty-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ui-fg) 28%, transparent);
+}
+
+.edit-notebook__cta {
+  margin-top: 12px;
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--ui-fg) 18%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--ui-font-sans);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--ui-fg, #1a1a1a);
+  cursor: pointer;
+  transition:
+    background var(--ui-transition, 0.15s ease),
+    border-color var(--ui-transition, 0.15s ease);
+}
+
+.edit-notebook__cta:hover {
+  background: color-mix(in srgb, var(--ui-fg) 5%, transparent);
+  border-color: color-mix(in srgb, var(--ui-fg) 32%, transparent);
+}
+
+.edit-notebook__cta.is-active {
+  border-color: color-mix(in srgb, var(--color-accent, #1a1a1a) 55%, transparent);
+  color: var(--color-accent, #1a1a1a);
+}
+
+.edit-notebook__sections {
+  padding: 8px 14px 28px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.edit-notebook__section-title {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-fg) 12%, transparent);
+  font-family: var(--ui-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--ui-fg-secondary, #64748b);
+}
+
+.edit-notebook__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.edit-notebook__item {
+  position: relative;
+  padding-right: 2.2em;
+}
+
+/* 与左侧 .shufuri-study-item__delete / explain-note__delete 一致 */
+.edit-notebook__delete {
+  position: absolute;
+  top: 0.2em;
+  right: 0.2em;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.22);
+  color: rgba(15, 23, 42, 0.8);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.edit-notebook__delete:hover {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.edit-notebook__card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+  margin: 0;
+  padding: 4px 8px 6px 12px;
+  border: none;
+  border-left: 2px solid color-mix(in srgb, var(--ui-fg) 18%, transparent);
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.edit-notebook__card:hover {
+  background: color-mix(in srgb, var(--ui-fg) 3%, transparent);
+}
+
+.edit-notebook__card-line1 {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 10px;
+  line-height: 1.45;
+}
+
+.edit-notebook__card-term {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.45;
+  color: var(--ui-fg, #1a1a1a);
+}
+
+.edit-notebook__card-term ruby {
+  ruby-position: over;
+}
+
+.edit-notebook__card-term rt {
+  font-size: 0.55em;
+  font-weight: 400;
+  color: var(--ui-fg-muted, #94a3b8);
+}
+
+.edit-notebook__card-meaning {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ui-fg-secondary, #64748b);
+}
+
+.edit-notebook__card-ex {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ui-fg, #1a1a1a);
+}
+
+.edit-notebook__card-zh {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ui-fg-secondary, #64748b);
+}
+
+.edit-notebook__microscope-host {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--color-bg-elevated, #fff);
+  z-index: 2;
+}
+
+.edit-notebook__microscope-host .microscope-root {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  align-self: stretch;
+}
+
+.edit-notebook__microscope-host .microscope-overlay {
+  display: none;
+}
+
+.edit-notebook__microscope-host .microscope-panel {
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+}
+
+.edit-notebook__microscope-host .microscope-panel__handle {
+  display: none;
+}

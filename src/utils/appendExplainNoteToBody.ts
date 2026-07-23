@@ -102,6 +102,39 @@ function noteNodesInSection(section: HTMLElement): HTMLElement[] {
   ).filter((n): n is HTMLElement => n instanceof HTMLElement);
 }
 
+export type ExplainNoteListItem = {
+  id: string;
+  term: string;
+  contextSense: string;
+  grammar: string;
+  mood: string;
+};
+
+/** 从正文解析划词笔记列表（桌面笔记本页镜像；不另持久化） */
+export function listExplainNotesFromBodyHtml(bodyHtml: string): ExplainNoteListItem[] {
+  const parsed = parseExplainNotesRoot(bodyHtml);
+  if (!parsed?.section) return [];
+
+  return noteNodesInSection(parsed.section).map((note, index) => {
+    const id =
+      note.getAttribute('data-shufuri-explain-note-id')?.trim() || `orphan-${index}`;
+    const term =
+      (
+        note.querySelector(
+          '.vocab-line1 .vocab-word, .vocab-line1 .vocab-word-ko, .vocab-line1 .vocab-word-cn',
+        ) as HTMLElement | null
+      )?.textContent?.trim() ?? '';
+    const contextSense =
+      (note.querySelector('.vocab-line1 .vocab-meaning') as HTMLElement | null)?.textContent?.trim() ??
+      '';
+    const grammar =
+      (note.querySelector('.grammar-detail') as HTMLElement | null)?.textContent?.trim() ?? '';
+    const mood =
+      (note.querySelector('.vocab-ex-zh') as HTMLElement | null)?.textContent?.trim() ?? '';
+    return { id, term, contextSense, grammar, mood };
+  });
+}
+
 function serializeExplainNotesRoot(root: HTMLElement): string {
   // 若仅有单个 clip-body 子节点，写回时保持单一根（与 normalizeLyricsBodyHtml 一致）
   if (

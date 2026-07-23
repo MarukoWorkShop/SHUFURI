@@ -83,6 +83,9 @@ export default function HomeScreen({
 
   return (
     <div className="home-body">
+      <div className="home-hero">
+        <p className="home-hero__tagline">多语歌词发音标注·排版打印·AI学习助手</p>
+      </div>
       <HtmlPasteInput
         key={inputResetKey}
         includeVocabAndGrammar={appSettings.defaultIncludeVocabAndGrammar}
@@ -102,9 +105,17 @@ export default function HomeScreen({
         externalPrompt={externalPrompt}
         onExternalPromptHandled={onExternalPromptHandled}
       />
-      <SavedLyricsLibrary onOpen={onOpenProject} refreshKey={libraryRefreshKey} />
-      <StudyCardsLibrary />
+      <div className="home-libraries-grid">
+        <SavedLyricsLibrary onOpen={onOpenProject} refreshKey={libraryRefreshKey} />
+        <StudyCardsLibrary />
+      </div>
       <HomeDailyLyricQuote refreshKey={libraryRefreshKey} onOpenProject={onOpenProject} />
+      <footer className="home-footer">
+        <p className="home-footer__icp">
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">粤ICP备XXXXXXXX号-1</a>
+        </p>
+        <p className="home-footer__copy">© 2026 SHUFURI</p>
+      </footer>
     </div>
   );
 }

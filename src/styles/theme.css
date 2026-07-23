@@ -38,6 +38,9 @@
 }
 
 :root {
+  /* 桌面编辑双栏断点（与 useMediaQuery / CSS 900px 对齐） */
+  --edit-split-min: 900px;
+
   /* Typography — 字体族（UI 与英文统一 PingFang Light） */
   --font-zh: "PingFang SC", "PingFang SC Light", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --font-sans: var(--font-zh);

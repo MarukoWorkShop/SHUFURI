@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 import {
   buildGrammarPointLessonPrompt,
   buildMicroscopeAiExplainPrompt,
+  formatLoanwordsForNote,
   langCodeToMicroscopeLanguage,
   normalizeAiExplainText,
   parseAiExplainParts,
@@ -579,20 +580,24 @@ export function useExplainSession({
     const grammar = aiParts?.grammar?.trim() || '';
     const mood = aiParts?.mood?.trim() || '';
     const slang = aiParts?.slang?.trim() || '';
+    const loanSummary = formatLoanwordsForNote(aiParts?.loanwords ?? []);
     const moodCombined = [mood, slang].filter(Boolean).join('\n');
+    const senseWithLoan = [contextSense, loanSummary ? `外来语：${loanSummary}` : '']
+      .filter(Boolean)
+      .join('\n');
     const term = (targetPhrase || micro?.dictionary_form || '').replace(/\s+/g, '').trim();
     if (!term) {
       showToast('暂无可添加的内容');
       return;
     }
-    if (!contextSense && !grammar && !moodCombined) {
+    if (!senseWithLoan && !grammar && !moodCombined) {
       showToast('请先完成 AI讲解');
       return;
     }
     appendExplainNote({
       id: noteId,
       term,
-      contextSense: contextSense || micro?.direct_meaning?.trim() || term,
+      contextSense: senseWithLoan || micro?.direct_meaning?.trim() || term,
       grammar: grammar || undefined,
       mood: moodCombined || undefined,
     });

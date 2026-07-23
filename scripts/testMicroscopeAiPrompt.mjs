@@ -77,9 +77,25 @@ assert(jp.includes('对比防坑'), 'jp grammar contrast');
 assert(jp.includes('Ateji') || jp.includes('借字') || jp.includes('さだめ'), 'jp slang hint');
 assert(jp.includes('【歌词黑话】'), 'jp has slang section');
 assert(jp.includes('词尾') || jp.includes('潜台词') || jp.includes('微妙语气'), 'jp mood emphasis');
+assert(jp.includes('【外来语原词】'), 'jp has loanword section');
+assert(jp.includes('片假名外来语') || jp.includes('源语言'), 'jp loanword rules');
 assert(!jp.includes('[나|'), 'jp must not include KO formula example');
 assert(jp.includes('禁止写：TOPIK'), 'jp forbids TOPIK');
 assert(!jp.includes('TOPIK|…'), 'jp output template not TOPIK');
+
+assert(!ko.includes('【外来语原词】'), 'ko must not have JP loanword section');
+assert(!en.includes('【外来语原词】'), 'en must not have JP loanword section');
+
+const jpLoan = buildMicroscopeAiExplainPrompt({
+  language: 'Japanese',
+  title: 'テスト',
+  artist: 'A',
+  targetPhrase: 'カルパッチョパエリアオードブル',
+  surroundingLine: 'カルパッチョパエリアオードブル',
+  interfaceLanguage: 'zh',
+});
+assert(jpLoan.includes('【硬性】'), 'katakana focus forces loanword block');
+assert(jpLoan.includes('不得写「—」'), 'force non-dash');
 
 assert(en.includes('只能谈英语'), 'en lang lock');
 assert(en.includes('英语考试'), 'en exam tag');
@@ -112,6 +128,18 @@ const capsules = parseGrammarCapsules(
 assert(capsules.length === 1, 'skip empty + wrong exam');
 assert(capsules[0].term === '건', 'capsule term');
 
+const jpCapsules = parseGrammarCapsules(
+  `JLPT|な|な形容词连体形修饰名词
+JLPT|裏腹|N2·裏腹な／裏腹だ表里不一
+JLPT|—|本划选无专属JLPT考点`,
+  'JLPT',
+);
+assert(jpCapsules.length === 1, 'drop generic + empty JP capsules');
+assert(jpCapsules[0].term === '裏腹', 'keep specific lexeme capsule');
+
+assert(jp.includes('无专属JLPT') || jp.includes('专属JLPT'), 'jp capsule specificity rules');
+assert(jp.includes('硬性禁止') || jp.includes('泛化词类'), 'jp forbids generic capsules');
+
 const parts = parseAiExplainParts(
   `【语境释义】我所期盼的事
 【语法分子式】[나|代词·我] + [건|것은缩略]
@@ -129,6 +157,25 @@ assert(parts.capsules[0].title.includes('口语缩略'), 'parsed capsule');
 assert(parts.grammar.includes('것은'), 'parsed grammar');
 assert(parts.mood.includes('迫切'), 'parsed mood');
 assert(parts.slang.includes('건'), 'parsed slang');
+
+const loanParts = parseAiExplainParts(
+  `【语境释义】菜单上并列的三种西餐名
+【外来语原词】
+カルパッチョ ← 意大利语 Carpaccio → 生牛肉片
+パエリア ← 西班牙语 Paella → 海鲜饭
+オードブル ← 法语 hors d'oeuvre → 开胃小食
+【语法分子式】[カルパッチョ|外来名词] + [パエリア|外来名词]
+【语法拆解】均为无变形外来语名词并列
+【语法胶囊】
+JLPT|—|本句无独立高频语法点
+【歌词意境】—
+【歌词黑话】—`,
+  { language: 'Japanese' },
+);
+assert(loanParts.loanwords.length === 3, 'parsed 3 loanwords');
+assert(loanParts.loanwords[0].original === 'Carpaccio', 'carpaccio original');
+assert(loanParts.loanwords[0].sourceLang.includes('意大利'), 'italian source');
+assert(loanParts.loanwords[2].gloss.includes('开胃'), 'hors gloss');
 
 assert(
   !textContainsGrammarTerm('あれこれと思い出をたどったら', '~で'),

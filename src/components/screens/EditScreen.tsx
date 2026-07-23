@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import InkFineTuneEditor from '../InkFineTuneEditor';
 import InkToolbox from '../InkToolbox';
 import ShufuriPosterEditCanvas from '../ShufuriPosterEditCanvas';
 import ExplainMicroscopePanel from '../ExplainMicroscopePanel';
+import EditNotebookPane from '../EditNotebookPane';
 import {
   usePosterDocumentContext,
   usePosterInkContext,
@@ -12,13 +13,17 @@ import { useEditCanvasScrollPerfProbe } from '../../hooks/useEditCanvasScrollPer
 import { useEditCanvasScrollInteractionLock } from '../../hooks/useEditCanvasScrollInteractionLock';
 import { useExplainSession } from '../../hooks/useExplainSession';
 import { useAppToast } from '../../context/AppToastContext';
+import { EDIT_DESKTOP_SPLIT_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
 import { readSelectionForExplain, clampSelectionToExplainBlock } from '../../utils/readSelectionForExplain';
+import { listExplainNotesFromBodyHtml } from '../../utils/appendExplainNoteToBody';
 import {
+  listStudyEntriesFromBodyHtml,
   readVocabItemFromElement,
   readGrammarItemFromElement,
   type VocabItemPayload,
   type GrammarItemPayload,
 } from '../../utils/studySectionItems';
+import { extractLyricsOnlyBodyHtml } from '../../utils/lyricsOnlyBodyHtml';
 
 type StudyEditorKind = 'vocab' | 'grammar';
 
@@ -54,6 +59,8 @@ export default function EditScreen() {
 
   const ink = usePosterInkContext();
   const showToast = useAppToast();
+  const isDesktopSplit = useMediaQuery(EDIT_DESKTOP_SPLIT_QUERY);
+  const notebookScrollRef = useRef<HTMLDivElement>(null);
   const appendExplainNoteAndScroll = useCallback(
     (payload: {
       id: string;
@@ -64,12 +71,19 @@ export default function EditScreen() {
     }) => {
       appendExplainNote(payload);
       window.requestAnimationFrame(() => {
+        if (isDesktopSplit) {
+          const nb = notebookScrollRef.current;
+          if (nb) {
+            nb.scrollTo({ top: nb.scrollHeight, behavior: 'smooth' });
+            return;
+          }
+        }
         const el = editCanvasRef.current;
         if (!el) return;
         el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
       });
     },
-    [appendExplainNote, editCanvasRef],
+    [appendExplainNote, editCanvasRef, isDesktopSplit],
   );
   const explain = useExplainSession({
     title,
@@ -142,6 +156,71 @@ export default function EditScreen() {
       setDraftMood(moodEl?.textContent?.trim() ?? '');
     },
     [ensureExplainNoteIds, explain, showToast],
+  );
+
+  const openEditForNoteId = useCallback(
+    (noteId: string) => {
+      const note = listExplainNotesFromBodyHtml(bodyHtml).find((n) => n.id === noteId);
+      if (!note || note.id.startsWith('orphan-')) {
+        ensureExplainNoteIds();
+        showToast('笔记已刷新，请再点一次编辑');
+        return;
+      }
+      if (explain.panelOpen) explain.closePanel();
+      window.getSelection()?.removeAllRanges();
+      setEditingStudy(null);
+      setEditingNoteId(note.id);
+      setDraftTerm(note.term);
+      setDraftContextSense(note.contextSense);
+      setDraftGrammar(note.grammar);
+      setDraftMood(note.mood);
+    },
+    [bodyHtml, ensureExplainNoteIds, explain, showToast],
+  );
+
+  const openEditForVocabId = useCallback(
+    (itemId: string) => {
+      const item = listStudyEntriesFromBodyHtml(bodyHtml).vocab.find((n) => n.id === itemId);
+      if (!item || item.id.startsWith('orphan-')) {
+        ensureStudyItemIds();
+        showToast('条目已刷新，请再点一次编辑');
+        return;
+      }
+      if (explain.panelOpen) explain.closePanel();
+      window.getSelection()?.removeAllRanges();
+      setEditingNoteId(null);
+      setEditingStudy({ id: item.id, kind: 'vocab' });
+      setVocabDraft({
+        term: item.term,
+        meaning: item.meaning,
+        example: item.example,
+        translation: item.translation,
+      });
+    },
+    [bodyHtml, ensureStudyItemIds, explain, showToast],
+  );
+
+  const openEditForGrammarId = useCallback(
+    (itemId: string) => {
+      const item = listStudyEntriesFromBodyHtml(bodyHtml).grammar.find((n) => n.id === itemId);
+      if (!item || item.id.startsWith('orphan-')) {
+        ensureStudyItemIds();
+        showToast('条目已刷新，请再点一次编辑');
+        return;
+      }
+      if (explain.panelOpen) explain.closePanel();
+      window.getSelection()?.removeAllRanges();
+      setEditingNoteId(null);
+      setEditingStudy({ id: item.id, kind: 'grammar' });
+      setGrammarDraft({
+        titlePrimary: item.titlePrimary,
+        titleSecondary: item.titleSecondary,
+        detail: item.detail,
+        example: item.example,
+        translation: item.translation,
+      });
+    },
+    [bodyHtml, ensureStudyItemIds, explain, showToast],
   );
 
   const openEditForStudyEl = useCallback(
@@ -263,6 +342,18 @@ export default function EditScreen() {
     ink.setInkToolboxOpen(false);
   }, [ink]);
 
+  const enableExplainFromNotebook = useCallback(() => {
+    if (explain.explainMode) {
+      showToast('划词已开启：在左侧选中词语');
+      return;
+    }
+    ink.closeInkPopover();
+    ink.setInkEditMode(false);
+    explain.arm();
+    collapseToolbox();
+    showToast('划词已开启：选中后先出本地释义，需要时再点 AI讲解');
+  }, [collapseToolbox, explain, ink, showToast]);
+
   const toggleInkToolbox = useCallback(() => {
     if (ink.inkToolboxOpen) {
       ink.closeInkPopover();
@@ -383,21 +474,18 @@ export default function EditScreen() {
     .filter(Boolean)
     .join(' ');
 
+  /** 桌面左栏只渲染歌词原文；完整正文仍用于笔记本 / 保存 */
+  const lyricsPaneBodyHtml = useMemo(
+    () => (isDesktopSplit ? extractLyricsOnlyBodyHtml(bodyHtml) : bodyHtml),
+    [bodyHtml, isDesktopSplit],
+  );
+
   return (
-    <div className={`edit-area${explain.panelOpen ? ' edit-area--explain' : ''}`}>
-      <InkToolbox
-        open={ink.inkToolboxOpen}
-        canUndo={ink.canUndoInkEdit}
-        inkEditActive={ink.inkEditMode}
-        showRuby={showRubyAnnotations}
-        rubySupported={rubyToggleSupported}
-        explainActive={explain.explainMode}
-        onToggle={toggleInkToolbox}
-        onUndo={ink.handleInkUndo}
-        onShowRubyChange={handleRubyChangeAndCollapse}
-        onToggleInkEdit={handleToggleInkEdit}
-        onToggleExplain={handleToggleExplain}
-      />
+    <div
+      className={`edit-area${explain.panelOpen ? ' edit-area--explain' : ''}${
+        isDesktopSplit ? ' edit-area--desktop-split' : ''
+      }`}
+    >
       <div className="edit-toolbar">
         <button type="button" className="btn-secondary" onClick={handleReset}>
           ← 重新输入
@@ -426,44 +514,86 @@ export default function EditScreen() {
       </div>
 
       <div className="edit-area__workspace">
-        <div ref={editCanvasRef} className={scrollClass}>
-          <InkFineTuneEditor
-            containerRef={editCanvasRef}
-            focusGroupIndex={ink.inkFocusGroupIndex}
-            editTarget={ink.inkEditTarget}
-            popoverClosing={ink.inkPopoverClosing}
-            draftKanji={ink.inkDraftKanji}
-            draftKana={ink.inkDraftKana}
-            draftZh={ink.inkDraftZh}
-            draftTitle={ink.inkDraftTitle}
-            draftArtist={ink.inkDraftArtist}
-            interaction="click"
-            interactionEnabled={inkEditArmed}
-            onOpenTarget={ink.handleInkOpenTarget}
-            onClose={ink.closeInkPopover}
-            onKanjiChange={ink.setInkDraftKanji}
-            onKanaChange={ink.setInkDraftKana}
-            onZhChange={ink.setInkDraftZh}
-            onTitleChange={ink.setInkDraftTitle}
-            onArtistChange={ink.setInkDraftArtist}
-            onConfirm={() => void ink.handleInkConfirm()}
-          >
-            <ShufuriPosterEditCanvas
-              title={title}
-              artist={artist}
-              bodyHtml={bodyHtml}
-              layoutProfile="mobilePoster"
-              displayScale={editScale}
-              titleMarkupHtml={titleMarkupHtml}
-              lang={lang}
-              language={lyricsLanguage}
-              colorTheme={colorTheme}
-              showRuby={showRubyAnnotations}
-            />
-          </InkFineTuneEditor>
+        <div className="edit-area__lyrics-pane">
+          <InkToolbox
+            open={ink.inkToolboxOpen}
+            canUndo={ink.canUndoInkEdit}
+            inkEditActive={ink.inkEditMode}
+            showRuby={showRubyAnnotations}
+            rubySupported={rubyToggleSupported}
+            explainActive={explain.explainMode}
+            onToggle={toggleInkToolbox}
+            onUndo={ink.handleInkUndo}
+            onShowRubyChange={handleRubyChangeAndCollapse}
+            onToggleInkEdit={handleToggleInkEdit}
+            onToggleExplain={handleToggleExplain}
+          />
+          <div ref={editCanvasRef} className={scrollClass}>
+            <InkFineTuneEditor
+              containerRef={editCanvasRef}
+              focusGroupIndex={ink.inkFocusGroupIndex}
+              editTarget={ink.inkEditTarget}
+              popoverClosing={ink.inkPopoverClosing}
+              draftKanji={ink.inkDraftKanji}
+              draftKana={ink.inkDraftKana}
+              draftZh={ink.inkDraftZh}
+              draftTitle={ink.inkDraftTitle}
+              draftArtist={ink.inkDraftArtist}
+              interaction="click"
+              interactionEnabled={inkEditArmed}
+              onOpenTarget={ink.handleInkOpenTarget}
+              onClose={ink.closeInkPopover}
+              onKanjiChange={ink.setInkDraftKanji}
+              onKanaChange={ink.setInkDraftKana}
+              onZhChange={ink.setInkDraftZh}
+              onTitleChange={ink.setInkDraftTitle}
+              onArtistChange={ink.setInkDraftArtist}
+              onConfirm={() => void ink.handleInkConfirm()}
+            >
+              <ShufuriPosterEditCanvas
+                title={title}
+                artist={artist}
+                bodyHtml={lyricsPaneBodyHtml}
+                layoutProfile="mobilePoster"
+                displayScale={editScale}
+                titleMarkupHtml={titleMarkupHtml}
+                lang={lang}
+                language={lyricsLanguage}
+                colorTheme={colorTheme}
+                showRuby={showRubyAnnotations}
+              />
+            </InkFineTuneEditor>
+          </div>
         </div>
 
-        <ExplainMicroscopePanel session={explain} />
+        {isDesktopSplit ? (
+          <EditNotebookPane
+            bodyHtml={bodyHtml}
+            explainMode={explain.explainMode}
+            aiOpen={explain.panelOpen}
+            onEnableExplain={enableExplainFromNotebook}
+            onOpenExplainNote={openEditForNoteId}
+            onOpenVocab={openEditForVocabId}
+            onOpenGrammar={openEditForGrammarId}
+            onDeleteExplainNote={(noteId) => {
+              removeExplainNote(noteId);
+              if (editingNoteId === noteId) setEditingNoteId(null);
+            }}
+            onDeleteStudy={(itemId) => {
+              removeStudyItem(itemId);
+              if (editingStudy?.id === itemId) setEditingStudy(null);
+            }}
+            scrollRef={notebookScrollRef}
+            microscope={
+              explain.panelOpen ? (
+                <ExplainMicroscopePanel session={explain} variant="embedded" />
+              ) : null
+            }
+          />
+        ) : (
+          <ExplainMicroscopePanel session={explain} />
+        )}
+      </div>
 
         {editingNoteId && (
           <div
@@ -814,7 +944,6 @@ export default function EditScreen() {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }

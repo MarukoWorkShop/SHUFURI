@@ -56,6 +56,7 @@ export type MicroscopeExplainResult = {
 export const LANGUAGE_RULES: Record<MicroscopeLanguageName, string> = {
   Japanese: `
     - 重点：动词/形容词活用、助词接续、在本句中的具体含义。
+    - 片假名外来语：除释义外，必须给出源语言、原词拼写与中文译义（见任务「外来语原词」）。
     - 不要写 JLPT 长文，不要歌手/曲风赏析。
   `,
   Korean: `
@@ -153,7 +154,9 @@ const AI_EXPLAIN_FORMULA_EXAMPLES: Record<MicroscopeLanguageName, string> = {
 };
 
 const AI_EXPLAIN_CAPSULE_EXAMPLES: Record<MicroscopeLanguageName, string> = {
-  Japanese: `- 检索键例：「ちゃう」「てしまう」「〜たら」；标题例：「口语中的てしまう缩略」
+  Japanese: `- 好例（紧扣该词/句型的 JLPT 考点）：\`JLPT|裏腹|N2·裏腹な／裏腹だ表里不一\`；\`JLPT|〜てしまう|N4·てしまう完了/遗憾\`；\`JLPT|せっかく|N3·せっかく…のに\`
+- 坏例（禁止）：\`JLPT|な|な形容词连体形修饰名词\`；\`JLPT|だ|だ的连体形\`；\`JLPT|名词|名词修饰\`——仅讲词类通识、不点名本划选词/句型。
+- 若该词/短语本身没有可指认的 JLPT 考点（无常见等级标注、无同词真题句型），只写：\`JLPT|—|本划选无专属JLPT考点\`
 - 禁止出现 TOPIK / 英语考试 / HSK，禁止韩语检索键。`,
   Korean: `- 检索键例：「건」「~는 것」「잖아」；标题例：「韩语中常见的 것 口语缩略现象」
 - 禁止出现 JLPT / 英语考试 / HSK，禁止日语检索键（ちゃう/て形等）。`,
@@ -161,6 +164,27 @@ const AI_EXPLAIN_CAPSULE_EXAMPLES: Record<MicroscopeLanguageName, string> = {
 - 禁止出现 JLPT / TOPIK / HSK，禁止日韩检索键。`,
   Chinese: `- 检索键例：「把」「了」「着」；标题例：「把字句的基本用法」
 - 禁止出现 JLPT / TOPIK / 英语考试，禁止日韩检索键。`,
+};
+
+/** 语法胶囊任务说明（按语种）；日语要求考点必须贴合划选本身 */
+const AI_EXPLAIN_CAPSULE_TASK: Record<MicroscopeLanguageName, string> = {
+  Japanese: `4. 语法胶囊（0～2 条，可空）：只收录与划选「词/短语本身」直接相关的【JLPT】考点，供点击深入。
+   - 每行严格：\`JLPT|检索键|中文短标题\`
+   - 检索键：必须是本划选中的核心词或固定句型（如「裏腹」「〜てしまう」），禁止只用「な」「だ」「の」等万能语素。
+   - 短标题：≤22字，须体现该词/句型的 JLPT 身份，优先含等级（N5～N1）或「真题/考点」；例：「N2·裏腹な表里不一」。
+   - 【硬性禁止】泛化词类课：な/い形容词连体形、修饰名词、动词活用通识、助词「は/を」百科等——这些已在语法拆解里说清，不得做成胶囊。
+   - 判定标准：若离开本划选词换任意同词类词，标题仍完全成立 → 视为泛化，禁止输出。
+   - 没有紧紧围绕本划选的 JLPT 考点时：只写一行 \`JLPT|—|本划选无专属JLPT考点\`（界面将不展示「核心语法点」）。`,
+  Korean: `4. 语法胶囊（必填 1～2 条）：提炼本划选中与【TOPIK】相关的高频核心语法点，供用户点击查看更多例句。
+   - 每行严格：\`TOPIK|检索键|中文短标题\`（第一段必须是「TOPIK」）
+   - 检索键：便于在同语种其它歌词/例句中检索的语法形，勿整句。
+   - 短标题：≤22字；禁止编造与本划选无关的语法点；无考试级语法时写：\`TOPIK|—|本句无独立高频语法点\``,
+  English: `4. 语法胶囊（必填 1～2 条）：提炼本划选中与【英语考试】相关的高频核心语法点，供用户点击查看更多例句。
+   - 每行严格：\`英语考试|检索键|中文短标题\`
+   - 检索键：便于检索的语法形，勿整句；短标题≤22字；无则写：\`英语考试|—|本句无独立高频语法点\``,
+  Chinese: `4. 语法胶囊（必填 1～2 条）：提炼本划选中与【HSK】相关的高频核心语法点，供用户点击查看更多例句。
+   - 每行严格：\`HSK|检索键|中文短标题\`
+   - 检索键：便于检索的语法形，勿整句；短标题≤22字；无则写：\`HSK|—|本句无独立高频语法点\``,
 };
 
 /** 考试体系标签：按语种选其一作为胶囊前缀 */
@@ -267,9 +291,18 @@ ${specificRule}
 `.trim();
 }
 
+/** 日语划选是否像片假名外来语（用于 Prompt 硬性提示） */
+export function looksLikeJapaneseKatakanaLoan(text: string): boolean {
+  const t = text.replace(/\s+/g, '');
+  if (t.length < 2) return false;
+  const kata = (t.match(/[\u30A0-\u30FFー゛゜]/g) || []).length;
+  return kata / t.length >= 0.55;
+}
+
 /**
  * 「AI讲解」：语境释义 + 语法分子式 + 语法拆解 + 考试语法胶囊 + 歌词意境 +（选填）歌词黑话。
  * 语法规则按 songContext.language 分轨，避免日/韩等串台。
+ * 日语另含【外来语原词】（片假名外来语溯源）。
  */
 export function buildMicroscopeAiExplainPrompt(songContext: MicroscopeSongContext): string {
   const hasLocal = Boolean(songContext.localLemma);
@@ -286,8 +319,28 @@ export function buildMicroscopeAiExplainPrompt(songContext: MicroscopeSongContex
     AI_EXPLAIN_FORMULA_EXAMPLES[lang] ?? AI_EXPLAIN_FORMULA_EXAMPLES.English;
   const capsuleExamples =
     AI_EXPLAIN_CAPSULE_EXAMPLES[lang] ?? AI_EXPLAIN_CAPSULE_EXAMPLES.English;
+  const capsuleTask = AI_EXPLAIN_CAPSULE_TASK[lang] ?? AI_EXPLAIN_CAPSULE_TASK.English;
   const slangHints =
     AI_EXPLAIN_SLANG_HINTS[lang] ?? AI_EXPLAIN_SLANG_HINTS.English;
+
+  const isJp = lang === 'Japanese';
+  const forceLoan =
+    isJp && looksLikeJapaneseKatakanaLoan(focus);
+  const loanwordTask = isJp
+    ? `
+1b. 外来语原词（日语专用，必填块）：
+   - 若「${focus}」含片假名外来语（含多个外来语连写），必须逐词写出：源语言、原词拼写、中文译义。
+   - 每行严格格式：\`片假名表面形 ← 源语言 原词拼写 → 中文译义\`
+   - 示例：\`カルパッチョ ← 意大利语 Carpaccio → 生牛肉片\`
+   - 连写须拆开多行（如 カルパッチョ／パエリア／オードブル 各一行），禁止只写笼统菜名概括而省略原词。
+   - 确非外来语（和语/汉语词/固有名词假名写法等）写一行「—」。
+${forceLoan ? `   - 【硬性】本划选已判定为片假名外来语倾向，【外来语原词】不得写「—」，必须给出可核验的源语言+原词+译义。` : ''}`
+    : '';
+
+  const loanwordOutput = isJp ? '【外来语原词】…\n' : '';
+  const task1Label = isJp
+    ? `1. 语境释义：一句话说明「${focus}」在这句歌词里的具体含义，不要生搬硬套词典标准解释。≤50字。外来语溯源不要挤在本段，放到「外来语原词」。`
+    : `1. 语境释义：一句话说明「${focus}」在这句歌词里的具体含义，不要生搬硬套词典标准解释。≤50字。`;
 
   return `
 你是歌词划词助教。简体中文。只解释划线片段「${focus}」，禁止整句翻译、串讲前后句、等级考试长文/百科/导语废话。
@@ -306,7 +359,8 @@ ${contextBlock(songContext)}
 ${lemma ? `【本地词典摘要】（基础义已给出；AI 勿照抄，须落到本句具体含义）\n${lemma}` : ''}
 
 【任务】
-1. 语境释义：一句话说明「${focus}」在这句歌词里的具体含义，不要生搬硬套词典标准解释。≤50字。
+${task1Label}
+${loanwordTask}
 2. 语法分子式（必填）：把「${focus}」拆成可点击的语素/词块，用「分子式」一行写出。
    - 格式必须严格：\`[语素|极短标签] + [语素|极短标签] + …\`
    - 语素用本曲原文语种书写；标签用简体中文，≤8字。
@@ -315,12 +369,8 @@ ${formulaExamples}
 3. 语法拆解（必填，须认真还原，禁止敷衍）：
 ${grammarRules}
    - 本段 ≤100字；须含「还原」+尽量一句「对比防坑」；可与分子式互补，不要重复粘贴分子式原文。
-4. 语法胶囊（必填 1～2 条）：提炼本划选中与【${examTag}】相关的高频核心语法点，供用户点击查看更多例句。
-   - 每行严格：\`${examTag}|检索键|中文短标题\`（第一段必须是「${examTag}」，不得改写成其它考试名）
+${capsuleTask}
 ${capsuleExamples}
-   - 检索键：便于在同语种其它歌词/例句中检索的语法形，勿整句。
-   - 短标题：≤22字，写成「点击查看」后的说明。
-   - 禁止编造与本划选无关的语法点；无考试级语法时写一行：\`${examTag}|—|本句无独立高频语法点\`
 5. 歌词意境（选填，强调情绪）：聚焦「词尾/用词透出的微妙语气与潜台词」——同一意思换一词会怎样变味；点出本曲语种下细微用词变化传达的情绪。≤50字；确无情绪层次写「—」。
 6. 歌词黑话（选填）：仅当划选涉及歌词专属「文学美学与潜规则」时填写，否则写「—」。
    - 覆盖：熟语/成语/惯用型（Idioms）；双关与变音特殊映射（Ateji/借字）；押韵改读、倒装、省略等文学特权。
@@ -329,7 +379,7 @@ ${slangHints}
 
 【输出格式】严格按下列标题顺序，不要其它 Markdown/前言后记：
 【语境释义】…
-【语法分子式】…
+${loanwordOutput}【语法分子式】…
 【语法拆解】…
 【语法胶囊】
 ${examTag}|…|…
@@ -353,9 +403,22 @@ export type AiGrammarCapsule = {
   title: string;
 };
 
+/** 日语片假名外来语：源语言 + 原词 + 译义 */
+export type AiLoanwordEtymology = {
+  surface: string;
+  sourceLang: string;
+  original: string;
+  gloss: string;
+  raw: string;
+};
+
 export type AiExplainParts = {
   /** 语境释义（生词卡主义） */
   contextSense: string;
+  /** 日语外来语溯源（非外来语为空） */
+  loanwords: AiLoanwordEtymology[];
+  /** 外来语区块原文（解析失败时仍可展示） */
+  loanwordsRaw: string;
   /** 语法分子式语素 */
   formula: AiGrammarFormulaToken[];
   /** 分子式原文（解析失败时仍可展示） */
@@ -403,6 +466,7 @@ function cleanMood(s: string): string {
 
 const SECTION_LABELS = [
   '【语境释义】',
+  '【外来语原词】',
   '【语法分子式】',
   '【语法拆解】',
   '【语法胶囊】',
@@ -411,6 +475,52 @@ const SECTION_LABELS = [
   '【中文直译】',
   '【语境讲解】',
 ] as const;
+
+/** 解析日语【外来语原词】行：`片假名 ← 源语言 原词 → 译义` */
+export function parseLoanwordEtymology(raw: string): AiLoanwordEtymology[] {
+  const out: AiLoanwordEtymology[] = [];
+  const cleaned = cleanMood(raw);
+  if (!cleaned) return out;
+
+  for (const line of cleaned.split(/\n+/)) {
+    const t = line.trim();
+    if (!t || t.startsWith('【')) continue;
+    const m = t.match(/^(.+?)\s*←\s*(.+?)\s*→\s*(.+)$/);
+    if (!m) continue;
+    const surface = m[1].trim();
+    const mid = m[2].trim();
+    const gloss = m[3].trim();
+    if (!surface || !mid || !gloss) continue;
+
+    let sourceLang = '';
+    let original = mid;
+    const langOrig =
+      mid.match(/^(.+?语)\s+(.+)$/) ||
+      mid.match(/^(.+?語)\s+(.+)$/) ||
+      mid.match(/^(\S+)\s+(.+)$/);
+    if (langOrig) {
+      sourceLang = langOrig[1].trim();
+      original = langOrig[2].trim();
+    }
+    if (!original) continue;
+    out.push({
+      surface,
+      sourceLang: sourceLang || '外来语',
+      original,
+      gloss,
+      raw: t,
+    });
+  }
+  return out;
+}
+
+/** 写入笔记时的外来语摘要一行 */
+export function formatLoanwordsForNote(items: AiLoanwordEtymology[]): string {
+  if (!items.length) return '';
+  return items
+    .map((it) => `${it.surface}←${it.sourceLang} ${it.original}→${it.gloss}`)
+    .join('；');
+}
 
 /** 解析 `[语素|标签] + [语素|标签]` 分子式 */
 export function parseGrammarFormula(raw: string): AiGrammarFormulaToken[] {
@@ -442,12 +552,46 @@ export function parseGrammarCapsules(
     const [exam, term, ...titleParts] = parts;
     const title = titleParts.join('|').trim();
     if (!exam || !term || !title) continue;
-    if (term === '—' || term === '-' || /无独立高频/.test(title)) continue;
+    if (term === '—' || term === '-' || /无独立高频|无专属JLPT|无专属.*考点/.test(title)) {
+      continue;
+    }
     if (expect && exam !== expect) continue;
+    if (expect === 'JLPT' && isGenericJapaneseJlptCapsule(term, title)) continue;
     out.push({ exam, term, title });
     if (out.length >= 3) break;
   }
   return out;
+}
+
+/**
+ * 日语 JLPT 胶囊兜底：丢掉「词类通识」型标题（な形容词连体形修饰名词 等）。
+ * 好的胶囊应点名具体词/句型或给出 N 级考点。
+ */
+export function isGenericJapaneseJlptCapsule(term: string, title: string): boolean {
+  const t = term.trim();
+  const titleText = title.trim();
+  if (!titleText) return true;
+
+  // 检索键过短且像万能语素
+  if (/^(な|だ|の|に|を|は|が|て|た|る|い)$/.test(t)) return true;
+
+  const genericTitle =
+    /(な|い)?形容词.*(连体|连用|修饰|词干|语尾)|修饰(后续)?名词|名词修飾|名词修饰|一般动词|动词活用通识|助词用法|词典形即|词类通识/;
+  if (genericTitle.test(titleText)) {
+    // 若标题已点名具体词或 N 级，可保留（如「N2·裏腹な连体形」）
+    const hasLevel = /N[1-5]/.test(titleText);
+    const hasConcreteLexeme = /[\u4e00-\u9fff]{2,}|[ぁ-んァ-ンー]{2,}|〜.+/.test(titleText);
+    // 纯通识且无等级、标题里也看不出专属词 → 丢弃
+    if (!hasLevel && !hasConcreteLexeme) return true;
+    // 「な形容词连体形修饰名词」这类即使有汉字「形」也算泛化
+    if (
+      /^(な|い)?形容词/.test(titleText) ||
+      /连体形修饰名词|修饰名词$/.test(titleText)
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /** 解析 AI讲解结构（兼容旧「中文直译 / 语境讲解」与无分子式/胶囊的旧三行） */
@@ -457,6 +601,8 @@ export function parseAiExplainParts(
 ): AiExplainParts {
   const empty: AiExplainParts = {
     contextSense: '',
+    loanwords: [],
+    loanwordsRaw: '',
     formula: [],
     formulaRaw: '',
     grammar: '',
@@ -473,6 +619,7 @@ export function parseAiExplainParts(
   const nextOf = (label: string) => SECTION_LABELS.filter((l) => l !== label);
 
   let contextSense = sectionBetween(text, '【语境释义】', nextOf('【语境释义】'));
+  let loanwordsRaw = sectionBetween(text, '【外来语原词】', nextOf('【外来语原词】'));
   let formulaRaw = sectionBetween(text, '【语法分子式】', nextOf('【语法分子式】'));
   let grammar = sectionBetween(text, '【语法拆解】', nextOf('【语法拆解】'));
   const capsulesRaw = sectionBetween(text, '【语法胶囊】', nextOf('【语法胶囊】'));
@@ -493,6 +640,10 @@ export function parseAiExplainParts(
   if (!contextSense) {
     contextSense =
       text.match(/(?:【语境释义】|语境释义)[:：]\s*([^\n【]+)/)?.[1]?.trim() || '';
+  }
+  if (!loanwordsRaw) {
+    loanwordsRaw =
+      text.match(/(?:【外来语原词】|外来语原词)[:：]\s*([^\n【]+)/)?.[1]?.trim() || '';
   }
   if (!formulaRaw) {
     formulaRaw =
@@ -516,6 +667,7 @@ export function parseAiExplainParts(
   const expectedExam = opts?.language ? examTagForLanguage(opts.language) : undefined;
   const formula = parseGrammarFormula(formulaRaw);
   const capsules = parseGrammarCapsules(capsulesRaw, expectedExam);
+  const loanwords = parseLoanwordEtymology(loanwordsRaw);
 
   if (
     !contextSense &&
@@ -523,13 +675,16 @@ export function parseAiExplainParts(
     !mood &&
     !slang &&
     !formula.length &&
-    !capsules.length
+    !capsules.length &&
+    !loanwords.length
   ) {
     return { ...empty, contextSense: text, zhGloss: text, context: '', raw: text };
   }
 
   return {
     contextSense,
+    loanwords,
+    loanwordsRaw: cleanMood(loanwordsRaw) ? loanwordsRaw.trim() : '',
     formula,
     formulaRaw: formulaRaw.trim(),
     grammar,
@@ -585,11 +740,18 @@ ${langLock}
 请针对检索键「${keyword}」生成一份极致精简的交互式微型语法讲义，并附带 1 条含有该检索键的著名歌词或高质量造句。
 说明语言统一使用简体中文。每段内容（含例句）严格控制在 40 字以内，禁止任何废话和 Markdown/代码块。
 语法体系与例句原文必须属于【${lang}】；禁止其它语种句子；例句原文必须原样包含「${surface}」。
+${
+  lang === 'Japanese'
+    ? `- 紧紧围绕「${keyword}」本身的 JLPT 用法/等级/近义辨析；禁止改讲泛化的「な形容词修饰名词」等词类课。
+- 【通常含义】优先点明该词/句型在 JLPT 中的考法（若可知等级可写 N2/N3 等）。
+- 例句必须使用「${surface}」原词或原句型，不要换成任意同词类词。`
+    : ''
+}
 ${avoidLine}
 
 【严格输出格式（必须完全一致）】
-【通常含义】用最通俗的语言说明该语法的核心字面意思。
-【如何使用】说明接续规则或位置（如：接在形容动词词干后，置于被修饰名词前）。
+【通常含义】用最通俗的语言说明该语法/词的核心字面意思。
+【如何使用】说明接续规则或位置；日语须结合本检索键，勿只写词类通识。
 【情感语气】用拟人化或情绪词描述其传达的隐性语感（如：表示傲娇反问、无可奈何、或中性稳定）。
 【例句】严格格式：《歌名》｜原文（必须包含${keyword}）｜中文翻译。如果没有合适的著名歌名，请用《造句》作为书名号内容，并确保原文极其适合流行音乐语境。
 `.trim();
