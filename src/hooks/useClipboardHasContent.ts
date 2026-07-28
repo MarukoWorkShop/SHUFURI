@@ -26,7 +26,7 @@ const EMPTY: ClipboardStructuredLyricsState = {
   hash: '',
 };
 
-/** 完整记录流，或 Step2 学习材料（含 V/G）均可点亮「粘贴并排版」主暗示 */
+/** 完整记录流，或 Step2 学习材料（含 V/G）均可点亮「粘贴剪贴板歌词」主暗示 */
 async function inspectClipboardStructuredLyrics(): Promise<ClipboardStructuredLyricsState> {
   try {
     const text = await readClipboardText();

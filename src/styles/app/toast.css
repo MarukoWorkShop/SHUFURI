@@ -1,6 +1,6 @@
 /* ---- 全局 Toast 轻提示 ---- */
 .app-toast {
-  z-index: 401;
+  z-index: 10002;
   padding: var(--toast-padding-y) var(--toast-padding-x);
   border-radius: var(--toast-radius);
   background: var(--toast-bg);

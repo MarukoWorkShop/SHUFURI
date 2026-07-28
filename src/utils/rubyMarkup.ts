@@ -37,8 +37,42 @@ function stripBareKanaBraces(text: string): string {
   return text.replace(/\{([ぁ-んァ-ンー\uFF66-\uFF9D]+)\}/g, '$1');
 }
 
+/**
+ * 修复 AI 未按规范标注、直接把振假名写在汉字后的 inline 注音。
+ * 把「港みなと」「汽笛きてき」「響ひび」转成 {港|みなと}{汽笛|きてき}{響|ひび}。
+ * 两类修复，均保护已有 {基字|读音} 的 token，避免二次处理：
+ *  1) 裸写：连续汉字 + 连续假名（≥2 个）且后面不再紧跟假名。
+ *     单假名后缀不处理，避免把走る/高い等送假名误标为振假名。
+ *  2) 括号包裹：港（みなと）/港(みなと)/港［みなと］/港《みなと》等。
+ *     括号明确分隔，可安全覆盖单假名读音（如 火（ひ）），不会误伤送假名。
+ */
+function repairInlineFurigana(text: string): string {
+  const tokens: string[] = [];
+  const localRe = new RegExp(RUBY_TOKEN_RE.source, 'g');
+  const protectedText = text.replace(localRe, (match) => {
+    tokens.push(match);
+    return `\u0000${tokens.length - 1}\u0000`;
+  });
+
+  // 1) 裸写：连续汉字 + 连续假名(≥2)，且不紧跟更多假名
+  const bareRepaired = protectedText.replace(
+    /([\u4e00-\u9fff々〆ヵヶ]+)([ぁ-んァ-ンー\uFF66-\uFF9D]{2,})(?![ぁ-んァ-ンー\uFF66-\uFF9D])/g,
+    '{$1|$2}',
+  );
+
+  // 2) 括号包裹：括号明确分隔，覆盖单假名读音且不会误伤送假名
+  const repaired = bareRepaired.replace(
+    /([\u4e00-\u9fff々〆ヵヶ]+)[（(［\[《]([ぁ-んァ-ンー\uFF66-\uFF9D]+)[）)\]］》]/g,
+    '{$1|$2}',
+  );
+
+  return repaired.replace(/\u0000(\d+)\u0000/g, (_, i) => tokens[Number(i)]!);
+}
+
 function normalizeRubyInput(text: string): string {
-  return stripBareKanaBraces(repairShorthandRubyMarkup(normalizeRubyBrackets(text)));
+  return stripBareKanaBraces(
+    repairShorthandRubyMarkup(repairInlineFurigana(normalizeRubyBrackets(text))),
+  );
 }
 
 function hasKanji(text: string): boolean {

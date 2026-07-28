@@ -5,6 +5,7 @@ import {
   parseAiExplainParts,
   type AiGrammarCapsule,
 } from '../codec/prompt/buildMicroscopePrompt';
+import { applyRubyMarkup } from '../utils/rubyMarkup';
 import './ExplainMicroscopePanel.css';
 
 type Props = {
@@ -339,7 +340,10 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                           >
                             <span className="microscope-capsule__exam">{cap.exam}</span>
                             <span className="microscope-capsule__text">
-                              点击查看：{cap.title}
+                              点击查看：
+                              <span
+                                dangerouslySetInnerHTML={{ __html: applyRubyMarkup(cap.title) }}
+                              />
                             </span>
                           </button>
                         );
@@ -388,19 +392,28 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                     {grammarLesson.meaning ? (
                       <div className="microscope-lesson__row">
                         <p className="microscope-lesson__label">通常含义</p>
-                        <p className="microscope-lesson__body">{grammarLesson.meaning}</p>
+                        <p
+                          className="microscope-lesson__body"
+                          dangerouslySetInnerHTML={{ __html: applyRubyMarkup(grammarLesson.meaning) }}
+                        />
                       </div>
                     ) : null}
                     {grammarLesson.usage ? (
                       <div className="microscope-lesson__row">
                         <p className="microscope-lesson__label">如何使用</p>
-                        <p className="microscope-lesson__body">{grammarLesson.usage}</p>
+                        <p
+                          className="microscope-lesson__body"
+                          dangerouslySetInnerHTML={{ __html: applyRubyMarkup(grammarLesson.usage) }}
+                        />
                       </div>
                     ) : null}
                     {grammarLesson.emotion ? (
                       <div className="microscope-lesson__row">
                         <p className="microscope-lesson__label">情感语气</p>
-                        <p className="microscope-lesson__body">{grammarLesson.emotion}</p>
+                        <p
+                          className="microscope-lesson__body"
+                          dangerouslySetInnerHTML={{ __html: applyRubyMarkup(grammarLesson.emotion) }}
+                        />
                       </div>
                     ) : null}
                     {grammarLesson.example ? (
@@ -416,9 +429,12 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                                 : 'AI'}
                           </span>
                         </p>
-                        <p className="microscope-examples__text">
-                          {grammarLesson.example.text}
-                        </p>
+                        <p
+                          className="microscope-examples__text"
+                          dangerouslySetInnerHTML={{
+                            __html: applyRubyMarkup(grammarLesson.example.text),
+                          }}
+                        />
                         {grammarLesson.example.zh ? (
                           <p className="microscope-examples__zh">{grammarLesson.example.zh}</p>
                         ) : null}

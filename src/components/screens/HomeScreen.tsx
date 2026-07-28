@@ -2,6 +2,8 @@ import type { AppSettings, LyricsLanguage } from '../../services/appSettings';
 import type { LanguageMatrixContext } from '../../services/languageMatrix/types';
 import type { StructuredLyricsCardFallbacks } from '../../utils/clipboardStructuredLyrics';
 import { useClipboardDetection } from '../../hooks/useClipboardDetection';
+import { useDesktopMusicShareDetection } from '../../hooks/useDesktopMusicShareDetection';
+import { useFillMusicShareFromClipboard } from '../../hooks/useFillMusicShareFromClipboard';
 import HtmlPasteInput from '../HtmlPasteInput';
 import SavedLyricsLibrary from '../SavedLyricsLibrary';
 import StudyCardsLibrary from '../StudyCardsLibrary';
@@ -13,6 +15,7 @@ import { hideAppBootLoader } from '../../utils/hideAppBootLoader';
 import type { ExternalPromptRequest } from '../../hooks/useStructuredLyricsClipboardCard';
 import type { ShareOcrData } from '../../context/HomeSessionContext';
 import { shareOcrToEncoderContext } from '../../utils/shareOcrToEncoderContext';
+import { useAppToast } from '../../context/AppToastContext';
 
 type Props = {
   inputResetKey: number;
@@ -30,7 +33,7 @@ type Props = {
   setShareOcrData: Dispatch<SetStateAction<ShareOcrData | null>>;
   setAppSettings: Dispatch<SetStateAction<AppSettings>>;
   onMusicShareStored: (data: ShareOcrData) => void;
-  onStructuredLyrics: (text: string) => boolean;
+  onStructuredLyrics: (text: string, opts?: { streaming?: boolean }) => boolean;
   consumedClipboardRef: RefObject<Set<string>>;
   prevClipboardHashRef: RefObject<string>;
   externalPrompt?: ExternalPromptRequest | null;
@@ -81,6 +84,22 @@ export default function HomeScreen({
     prevClipboardHashRef,
   });
 
+  const showToast = useAppToast();
+  useDesktopMusicShareDetection({
+    setShareOcrData,
+    setAppSettings,
+    onMusicShareStored,
+    prevClipboardHashRef,
+    consumedClipboardRef,
+    showToast,
+  });
+
+  const { parseShareText, parsing: parseMusicShareBusy } = useFillMusicShareFromClipboard({
+    setShareOcrData,
+    setAppSettings,
+    onMusicShareStored,
+  });
+
   return (
     <div className="home-body">
       <div className="home-hero">
@@ -101,6 +120,8 @@ export default function HomeScreen({
         pasteLayoutReady={pasteLayoutReady}
         clipboardStreamTitle={clipboardStreamTitle}
         onActivatePasteLayout={onActivatePasteLayout}
+        onParseMusicShareText={parseShareText}
+        parseMusicShareBusy={parseMusicShareBusy}
         onFormMetaChange={onFormMetaChange}
         externalPrompt={externalPrompt}
         onExternalPromptHandled={onExternalPromptHandled}
@@ -111,10 +132,19 @@ export default function HomeScreen({
       </div>
       <HomeDailyLyricQuote refreshKey={libraryRefreshKey} onOpenProject={onOpenProject} />
       <footer className="home-footer">
-        <p className="home-footer__icp">
-          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">粤ICP备XXXXXXXX号-1</a>
-        </p>
-        <p className="home-footer__copy">© 2026 SHUFURI</p>
+        <div className="home-footer__line">
+          <span className="home-footer__copy">
+            Copyright © 2020 – 2026 Wanderful Studio. All Rights Reserved. Wanderful Studio 版权所有
+          </span>
+          <span className="home-footer__divider" aria-hidden="true">|</span>
+          <a className="home-footer__link" href="/terms">服务协议</a>
+          <span className="home-footer__divider" aria-hidden="true">|</span>
+          <a className="home-footer__link" href="/privacy">隐私政策</a>
+          <span className="home-footer__divider" aria-hidden="true">|</span>
+          <span className="home-footer__meta">粤B2-XXXXXXXX</span>
+          <span className="home-footer__divider" aria-hidden="true">|</span>
+          <span className="home-footer__meta">粤公网安备 XXXXXXXXXXXX号</span>
+        </div>
       </footer>
     </div>
   );

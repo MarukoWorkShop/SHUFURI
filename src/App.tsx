@@ -92,10 +92,11 @@ function AppShell({
           setShareOcrData={homeSession.setShareOcrData}
           setAppSettings={setAppSettings}
           onMusicShareStored={storeMusicShare}
-          onStructuredLyrics={(text) =>
+          onStructuredLyrics={(text, opts) =>
             homeSession.activateClipboardDetectCardFromText(text, {
               title: homeSession.homeFormMetaRef.current.title,
               artist: homeSession.homeFormMetaRef.current.artist,
+              ...(opts ?? {}),
             })
           }
           consumedClipboardRef={homeSession.consumedClipboardRef}

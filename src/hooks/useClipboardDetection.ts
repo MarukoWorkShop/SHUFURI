@@ -23,7 +23,7 @@ type Options = {
   setShareOcrData: Dispatch<SetStateAction<ShareOcrData | null>>;
   setAppSettings: Dispatch<SetStateAction<AppSettings>>;
   onMusicShareStored: (data: ShareOcrData) => void;
-  onStructuredLyrics: (text: string) => boolean;
+  onStructuredLyrics: (text: string, opts?: { streaming?: boolean }) => boolean;
   consumedClipboardRef: RefObject<Set<string>>;
   prevClipboardHashRef: RefObject<string>;
 };

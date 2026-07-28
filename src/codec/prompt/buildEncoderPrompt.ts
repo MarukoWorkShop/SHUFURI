@@ -80,7 +80,9 @@ export function buildEncoderPrompt(
     a,
     t,
     options.ocrContext?.firstLyricLine,
-    phase === 'lyrics' ? { completeness: true, retry: options.retry } : undefined,
+    phase === 'lyrics'
+      ? { completeness: true, retry: options.retry, retryReason: options.retryReason }
+      : undefined,
   );
   body += buildOcrHintBlock(options.ocrContext);
   body += buildWireSchema(include, iface, lang, gloss);
@@ -160,7 +162,7 @@ function buildStudyMaterialsPrompt(
   }
 
   body += buildFullSampleBlock(lang, true, iface);
-  body += buildStreamCloseBlock();
+  body += buildStreamCloseBlock({ requireStudySections: true });
   body += buildSelfCheckBlock(lang, true, pedagogicalLevel);
   body += buildModelComplianceBlock(options.modelHint);
 

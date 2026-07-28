@@ -26,6 +26,29 @@ Vite + React（Web）/ iOS WebView 壳（Capacitor 桥接）
 
 ## 部署
 
+### CloudBase（生产环境）
+
+| 资源 | 说明 |
+|------|------|
+| 静态托管 | `https://shufu-life-d8g9j8v5385543c1a-1435171508.tcloudbaseapp.com/?v=20260728-2` |
+| 云函数 arkProxy | `explain.selection`（划词/语法讲解）/ `lyrics.step2`（词解与语法生成，已开启 `web_search` 联网搜索） |
+| 云函数 arkExplainStream | 流式讲解（备用） |
+| 环境 ID | `shufu-life-d8g9j8v5385543c1a` |
+
+**部署命令**：
+
+```bash
+# 部署云函数
+npm run deploy:ark-proxy        # arkProxy（含歌词生成 + 划词讲解）
+npm run deploy:ark-explain-stream  # arkExplainStream
+
+# 构建 + 部署前端到静态托管
+npm run build
+npx tcb hosting deploy dist -e shufu-life-d8g9j8v5385543c1a
+```
+
+### 本地开发
+
 ```bash
 npm install
 npm run dev      # 开发服务器 → localhost:5173

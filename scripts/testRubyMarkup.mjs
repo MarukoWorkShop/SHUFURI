@@ -97,6 +97,36 @@ const cases = [
     norm: '語る',
     html: '語る',
   },
+  {
+    name: 'AI 裸写 inline 振假名（≥2 假名）',
+    in: '港みなと汽笛きてき',
+    norm: '{港|みなと}{汽笛|きてき}',
+    html: '<ruby>港<rt>みなと</rt></ruby><ruby>汽笛<rt>きてき</rt></ruby>',
+  },
+  {
+    name: 'AI 括号 inline 振假名（单假名，安全覆盖）',
+    in: '火（ひ）が',
+    norm: '{火|ひ}が',
+    html: '<ruby>火<rt>ひ</rt></ruby>が',
+  },
+  {
+    name: 'AI 括号 inline 振假名（全角括号，多假名）',
+    in: '港（みなと）を',
+    norm: '{港|みなと}を',
+    html: '<ruby>港<rt>みなと</rt></ruby>を',
+  },
+  {
+    name: 'AI 书名号 inline 振假名',
+    in: '響《ひび》く',
+    norm: '{響|ひび}く',
+    html: '<ruby>響<rt>ひび</rt></ruby>く',
+  },
+  {
+    name: '括号 inline 不误伤送假名（走る 保持原样）',
+    in: '走る',
+    norm: '走る',
+    html: '走る',
+  },
 ];
 
 let failed = 0;

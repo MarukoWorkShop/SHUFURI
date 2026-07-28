@@ -28,12 +28,15 @@ export type HomeSessionContextValue = {
   homeFormMetaRef: RefObject<{ title: string; artist: string }>;
   activateClipboardDetectCardFromText: (
     text: string,
-    formMeta?: { title?: string; artist?: string },
+    formMeta?: { title?: string; artist?: string; streaming?: boolean },
   ) => boolean;
   consumedClipboardRef: RefObject<Set<string>>;
   prevClipboardHashRef: RefObject<string>;
   // 两步式歌词确认
   confirmVisible: boolean;
+  confirmStreaming: boolean;
+  isGeneratingStudy: boolean;
+  studyError: string | null;
   confirmTitle: string;
   confirmArtist: string;
   confirmLang: LangCode | undefined;
@@ -41,6 +44,7 @@ export type HomeSessionContextValue = {
   confirmPreviewLines: LyricPreviewLine[];
   handleConfirmLayout: () => void;
   handleConfirmStudy: () => void;
+  handleConfirmStudyFallback: () => void;
   handleConfirmRetry: () => void;
   handleConfirmDismiss: () => void;
   externalPrompt: ExternalPromptRequest | null;

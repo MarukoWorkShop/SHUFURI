@@ -37,7 +37,7 @@ export type ArkProxyUsage = {
 
 /** 发送到云函数的请求 */
 export type ArkProxyRequest = {
-  action: 'explain.selection';
+  action: 'explain.selection' | 'lyrics.step2';
   requestId: string;
   prompt: string;
   targetLanguage: 'jp' | 'ko' | 'en' | 'zh';
@@ -59,7 +59,7 @@ export type ArkProxyResponse = {
 
 /** 网关请求（与 ArkProxyRequest 解耦，便于未来切换后端） */
 export type AiGatewayRequest = {
-  action: 'explain.selection';
+  action: 'explain.selection' | 'lyrics.step2';
   requestId: string;
   prompt: string;
   targetLanguage: 'jp' | 'ko' | 'en' | 'zh';
