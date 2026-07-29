@@ -339,13 +339,16 @@ export function buildMicroscopeAiExplainPrompt(songContext: MicroscopeSongContex
   const slangHints =
     AI_EXPLAIN_SLANG_HINTS[lang] ?? AI_EXPLAIN_SLANG_HINTS.English;
 
+  // 输出语言跟随界面语言（EN 用户得英文讲解）；段落标签保留中文以兼容解析器
+  const ifaceLabel = INTERFACE_LANG_LABEL[songContext.interfaceLanguage ?? 'zh'];
+
   const isJp = lang === 'Japanese';
   const forceLoan =
     isJp && looksLikeJapaneseKatakanaLoan(focus);
   const loanwordTask = isJp
     ? `
 1b. 外来语原词（日语专用，必填块）：
-   - 若「${focus}」含片假名外来语（含多个外来语连写），必须逐词写出：源语言、原词拼写、中文译义。
+   - 若「${focus}」含片假名外来语（含多个外来语连写），必须逐词写出：源语言、原词拼写、译义。
    - 每行严格格式：\`片假名表面形 ← 源语言 原词拼写 → 中文译义\`
    - 示例：\`カルパッチョ ← 意大利语 Carpaccio → 生牛肉片\`
    - 连写须拆开多行（如 カルパッチョ／パエリア／オードブル 各一行），禁止只写笼统菜名概括而省略原词。
@@ -363,7 +366,7 @@ ${forceLoan ? `   - 【硬性】本划选已判定为片假名外来语倾向，
     ? `1. 逐句解析（必填）：划选含多句，按句拆分逐句给出「原文｜译义｜要点」。
    - 已识别的句子：
 ${sentences.map((s, i) => `     ${i + 1}) ${s}`).join('\n')}
-   - 每行严格：\`<序号>. <原文句>｜<中文译义>｜<本句语法/活用/口语缩略要点≤30字，无写—>\`
+   - 每行严格：\`<序号>. <原文句>｜<译义>｜<本句语法/活用/口语缩略要点≤30字，无写—>\`
    - 原文句保留原文语种；若划选混入译文行（如原文+中文翻译），译文并入对应译义列，不单独成句。
 2. 整体语境（对应【语境释义】）：一句话说明这段在曲中的作用或承接关系。≤60字。`
     : '';
@@ -379,7 +382,7 @@ ${sentences.map((s, i) => `     ${i + 1}) ${s}`).join('\n')}
     ? `3. 语法分子式（选填）：仅针对整段核心语法点拆分子式；无明确可拆写「—」。`
     : `2. 语法分子式（必填）：把「${focus}」拆成可点击的语素/词块，用「分子式」一行写出。
    - 格式必须严格：\`[语素|极短标签] + [语素|极短标签] + …\`
-   - 语素用本曲原文语种书写；标签用简体中文，≤8字。
+   - 语素用本曲原文语种书写；标签用${ifaceLabel}，≤8字。
 ${formulaExamples}
    - 若确无成分可拆，写：\`[词典形|无特殊变形]\``;
 
@@ -392,7 +395,7 @@ ${grammarRules}
   const multiOutput = isMulti ? '【逐句解析】…\n' : '';
 
   return `
-你是歌词划词助教。简体中文。${
+你是歌词划词助教。${ifaceLabel}。${
   isMulti
     ? `划选「${focus}」含多个句子，须逐句翻译与解析，并简要给出整体语境与上下文承接。`
     : `只解释划线片段「${focus}」，禁止整句翻译、串讲前后句、等级考试长文/百科/导语废话。`
