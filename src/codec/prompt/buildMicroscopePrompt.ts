@@ -395,6 +395,8 @@ ${grammarRules}
   const multiOutput = isMulti ? '【逐句解析】…\n' : '';
 
   return `
+【输出语言 — 硬性 / STRICT】所有释义、译义、语法标签、拆解说明、意境、黑话等说明文字必须用 ${ifaceLabel} 书写；仅歌词原文与语素保留原文语种。${ifaceLabel === 'English' ? 'Do NOT write Chinese explanations; output English only.' : ''}
+
 你是歌词划词助教。${ifaceLabel}。${
   isMulti
     ? `划选「${focus}」含多个句子，须逐句翻译与解析，并简要给出整体语境与上下文承接。`
@@ -427,7 +429,7 @@ ${capsuleExamples}
 ${slangHints}
    - 本段 ≤50字；只谈与「${focus}」直接相关的黑话，禁止百科展开。
 
-【输出格式】严格按下列标题顺序，不要其它 Markdown/前言后记：
+【输出格式】严格按下列标题顺序，不要其它 Markdown/前言后记（所有说明文字一律用 ${ifaceLabel}）：
 ${multiOutput}【语境释义】…
 ${loanwordOutput}【语法分子式】…
 【语法拆解】…
