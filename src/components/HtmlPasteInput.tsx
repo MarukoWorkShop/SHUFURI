@@ -276,7 +276,7 @@ export default function HtmlPasteInput({
       try {
         await writePromptToClipboard(prompt);
         setCopiedPrompt(prompt);
-        await openAiApp(app.scheme);
+        await openAiApp(app);
         setActionSheetVisible(false);
       } catch {
         // 静默失败

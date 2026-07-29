@@ -10,6 +10,8 @@ export type ExplainNotePayload = {
   term: string;
   contextSense: string;
   grammar?: string;
+  /** 语法分子式（如「[语素|标签] + [语素|标签]」），保存与导出时保留 */
+  formula?: string;
   mood?: string;
   /** 正文语种；决定 vocab-word / vocab-word-ko 等 class */
   lang?: LangCode;
@@ -45,6 +47,10 @@ export function buildExplainNoteItemHtml(payload: ExplainNotePayload): string {
   const detail = grammar
     ? `<p class="grammar-detail">${grammarHtml}</p>`
     : '';
+  const formula = payload.formula?.trim() || '';
+  const formulaLine = formula
+    ? `<p class="vocab-formula">${escapeHtml(formula)}</p>`
+    : '';
   const moodLine = mood
     ? `<p class="vocab-ex-zh">${escapeHtml(mood)}</p>`
     : '';
@@ -58,6 +64,7 @@ export function buildExplainNoteItemHtml(payload: ExplainNotePayload): string {
       id,
     )}" aria-label="删除划词笔记" style="display:none">×</button>` +
     `<p class="vocab-line1"><span class="${vocabWordClass}">${escapeHtml(term)}</span>${meaning}</p>` +
+    formulaLine +
     detail +
     moodLine +
     `</div>`
@@ -107,6 +114,7 @@ export type ExplainNoteListItem = {
   term: string;
   contextSense: string;
   grammar: string;
+  formula: string;
   mood: string;
 };
 
@@ -129,9 +137,11 @@ export function listExplainNotesFromBodyHtml(bodyHtml: string): ExplainNoteListI
       '';
     const grammar =
       (note.querySelector('.grammar-detail') as HTMLElement | null)?.textContent?.trim() ?? '';
+    const formula =
+      (note.querySelector('.vocab-formula') as HTMLElement | null)?.textContent?.trim() ?? '';
     const mood =
       (note.querySelector('.vocab-ex-zh') as HTMLElement | null)?.textContent?.trim() ?? '';
-    return { id, term, contextSense, grammar, mood };
+    return { id, term, contextSense, grammar, formula, mood };
   });
 }
 

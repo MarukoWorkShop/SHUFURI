@@ -52,6 +52,7 @@ export type UseExplainSessionOptions = {
     term: string;
     contextSense: string;
     grammar?: string;
+    formula?: string;
     mood?: string;
   }) => void;
 };
@@ -578,6 +579,7 @@ export function useExplainSession({
       : null;
     const contextSense = aiParts?.contextSense?.trim() || '';
     const grammar = aiParts?.grammar?.trim() || '';
+    const formula = aiParts?.formulaRaw?.trim() || '';
     const mood = aiParts?.mood?.trim() || '';
     const slang = aiParts?.slang?.trim() || '';
     const loanSummary = formatLoanwordsForNote(aiParts?.loanwords ?? []);
@@ -599,6 +601,7 @@ export function useExplainSession({
       term,
       contextSense: senseWithLoan || micro?.direct_meaning?.trim() || term,
       grammar: grammar || undefined,
+      formula: formula || undefined,
       mood: moodCombined || undefined,
     });
     showToast('已添加到笔记');

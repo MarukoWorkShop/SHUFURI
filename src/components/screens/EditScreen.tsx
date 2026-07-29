@@ -17,6 +17,7 @@ import { EDIT_DESKTOP_SPLIT_QUERY, useMediaQuery } from '../../hooks/useMediaQue
 import {
   createBrushController,
   tokenizeBrushableHtml,
+  originalLineClassesForLang,
   BRUSH_MAX_CHARS,
   BRUSH_READY_CLASS,
 } from '../../utils/highlighterBrush';
@@ -438,6 +439,7 @@ export default function EditScreen() {
       root,
       body,
       maxChars: BRUSH_MAX_CHARS,
+      originalLineClasses: originalLineClassesForLang(lang),
       onSelect: (sel) => {
         explain.analyzeSelection(sel.text, sel.context);
       },
@@ -454,6 +456,7 @@ export default function EditScreen() {
     brushBodyHtml,
     explain.analyzeSelection,
     showToast,
+    lang,
   ]);
 
   return (

@@ -92,6 +92,8 @@ export type BrushControllerOptions = {
   /** 正文容器（.fv-body-h） */
   body: HTMLElement;
   maxChars?: number;
+  /** 歌曲原文行的 class 集合；选区中的译文行进入 prompt 前丢弃（高亮保留） */
+  originalLineClasses?: string[];
   onSelect: (selection: BrushSelection) => void;
   onOverflow?: () => void;
 };
@@ -100,10 +102,29 @@ export type BrushController = {
   destroy: () => void;
 };
 
+/**
+ * 按歌曲语种返回「原文行」的 class 集合。
+ * 选区里不属此集合的行视为译文，进入 prompt 前丢弃（高亮保留）。
+ * 与起笔位置无关——避免从译文起笔时误留译文、丢原文。
+ */
+export function originalLineClassesForLang(lang?: string): string[] {
+  switch (lang) {
+    case 'jp':
+      return ['jp-line'];
+    case 'ko':
+      return ['ko-line'];
+    case 'zh':
+      return ['zh-line', 'cn-line'];
+    default:
+      return []; // en/未知：不过滤
+  }
+}
+
 function buildBrushSelection(
   body: HTMLElement,
   s: number,
   e: number,
+  originalClasses: string[],
 ): BrushSelection | null {
   const startEl = body.querySelector<HTMLElement>(
     `.${BRUSH_TOKEN_CLASS}[data-brush-index="${s}"]`,
@@ -121,25 +142,58 @@ function buildBrushSelection(
     return null;
   }
 
-  const text = textWithoutRubyNotes(range.cloneContents());
-  if (!text) return null;
+  const root =
+    (body.closest('.fv-body-h, .fv-edit-document-root, .edit-canvas-scroll') as HTMLElement | null) ??
+    body;
+  const hasLangFilter = originalClasses.length > 0;
 
-  const block = findExplainSelectBlock(startEl);
-  const surroundingLine = block ? textWithoutRubyNotes(block) : text;
+  const frag = range.cloneContents();
+  if (hasLangFilter) {
+    // 按歌曲语种判定原文/译文（与起笔位置无关）：丢弃译文行，只保留原文进入 prompt。
+    // 高亮仍保留涂过的原文+译文（视觉=涂了啥亮啥）。
+    const keep = new Set(originalClasses);
+    frag
+      .querySelectorAll('.jp-line, .zh-line, .ko-line, .cn-line')
+      .forEach((line) => {
+        const isOriginal = Array.from(line.classList).some((c) => keep.has(c));
+        if (!isOriginal) line.remove();
+      });
+  }
+  let text = textWithoutRubyNotes(frag);
+  if (!text) {
+    // 译文-only 选择（无原文命中）：回退保留全部，仍可讲解译文
+    text = textWithoutRubyNotes(range.cloneContents());
+    if (!text) return null;
+  }
+  const surroundingLine = text;
 
   let prevLine = '';
   let nextLine = '';
-  if (block) {
-    const root = block.closest(
-      '.fv-body-h, .fv-edit-document-root, .edit-canvas-scroll',
-    ) as HTMLElement | null;
-    const line = block.matches('.jp-line, .zh-line, .ko-line, .cn-line')
-      ? block
-      : null;
-    if (line && root) {
-      const all = Array.from(
-        root.querySelectorAll<HTMLElement>(peerSelectorFor(line)),
-      );
+  if (hasLangFilter) {
+    // prev/next 取选区外相邻的原文行（不依赖起笔 token）
+    const sel = originalClasses.map((c) => `.${c}`).join(',');
+    const allOriginal = Array.from(root.querySelectorAll<HTMLElement>(sel));
+    const selectedOriginal = allOriginal.filter((ln) => {
+      try {
+        return range.intersectsNode(ln);
+      } catch {
+        return false;
+      }
+    });
+    if (selectedOriginal.length) {
+      const firstIdx = allOriginal.indexOf(selectedOriginal[0]!);
+      const lastIdx = allOriginal.indexOf(selectedOriginal[selectedOriginal.length - 1]!);
+      if (firstIdx > 0) prevLine = textWithoutRubyNotes(allOriginal[firstIdx - 1]!);
+      if (lastIdx >= 0 && lastIdx < allOriginal.length - 1) {
+        nextLine = textWithoutRubyNotes(allOriginal[lastIdx + 1]!);
+      }
+    }
+  } else {
+    // 无语种信息（如英文）：沿用起始行邻接
+    const block = findExplainSelectBlock(startEl);
+    const line = block?.matches('.jp-line, .zh-line, .ko-line, .cn-line') ? block : null;
+    if (line) {
+      const all = Array.from(root.querySelectorAll<HTMLElement>(peerSelectorFor(line)));
       const idx = all.indexOf(line);
       if (idx >= 0) {
         prevLine = idx > 0 ? textWithoutRubyNotes(all[idx - 1]!) : '';
@@ -283,7 +337,7 @@ export function createBrushController(
       return;
     }
     const [s, e] = lastRange;
-    const sel = buildBrushSelection(body, s, e);
+    const sel = buildBrushSelection(body, s, e, opts.originalLineClasses ?? []);
     // 保留高亮作为「正在讲解」反馈；下次落笔时由 clearHighlight 清掉
     if (sel && sel.text) {
       onSelect(sel);

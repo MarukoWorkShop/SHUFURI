@@ -7,19 +7,21 @@
   z-index: 10001;
   background: var(--color-scrim-medium);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
 }
 
 .ai-action-sheet-panel {
   width: 100%;
   max-width: 480px;
+  max-height: 85vh;
+  margin: 0 16px;
   background: var(--color-bg-elevated);
-  border-radius: 16px 16px 0 0;
-  padding: 0 0 env(safe-area-inset-bottom, 16px);
+  border-radius: 16px;
+  padding: 0 0 16px;
   transform: translateY(0);
   transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .ai-action-sheet__header {
@@ -27,6 +29,69 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 浏览器端：复制成功卡片 + 打勾动效 */
+.ai-action-sheet__success {
+  padding: 30px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-action-sheet__check {
+  width: 56px;
+  height: 56px;
+  display: block;
+}
+
+.ai-action-sheet__check-ring {
+  stroke: var(--color-accent, #3b82f6);
+  stroke-width: 2.5;
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+  animation: ai-check-draw 0.45s ease forwards;
+}
+
+.ai-action-sheet__check-path {
+  stroke: var(--color-accent, #3b82f6);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 36;
+  stroke-dashoffset: 36;
+  animation: ai-check-draw 0.3s 0.4s ease forwards;
+}
+
+@keyframes ai-check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.ai-action-sheet__success-title {
+  margin: 8px 0 0;
+  font-family: var(--ui-font-sans);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-fg, #1a1a1a);
+}
+
+.ai-action-sheet__success-sub {
+  margin: 0;
+  font-family: var(--ui-font-sans);
+  font-size: 14px;
+  color: var(--color-fg-muted, #64748b);
+}
+
+.ai-action-sheet__success-note {
+  margin: 10px 24px 0;
+  text-align: center;
+  font-family: var(--ui-font-sans);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-fg-faint, #94a3b8);
 }
 
 .ai-action-sheet__title {

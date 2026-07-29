@@ -500,7 +500,8 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${ZH_FONT_FAMILY} !important;
   }
   ${bodySel} .grammar-detail,
-  ${bodySel} .grammar-detail *:not(rt):not(rp)${F.isZhPipeline ? '' : `,\n  ${bodySel} .vocab-line1`} {
+  ${bodySel} .grammar-detail *:not(rt):not(rp)${F.isZhPipeline ? '' : `,\n  ${bodySel} .vocab-line1`},
+  ${bodySel} .vocab-formula {
     font-size: ${auxFs} !important;
     font-weight: ${zhAuxWght} !important;
     color: #0a0a0a !important;
