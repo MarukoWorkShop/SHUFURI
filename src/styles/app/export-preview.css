@@ -408,6 +408,30 @@ html:has(.app--edit) body,
   }
 }
 
+/* ===== Highlighter Brush（笔刷涂抹选词，彻底替代原生划词）===== */
+/* 注音不挡笔刷：点击穿透到基字 */
+.edit-canvas-scroll.explain-brush-ready .fv-edit-document-root .fv-body-h rt,
+.edit-canvas-scroll.explain-brush-ready .fv-edit-document-root .fv-body-h rp,
+.edit-canvas-scroll.explain-brush-ready .fv-edit-document-root .fv-body-h ruby rt,
+.edit-canvas-scroll.explain-brush-ready .fv-edit-document-root .fv-body-h ruby rp {
+  pointer-events: none !important;
+}
+
+/* 讲解（笔刷）模式下暂停画布内滚动，避免边涂边跑；
+   翻页用分页控件而非滚动，单页海报内容通常已铺满视口 */
+.edit-canvas-scroll.explain-brush-ready .fv-edit-document-root {
+  touch-action: none;
+}
+
+/* 荧光笔高亮：下半截黄色，模拟真实荧光笔 */
+.edit-canvas-scroll .fv-body-h .brush-token.brush-highlighted {
+  background: linear-gradient(rgba(255, 214, 51, 0) 4%, rgba(255, 214, 51, 0.6) 8%);
+  border-radius: 2px;
+  /* 让背景铺满行盒（line box），使荧光条高度接近行高而非仅字符高度 */
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
 .edit-area__workspace {
   flex: 1;
   min-height: 0;

@@ -14,7 +14,12 @@ import { useEditCanvasScrollInteractionLock } from '../../hooks/useEditCanvasScr
 import { useExplainSession } from '../../hooks/useExplainSession';
 import { useAppToast } from '../../context/AppToastContext';
 import { EDIT_DESKTOP_SPLIT_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
-import { readSelectionForExplain, clampSelectionToExplainBlock } from '../../utils/readSelectionForExplain';
+import {
+  createBrushController,
+  tokenizeBrushableHtml,
+  BRUSH_MAX_CHARS,
+  BRUSH_READY_CLASS,
+} from '../../utils/highlighterBrush';
 import { listExplainNotesFromBodyHtml } from '../../utils/appendExplainNoteToBody';
 import {
   listStudyEntriesFromBodyHtml,
@@ -399,73 +404,6 @@ export default function EditScreen() {
     [collapseToolbox, handleShowRubyChange],
   );
 
-  useEffect(() => {
-    if (!explain.explainMode) return;
-
-    let timer = 0;
-    const onUp = () => {
-      window.clearTimeout(timer);
-      // WKWebView 松手后选区可能略晚稳定
-      timer = window.setTimeout(() => {
-        void (async () => {
-          const sel = window.getSelection();
-          if (sel?.anchorNode) {
-            const el =
-              sel.anchorNode.nodeType === Node.ELEMENT_NODE
-                ? (sel.anchorNode as Element)
-                : sel.anchorNode.parentElement;
-            // 划词笔记 / 学习条目区内的选区不触发 AI，留给条目编辑
-            if (el?.closest('.shufuri-explain-note, .shufuri-study-item')) return;
-          }
-          const snapJp = (lang ?? lyricsLanguage ?? 'jp') === 'jp';
-          const picked = await readSelectionForExplain({
-            enableJapaneseTokenSnap: snapJp,
-          });
-          if (!picked) return;
-          explain.analyzeSelection(picked.text, picked);
-        })();
-      }, 40);
-    };
-
-    /** 拖选过程中实时钳到单行/单块，避免蓝选区跨日文行+译文 */
-    let clamping = false;
-    const onSelectionChange = () => {
-      if (clamping) return;
-      const root = editCanvasRef.current;
-      if (!root) return;
-      const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || sel.rangeCount < 1) return;
-      const anchorEl =
-        sel.anchorNode?.nodeType === Node.ELEMENT_NODE
-          ? (sel.anchorNode as Element)
-          : sel.anchorNode?.parentElement;
-      if (!anchorEl || !root.contains(anchorEl)) return;
-      clamping = true;
-      try {
-        clampSelectionToExplainBlock(sel);
-      } finally {
-        clamping = false;
-      }
-    };
-
-    const root = editCanvasRef.current;
-    root?.addEventListener('mouseup', onUp);
-    root?.addEventListener('touchend', onUp);
-    document.addEventListener('selectionchange', onSelectionChange);
-    return () => {
-      window.clearTimeout(timer);
-      root?.removeEventListener('mouseup', onUp);
-      root?.removeEventListener('touchend', onUp);
-      document.removeEventListener('selectionchange', onSelectionChange);
-    };
-  }, [
-    editCanvasRef,
-    explain.explainMode,
-    explain.analyzeSelection,
-    lang,
-    lyricsLanguage,
-  ]);
-
   const scrollClass = [
     'edit-canvas-scroll',
     inkEditArmed ? 'is-ink-edit-armed' : '',
@@ -479,6 +417,44 @@ export default function EditScreen() {
     () => (isDesktopSplit ? extractLyricsOnlyBodyHtml(bodyHtml) : bodyHtml),
     [bodyHtml, isDesktopSplit],
   );
+
+  // 讲解模式下把正文拆成字符级 span 供笔刷命中；关闭时退回原始 HTML
+  const brushBodyHtml = useMemo(
+    () => (explain.explainMode ? tokenizeBrushableHtml(lyricsPaneBodyHtml) : lyricsPaneBodyHtml),
+    [explain.explainMode, lyricsPaneBodyHtml],
+  );
+
+  // 讲解模式：用 Highlighter Brush（笔刷涂抹）彻底替代原生划词。
+  // 笔刷计算出的选区文本 + 上下文原样喂给 analyzeSelection，不改 AI 管线。
+  useEffect(() => {
+    if (!explain.explainMode) return;
+    const root = editCanvasRef.current;
+    const body = root?.querySelector<HTMLElement>('.fv-body-h') ?? null;
+    if (!root || !body) return;
+
+    root.classList.add(BRUSH_READY_CLASS);
+
+    const controller = createBrushController({
+      root,
+      body,
+      maxChars: BRUSH_MAX_CHARS,
+      onSelect: (sel) => {
+        explain.analyzeSelection(sel.text, sel.context);
+      },
+      onOverflow: () => showToast('已超出讲解范围，请缩小选区'),
+    });
+
+    return () => {
+      controller.destroy();
+      root.classList.remove(BRUSH_READY_CLASS);
+    };
+  }, [
+    editCanvasRef,
+    explain.explainMode,
+    brushBodyHtml,
+    explain.analyzeSelection,
+    showToast,
+  ]);
 
   return (
     <div
@@ -553,7 +529,7 @@ export default function EditScreen() {
               <ShufuriPosterEditCanvas
                 title={title}
                 artist={artist}
-                bodyHtml={lyricsPaneBodyHtml}
+                bodyHtml={brushBodyHtml}
                 layoutProfile="mobilePoster"
                 displayScale={editScale}
                 titleMarkupHtml={titleMarkupHtml}
