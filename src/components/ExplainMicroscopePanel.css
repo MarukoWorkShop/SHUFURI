@@ -211,6 +211,44 @@
   color: #334155;
 }
 
+/* 逐句解析（多句选区） */
+.microscope-sentences {
+  margin: 0;
+  padding-left: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.microscope-sentences__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #1e293b;
+}
+
+.microscope-sentences__original {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.microscope-sentences__gloss {
+  color: #334155;
+}
+
+.microscope-sentences__note {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.microscope-sentences__note::before {
+  content: '·';
+  margin-right: 4px;
+}
+
 .microscope-formula {
   display: flex;
   flex-wrap: wrap;

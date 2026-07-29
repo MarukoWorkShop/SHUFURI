@@ -131,7 +131,8 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
   const showStructuredAi =
     !deepDiveLoading &&
     aiParts &&
-    (aiParts.contextSense ||
+    (aiParts.sentenceBreakdown.length > 0 ||
+      aiParts.contextSense ||
       aiParts.loanwords.length > 0 ||
       aiParts.loanwordsRaw ||
       aiParts.grammar ||
@@ -274,6 +275,25 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
             ) : null}
             {showStructuredAi && aiParts ? (
               <div className="microscope-ai-card">
+                {aiParts.sentenceBreakdown.length > 0 ? (
+                  <div className="microscope-ai-card__row">
+                    <p className="microscope-ai-card__label">逐句解析</p>
+                    <ol className="microscope-sentences">
+                      {aiParts.sentenceBreakdown.map((s, i) => (
+                        <li key={i} className="microscope-sentences__item">
+                          <span
+                            className="microscope-sentences__original"
+                            dangerouslySetInnerHTML={{ __html: applyRubyMarkup(s.original) }}
+                          />
+                          <span className="microscope-sentences__gloss">{s.gloss}</span>
+                          {s.note && s.note !== '—' ? (
+                            <span className="microscope-sentences__note">{s.note}</span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ) : null}
                 {aiParts.contextSense ? (
                   <div className="microscope-ai-card__row">
                     <p className="microscope-ai-card__label">语境释义</p>

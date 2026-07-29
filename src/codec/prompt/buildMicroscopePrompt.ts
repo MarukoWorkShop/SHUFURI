@@ -301,6 +301,21 @@ export function looksLikeJapaneseKatakanaLoan(text: string): boolean {
 }
 
 /**
+ * 按句末标点（。！？!?）切分歌词选区为句子数组。
+ * - 仅按句末标点切，不按换行切（歌词常跨行同句）。
+ * - 返回 ≥2 句 → 视为「多句选区」，走逐句解析；否则视为整句，沿用单句解析。
+ */
+export function splitLyricsSentences(text: string): string[] {
+  const t = text.replace(/\s+/g, ' ').trim();
+  if (!t) return [];
+  const m = t.match(/[^。！？!?]*[。！？!?]+/g);
+  if (m && m.length >= 2) {
+    return m.map((s) => s.trim()).filter(Boolean);
+  }
+  return [t];
+}
+
+/**
  * 「AI讲解」：语境释义 + 语法分子式 + 语法拆解 + 考试语法胶囊 + 歌词意境 +（选填）歌词黑话。
  * 语法规则按 songContext.language 分轨，避免日/韩等串台。
  * 日语另含【外来语原词】（片假名外来语溯源）。
@@ -339,12 +354,49 @@ ${forceLoan ? `   - 【硬性】本划选已判定为片假名外来语倾向，
     : '';
 
   const loanwordOutput = isJp ? '【外来语原词】…\n' : '';
-  const task1Label = isJp
-    ? `1. 语境释义：一句话说明「${focus}」在这句歌词里的具体含义，不要生搬硬套词典标准解释。≤50字。外来语溯源不要挤在本段，放到「外来语原词」。`
-    : `1. 语境释义：一句话说明「${focus}」在这句歌词里的具体含义，不要生搬硬套词典标准解释。≤50字。`;
+
+  // 多句选区检测：按句末标点切分；≥2 句 → 逐句解析模式
+  const sentences = splitLyricsSentences(focus);
+  const isMulti = sentences.length >= 2;
+
+  const multiSentenceTask = isMulti
+    ? `1. 逐句解析（必填）：划选含多句，按句拆分逐句给出「原文｜译义｜要点」。
+   - 已识别的句子：
+${sentences.map((s, i) => `     ${i + 1}) ${s}`).join('\n')}
+   - 每行严格：\`<序号>. <原文句>｜<中文译义>｜<本句语法/活用/口语缩略要点≤30字，无写—>\`
+   - 原文句保留原文语种；若划选混入译文行（如原文+中文翻译），译文并入对应译义列，不单独成句。
+2. 整体语境（对应【语境释义】）：一句话说明这段在曲中的作用或承接关系。≤60字。`
+    : '';
+
+  const task1Label = isMulti
+    ? ''
+    : isJp
+      ? `1. 语境释义：一句话说明「${focus}」在这句歌词里的具体含义，不要生搬硬套词典标准解释。≤50字。外来语溯源不要挤在本段，放到「外来语原词」。`
+      : `1. 语境释义：一句话说明「${focus}」在这句歌词里的具体含义，不要生搬硬套词典标准解释。≤50字。`;
+
+  // 多句模式下分子式/拆解改为针对整段、可选；单句模式保持原有强约束
+  const formulaTask = isMulti
+    ? `3. 语法分子式（选填）：仅针对整段核心语法点拆分子式；无明确可拆写「—」。`
+    : `2. 语法分子式（必填）：把「${focus}」拆成可点击的语素/词块，用「分子式」一行写出。
+   - 格式必须严格：\`[语素|极短标签] + [语素|极短标签] + …\`
+   - 语素用本曲原文语种书写；标签用简体中文，≤8字。
+${formulaExamples}
+   - 若确无成分可拆，写：\`[词典形|无特殊变形]\``;
+
+  const grammarTask = isMulti
+    ? `4. 语法拆解（选填）：整段关键语法/活用要点，≤100字；无写「—」。`
+    : `3. 语法拆解（必填，须认真还原，禁止敷衍）：
+${grammarRules}
+   - 本段 ≤100字；须含「还原」+尽量一句「对比防坑」；可与分子式互补，不要重复粘贴分子式原文。`;
+
+  const multiOutput = isMulti ? '【逐句解析】…\n' : '';
 
   return `
-你是歌词划词助教。简体中文。只解释划线片段「${focus}」，禁止整句翻译、串讲前后句、等级考试长文/百科/导语废话。
+你是歌词划词助教。简体中文。${
+  isMulti
+    ? `划选「${focus}」含多个句子，须逐句翻译与解析，并简要给出整体语境与上下文承接。`
+    : `只解释划线片段「${focus}」，禁止整句翻译、串讲前后句、等级考试长文/百科/导语废话。`
+}
 ${langLock}
 
 【曲目语种】${lang}（《${songContext.title}》 / ${songContext.artist}）
@@ -360,16 +412,10 @@ ${contextBlock(songContext)}
 ${lemma ? `【本地词典摘要】（基础义已给出；AI 勿照抄，须落到本句具体含义）\n${lemma}` : ''}
 
 【任务】
-${task1Label}
+${multiSentenceTask ? `${multiSentenceTask}\n` : ''}${task1Label}
 ${loanwordTask}
-2. 语法分子式（必填）：把「${focus}」拆成可点击的语素/词块，用「分子式」一行写出。
-   - 格式必须严格：\`[语素|极短标签] + [语素|极短标签] + …\`
-   - 语素用本曲原文语种书写；标签用简体中文，≤8字。
-${formulaExamples}
-   - 若确无成分可拆，写：\`[词典形|无特殊变形]\`
-3. 语法拆解（必填，须认真还原，禁止敷衍）：
-${grammarRules}
-   - 本段 ≤100字；须含「还原」+尽量一句「对比防坑」；可与分子式互补，不要重复粘贴分子式原文。
+${formulaTask}
+${grammarTask}
 ${capsuleTask}
 ${capsuleExamples}
 5. 歌词意境（选填，强调情绪）：聚焦「词尾/用词透出的微妙语气与潜台词」——同一意思换一词会怎样变味；点出本曲语种下细微用词变化传达的情绪。≤50字；确无情绪层次写「—」。
@@ -379,7 +425,7 @@ ${slangHints}
    - 本段 ≤50字；只谈与「${focus}」直接相关的黑话，禁止百科展开。
 
 【输出格式】严格按下列标题顺序，不要其它 Markdown/前言后记：
-【语境释义】…
+${multiOutput}【语境释义】…
 ${loanwordOutput}【语法分子式】…
 【语法拆解】…
 【语法胶囊】
@@ -413,8 +459,18 @@ export type AiLoanwordEtymology = {
   raw: string;
 };
 
+/** 多句选区逐句解析项：原文｜译义｜要点 */
+export type AiSentenceBreakdownItem = {
+  original: string;
+  gloss: string;
+  note: string;
+  raw: string;
+};
+
 export type AiExplainParts = {
-  /** 语境释义（生词卡主义） */
+  /** 逐句解析（仅多句选区；单句为空数组） */
+  sentenceBreakdown: AiSentenceBreakdownItem[];
+  /** 语境释义（生词卡主义；多句模式下为整体语境一句话） */
   contextSense: string;
   /** 日语外来语溯源（非外来语为空） */
   loanwords: AiLoanwordEtymology[];
@@ -466,6 +522,7 @@ function cleanMood(s: string): string {
 }
 
 const SECTION_LABELS = [
+  '【逐句解析】',
   '【语境释义】',
   '【外来语原词】',
   '【语法分子式】',
@@ -476,6 +533,27 @@ const SECTION_LABELS = [
   '【中文直译】',
   '【语境讲解】',
 ] as const;
+
+/** 解析【逐句解析】行：`<序号>. <原文句>｜<译义>｜<要点>` */
+export function parseSentenceBreakdown(raw: string): AiSentenceBreakdownItem[] {
+  const out: AiSentenceBreakdownItem[] = [];
+  const cleaned = cleanMood(raw);
+  if (!cleaned) return out;
+  for (const line of cleaned.split(/\n+/)) {
+    const t = line.trim();
+    if (!t || t.startsWith('【')) continue;
+    const stripped = t.replace(/^\d+[\.\)、]\s*/, '');
+    if (!stripped) continue;
+    const parts = stripped.split('｜').map((p) => p.trim());
+    if (parts.length < 2) continue;
+    const original = parts[0] ?? '';
+    const gloss = parts[1] ?? '';
+    const note = parts.slice(2).join('｜').trim() || '—';
+    if (!original) continue;
+    out.push({ original, gloss, note, raw: t });
+  }
+  return out;
+}
 
 /** 解析日语【外来语原词】行：`片假名 ← 源语言 原词 → 译义` */
 export function parseLoanwordEtymology(raw: string): AiLoanwordEtymology[] {
@@ -601,6 +679,7 @@ export function parseAiExplainParts(
   opts?: { language?: MicroscopeLanguageName },
 ): AiExplainParts {
   const empty: AiExplainParts = {
+    sentenceBreakdown: [],
     contextSense: '',
     loanwords: [],
     loanwordsRaw: '',
@@ -619,6 +698,8 @@ export function parseAiExplainParts(
 
   const nextOf = (label: string) => SECTION_LABELS.filter((l) => l !== label);
 
+  const sentenceRaw = sectionBetween(text, '【逐句解析】', nextOf('【逐句解析】'));
+  const sentenceBreakdown = parseSentenceBreakdown(sentenceRaw);
   let contextSense = sectionBetween(text, '【语境释义】', nextOf('【语境释义】'));
   let loanwordsRaw = sectionBetween(text, '【外来语原词】', nextOf('【外来语原词】'));
   let formulaRaw = sectionBetween(text, '【语法分子式】', nextOf('【语法分子式】'));
@@ -683,6 +764,7 @@ export function parseAiExplainParts(
   }
 
   return {
+    sentenceBreakdown,
     contextSense,
     loanwords,
     loanwordsRaw: cleanMood(loanwordsRaw) ? loanwordsRaw.trim() : '',
