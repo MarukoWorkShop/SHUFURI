@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { checkInstalledAiApps, openAiApp, isNativeWebView } from '../utils/nativeBridge';
 import type { AiAppInfo } from '../bridge/deepLinkPlugin';
+import { L } from '../utils/i18n';
 
 type Props = {
   visible: boolean;
@@ -76,7 +77,7 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
               <circle className="ai-action-sheet__check-ring" cx="26" cy="26" r="24" fill="none" />
               <path className="ai-action-sheet__check-path" fill="none" d="M14 27l8 8 16-16" />
             </svg>
-            <p className="ai-action-sheet__success-title">复制口令成功</p>
+            <p className="ai-action-sheet__success-title">{L('复制口令成功', 'Share code copied')}</p>
 
             <div className="ai-action-sheet__footer">
               <button
@@ -84,18 +85,21 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
                 className="ai-action-sheet__self-service"
                 onClick={handleSelfService}
               >
-                去AI智能体对话窗口直接粘贴
+                {L('去AI智能体对话窗口直接粘贴', 'Open an AI chat app and paste there')}
               </button>
             </div>
             <p className="ai-action-sheet__success-note">
-              不同AI表现有差异，可能出现幻觉，可切换不同AI尝试
+              {L(
+                '不同AI表现有差异，可能出现幻觉，可切换不同AI尝试',
+                'Different AIs perform differently — hallucinations may occur. Try switching AIs if needed.',
+              )}
             </p>
             <button
               type="button"
               className="ai-action-sheet__cancel"
               onClick={onClose}
             >
-              取消
+              {L('取消', 'Cancel')}
             </button>
           </div>
         ) : (
@@ -103,18 +107,20 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
             {/* 标题 */}
             <div className="ai-action-sheet__header">
               {copiedText ? (
-                <p className="ai-action-sheet__title">✓ 指令已复制</p>
+                <p className="ai-action-sheet__title">{L('✓ 指令已复制', '✓ Prompt copied')}</p>
               ) : (
-                <p className="ai-action-sheet__title">选择 AI 应用打开</p>
+                <p className="ai-action-sheet__title">{L('选择 AI 应用打开', 'Choose an AI app to open')}</p>
               )}
             </div>
 
             {loading ? (
-              <div className="ai-action-sheet__loading">检测中…</div>
+              <div className="ai-action-sheet__loading">{L('检测中…', 'Detecting…')}</div>
             ) : apps.length === 0 ? (
               <div className="ai-action-sheet__empty">
-                <p>未检测到 AI 应用</p>
-                <p className="ai-action-sheet__empty-hint">请先安装 ChatGPT、Kimi 或豆包等应用</p>
+                <p>{L('未检测到 AI 应用', 'No AI app detected')}</p>
+                <p className="ai-action-sheet__empty-hint">
+                  {L('请先安装 ChatGPT、Kimi 或豆包等应用', 'Please install ChatGPT, Kimi, Doubao, etc. first.')}
+                </p>
               </div>
             ) : (
               <div className="ai-action-sheet__list">
@@ -144,7 +150,7 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
                 className="ai-action-sheet__self-service"
                 onClick={onClose}
               >
-                复制好了，自己打开
+                {L('复制好了，自己打开', "It's copied — open it myself")}
               </button>
             </div>
 
@@ -154,7 +160,7 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
               className="ai-action-sheet__cancel"
               onClick={onClose}
             >
-              取消
+              {L('取消', 'Cancel')}
             </button>
           </>
         )}

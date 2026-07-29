@@ -86,6 +86,10 @@ export type BrushSelection = {
   context: ExplainPickContext;
 };
 
+export type BrushSelectionResult =
+  | { ok: true; selection: BrushSelection }
+  | { ok: false; reason: 'translation-only' | 'empty' };
+
 export type BrushControllerOptions = {
   /** 滚动容器（.edit-canvas-scroll），事件挂载与就绪/涂抹 class 加在这里 */
   root: HTMLElement;
@@ -96,6 +100,8 @@ export type BrushControllerOptions = {
   originalLineClasses?: string[];
   onSelect: (selection: BrushSelection) => void;
   onOverflow?: () => void;
+  /** 用户只涂抹了译文行（翻译/gloss），无原文可讲解时触发 */
+  onTranslationOnly?: () => void;
 };
 
 export type BrushController = {
@@ -125,21 +131,21 @@ function buildBrushSelection(
   s: number,
   e: number,
   originalClasses: string[],
-): BrushSelection | null {
+): BrushSelectionResult {
   const startEl = body.querySelector<HTMLElement>(
     `.${BRUSH_TOKEN_CLASS}[data-brush-index="${s}"]`,
   );
   const endEl = body.querySelector<HTMLElement>(
     `.${BRUSH_TOKEN_CLASS}[data-brush-index="${e}"]`,
   );
-  if (!startEl || !endEl) return null;
+  if (!startEl || !endEl) return { ok: false, reason: 'empty' };
 
   const range = document.createRange();
   try {
     range.setStartBefore(startEl);
     range.setEndAfter(endEl);
   } catch {
-    return null;
+    return { ok: false, reason: 'empty' };
   }
 
   const root =
@@ -153,7 +159,7 @@ function buildBrushSelection(
     // 高亮仍保留涂过的原文+译文（视觉=涂了啥亮啥）。
     const keep = new Set(originalClasses);
     frag
-      .querySelectorAll('.jp-line, .zh-line, .ko-line, .cn-line')
+      .querySelectorAll('.jp-line, .zh-line, .ko-line, .cn-line, .gloss-line')
       .forEach((line) => {
         const isOriginal = Array.from(line.classList).some((c) => keep.has(c));
         if (!isOriginal) line.remove();
@@ -161,9 +167,10 @@ function buildBrushSelection(
   }
   let text = textWithoutRubyNotes(frag);
   if (!text) {
-    // 译文-only 选择（无原文命中）：回退保留全部，仍可讲解译文
-    text = textWithoutRubyNotes(range.cloneContents());
-    if (!text) return null;
+    // 全译文涂抹：不讲解译文（一贯规则：丢弃翻译行）
+    const rawText = textWithoutRubyNotes(range.cloneContents());
+    if (rawText) return { ok: false, reason: 'translation-only' };
+    return { ok: false, reason: 'empty' };
   }
   const surroundingLine = text;
 
@@ -202,7 +209,7 @@ function buildBrushSelection(
     }
   }
 
-  return { text, context: { text, surroundingLine, prevLine, nextLine } };
+  return { ok: true, selection: { text, context: { text, surroundingLine, prevLine, nextLine } } };
 }
 
 export function createBrushController(
@@ -337,12 +344,13 @@ export function createBrushController(
       return;
     }
     const [s, e] = lastRange;
-    const sel = buildBrushSelection(body, s, e, opts.originalLineClasses ?? []);
+    const result = buildBrushSelection(body, s, e, opts.originalLineClasses ?? []);
     // 保留高亮作为「正在讲解」反馈；下次落笔时由 clearHighlight 清掉
-    if (sel && sel.text) {
-      onSelect(sel);
+    if (result.ok) {
+      onSelect(result.selection);
     } else {
       clearHighlight();
+      if (result.reason === 'translation-only') opts.onTranslationOnly?.();
     }
     startIdx = -1;
   };

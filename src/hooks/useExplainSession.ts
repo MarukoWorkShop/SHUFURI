@@ -35,6 +35,7 @@ import { ensureGaruKoLoaded } from '../services/dict/garuKoTokenizer';
 import { findGrammarExamplesFromStudyCards } from '../services/grammarExamplesFromStudyCards';
 
 import { ensureKuromojiLoaded } from '../services/dict/kuromojiTokenizer';
+import { L } from '../utils/i18n';
 import type { ExplainPickContext } from '../utils/readSelectionForExplain';
 
 export type ExplainResultSource = 'local' | 'ai' | null;
@@ -314,14 +315,14 @@ export function useExplainSession({
         setAiStreamReady(false);
         if (!res.ok || !res.content) {
           setError(
-            (res.error?.message || 'AI讲解失败') +
+            (res.error?.message || L('AI讲解失败', 'AI explanation failed')) +
               (res.model ? `（model: ${res.model}）` : ''),
           );
           return;
         }
         const text = normalizeAiExplainText(res.content);
         if (!text) {
-          setError('AI讲解为空，请重试' + (res.model ? `（model: ${res.model}）` : ''));
+          setError(L('AI讲解为空，请重试', 'AI explanation empty, please retry') + (res.model ? `（model: ${res.model}）` : ''));
           return;
         }
         applyDelta(text);
@@ -329,13 +330,13 @@ export function useExplainSession({
         if (controller.signal.aborted) return;
         setDeepDiveLoading(false);
         setAiStreamReady(false);
-        const raw = err instanceof Error ? err.message : '请求失败';
+        const raw = err instanceof Error ? err.message : L('请求失败', 'Request failed');
         const isTimeout =
           (err instanceof DOMException && err.name === 'AbortError') ||
           /超时|timeout|AbortError/i.test(raw);
         setError(
           isTimeout
-            ? 'AI讲解超时：请检查网络或云函数超时≥60s'
+            ? L('AI讲解超时：请检查网络或云函数超时≥60s', 'AI timed out. Check network or cloud function timeout ≥60s')
             : raw,
         );
       }
@@ -404,17 +405,17 @@ export function useExplainSession({
             if (seed) {
               setGrammarLesson({
                 meaning: capsule.title || `关于「${capsule.term}」`,
-                usage: '（网络讲解暂不可用，以下为学习卡例句）',
+                usage: L('（网络讲解暂不可用，以下为学习卡例句）', '(Online explanation unavailable, showing study card example)'),
                 emotion: '—',
                 example: { ...local[0], via: 'local' },
                 raw: '',
               });
               setGrammarExamplesLoading(false);
-              setGrammarExamplesError(res.error?.message || '讲解生成失败，已显示本地例句');
+              setGrammarExamplesError(res.error?.message || L('讲解生成失败，已显示本地例句', 'Explanation failed, showing local example'));
               return;
             }
             setGrammarExamplesLoading(false);
-            setGrammarExamplesError(res.error?.message || '获取语法讲解失败');
+            setGrammarExamplesError(res.error?.message || L('获取语法讲解失败', 'Failed to get grammar explanation'));
             return;
           }
 
@@ -426,12 +427,12 @@ export function useExplainSession({
           setGrammarLesson(lesson);
           setGrammarExamplesLoading(false);
           if (!lesson.meaning && !lesson.usage && !lesson.example) {
-            setGrammarExamplesError('未生成有效讲解，请重试');
+            setGrammarExamplesError(L('未生成有效讲解，请重试', 'No valid explanation generated, please retry'));
           }
         } catch (err) {
           if (controller.signal.aborted) return;
           setGrammarExamplesLoading(false);
-          const raw = err instanceof Error ? err.message : '请求失败';
+          const raw = err instanceof Error ? err.message : L('请求失败', 'Request failed');
           setGrammarExamplesError(raw);
         }
       })();
@@ -443,7 +444,7 @@ export function useExplainSession({
     (selection: string, context?: string | ExplainPickContext) => {
       const phrase = selection.replace(/\s+/g, ' ').trim();
       if (!phrase) {
-        showToast('请先划选要分析的词或句');
+        showToast(L('请先划选要分析的词或句', 'Please select a word or sentence to analyze'));
         return;
       }
 
@@ -482,7 +483,7 @@ export function useExplainSession({
 
       if (!useLocal) {
         setLoading(false);
-        setError('当前语言暂无本地词典，可点「AI讲解」。');
+        setError(L('当前语言暂无本地词典，可点「AI讲解」。', 'No local dictionary for this language. Tap "AI Explain".'));
         return;
       }
 
@@ -508,7 +509,7 @@ export function useExplainSession({
             setResult(null);
             setResultSource(null);
             setLoading(false);
-            setError('本地词典未命中。可缩短选区，或直接点「AI讲解」。');
+            setError(L('本地词典未命中。可缩短选区，或直接点「AI讲解」。', 'Not found in local dictionary. Shorten selection or tap "AI Explain".'));
           })
           .catch((err) => {
             console.warn('[krdict]', err);
@@ -518,8 +519,8 @@ export function useExplainSession({
             setLoading(false);
             setError(
               err instanceof Error
-                ? `本地词典加载失败：${err.message}。可点「AI讲解」。`
-                : '本地词典加载失败。可点「AI讲解」。',
+                ? `${L('本地词典加载失败：', 'Local dictionary load failed: ')}${err.message}${L('。可点「AI讲解」。', '. Tap "AI Explain".')}`
+                : L('本地词典加载失败。可点「AI讲解」。', 'Local dictionary load failed. Tap "AI Explain".'),
             );
           });
         return;
@@ -544,7 +545,7 @@ export function useExplainSession({
           setResult(null);
           setResultSource(null);
           setLoading(false);
-          setError('本地词典未命中。可缩短选区，或直接点「AI讲解」。');
+          setError(L('本地词典未命中。可缩短选区，或直接点「AI讲解」。', 'Not found in local dictionary. Shorten selection or tap "AI Explain".'));
         })
         .catch((err) => {
           console.warn('[jmdict]', err);
@@ -554,8 +555,8 @@ export function useExplainSession({
           setLoading(false);
           setError(
             err instanceof Error
-              ? `本地词典加载失败：${err.message}。可点「AI讲解」。`
-              : '本地词典加载失败。可点「AI讲解」。',
+              ? `${L('本地词典加载失败：', 'Local dictionary load failed: ')}${err.message}${L('。可点「AI讲解」。', '. Tap "AI Explain".')}`
+              : L('本地词典加载失败。可点「AI讲解」。', 'Local dictionary load failed. Tap "AI Explain".'),
           );
         });
     },
@@ -570,7 +571,7 @@ export function useExplainSession({
 
   const addToLyricsNote = useCallback(() => {
     if (!appendExplainNote) {
-      showToast('当前页面无法添加笔记');
+      showToast(L('当前页面无法添加笔记', 'Cannot add notes on this page'));
       return;
     }
     const noteId = nanoid();
@@ -590,11 +591,11 @@ export function useExplainSession({
       .join('\n');
     const term = (targetPhrase || micro?.dictionary_form || '').replace(/\s+/g, '').trim();
     if (!term) {
-      showToast('暂无可添加的内容');
+      showToast(L('暂无可添加的内容', 'Nothing to add'));
       return;
     }
     if (!senseWithLoan && !grammar && !moodCombined) {
-      showToast('请先完成 AI讲解');
+      showToast(L('请先完成 AI讲解', 'Please complete AI explanation first'));
       return;
     }
     appendExplainNote({
@@ -605,7 +606,7 @@ export function useExplainSession({
       formula: formula || undefined,
       mood: moodCombined || undefined,
     });
-    showToast('已添加到笔记');
+    showToast(L('已添加到笔记', 'Added to notes'));
   }, [aiExplain, appendExplainNote, lang, result, showToast, targetPhrase]);
 
   return {

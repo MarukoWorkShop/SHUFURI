@@ -16,6 +16,7 @@ import type { ExternalPromptRequest } from '../../hooks/useStructuredLyricsClipb
 import type { ShareOcrData } from '../../context/HomeSessionContext';
 import { shareOcrToEncoderContext } from '../../utils/shareOcrToEncoderContext';
 import { useAppToast } from '../../context/AppToastContext';
+import { L } from '../../utils/i18n';
 
 type Props = {
   inputResetKey: number;
@@ -103,7 +104,16 @@ export default function HomeScreen({
   return (
     <div className="home-body">
       <div className="home-hero">
-        <p className="home-hero__tagline">多语歌词发音标注·排版打印·AI学习助手</p>
+        <h1 className="home-hero__headline">
+          {appSettings.interfaceLanguage === 'en'
+            ? 'Pause the melody, let the words linger.'
+            : '让旋律暂停，让文字驻足。'}
+        </h1>
+        <p className="home-hero__subtitle">
+          {appSettings.interfaceLanguage === 'en'
+            ? 'Free one-tap AI search for foreign lyrics — with pronunciation guides and explanations. Read them like literature, learn in quiet reflection.'
+            : '一键免费AI检索获取外语歌词文本，生成注音与解释，像阅读文学作品，在静谧中慢慢学习和体会'}
+        </p>
       </div>
       <HtmlPasteInput
         key={inputResetKey}
@@ -132,17 +142,18 @@ export default function HomeScreen({
       </div>
       <HomeDailyLyricQuote refreshKey={libraryRefreshKey} onOpenProject={onOpenProject} />
       <footer className="home-footer">
-        <div className="home-footer__line">
+        <div className="home-footer__left">
           <span className="home-footer__copy">
-            Copyright © 2020 – 2026 Wanderful Studio. All Rights Reserved. Wanderful Studio 版权所有
+            Copyright © 2020 – 2026 Wanderful Studio
           </span>
-          <span className="home-footer__divider" aria-hidden="true">|</span>
-          <a className="home-footer__link" href="/terms">服务协议</a>
-          <span className="home-footer__divider" aria-hidden="true">|</span>
-          <a className="home-footer__link" href="/privacy">隐私政策</a>
-          <span className="home-footer__divider" aria-hidden="true">|</span>
+        </div>
+        <div className="home-footer__right">
+          <a className="home-footer__link" href="/terms">{L('服务协议', 'Terms')}</a>
+          <span className="home-footer__sep" aria-hidden="true">|</span>
+          <a className="home-footer__link" href="/privacy">{L('隐私政策', 'Privacy')}</a>
+          <span className="home-footer__sep" aria-hidden="true">|</span>
           <span className="home-footer__meta">粤B2-XXXXXXXX</span>
-          <span className="home-footer__divider" aria-hidden="true">|</span>
+          <span className="home-footer__sep" aria-hidden="true">|</span>
           <span className="home-footer__meta">粤公网安备 XXXXXXXXXXXX号</span>
         </div>
       </footer>

@@ -14,6 +14,7 @@ import {
 import { resetPosterPageRefs } from '../utils/posterPageRefs';
 import { resolveExportTitle } from '../utils/shufuriPoster/posterTitle';
 import { resolveDocumentLang } from '../services/documentLang';
+import { L } from '../utils/i18n';
 import type {
   PosterLayoutProfile,
   PosterPageSlice,
@@ -126,20 +127,20 @@ export function usePosterSave({
       const includeCards =
         saved.includeVocabAndGrammar ?? defaultIncludeVocabAndGrammar;
       if (written > 0) {
-        showToast(`已同步 ${written} 张学习卡`, 2400);
+        showToast(L(`已同步 ${written} 张学习卡`, `Synced ${written} study cards`), 2400);
       } else if (
         includeCards &&
         rawForSync &&
         rawLyricsHasStudyCardSections(rawForSync)
       ) {
-        showToast('词卡同步失败，请打开控制台查看 [study-cards]', 3200);
+        showToast(L('词卡同步失败，请打开控制台查看 [study-cards]', 'Failed to sync study cards. Check [study-cards] in the console.'), 3200);
       }
       onLibrarySaved();
-      showToast('已保存到我的歌词库', 2400);
+      showToast(L('已保存到我的歌词库', 'Saved to my lyrics library'), 2400);
       hapticSuccess();
     } catch (e) {
       hapticError();
-      alert(e instanceof Error ? e.message : '保存失败');
+      alert(e instanceof Error ? e.message : L('保存失败', 'Save failed'));
     } finally {
       setSaving(false);
     }

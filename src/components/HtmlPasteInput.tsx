@@ -7,6 +7,7 @@ import type { LanguageMatrixContext } from '../services/languageMatrix/types';
 import { postClipboardWrite, openAiApp } from '../utils/nativeBridge';
 import type { AiAppInfo } from '../bridge/deepLinkPlugin';
 import { useAppToast } from '../context/AppToastContext';
+import { L } from '../utils/i18n';
 import AiAppActionSheet from './AiAppActionSheet';
 import LanguageWheel from './LanguageWheel';
 import type { ExternalPromptRequest } from '../hooks/useStructuredLyricsClipboardCard';
@@ -261,10 +262,10 @@ export default function HtmlPasteInput({
         setCopiedPrompt(prompt);
         setPromptLocked(false);
         setActionSheetVisible(true);
-        showAppToast('✓ 歌词口令已复制（第一步：仅完整歌词）');
+        showAppToast(L('✓ 歌词口令已复制（第一步：仅完整歌词）', '✓ Lyrics prompt copied (Step 1: full lyrics only)'));
       })
       .catch(() => {
-        showAppToast('⚠ 复制失败，请检查浏览器权限后重试');
+        showAppToast(L('⚠ 复制失败，请检查浏览器权限后重试', '⚠ Copy failed. Please check browser permissions and retry.'));
       });
   }, [songTitle, buildPrompt, writePromptToClipboard, showAppToast]);
 
@@ -297,7 +298,7 @@ export default function HtmlPasteInput({
               id="title-input"
               value={songTitle}
               onChange={(e) => setSongTitle(e.target.value)}
-              placeholder="歌曲名称"
+              placeholder={L('歌曲名称', 'Enter the song title you want to search for')}
               required
               aria-required="true"
             />
@@ -310,7 +311,7 @@ export default function HtmlPasteInput({
               id="artist-input"
               value={artist}
               onChange={(e) => setArtist(e.target.value)}
-              placeholder="歌手信息"
+              placeholder={L('歌手信息', 'Artist')}
             />
           </label>
           {onParseMusicShareText ? (
@@ -320,7 +321,10 @@ export default function HtmlPasteInput({
                   <textarea
                     ref={pasteInputRef}
                     className="ext-pipeline__share-fill-input"
-                    placeholder="点击腾讯音乐、网易云音乐等的分享-复制链接，粘贴在这里自动解析"
+                    placeholder={L(
+                      '点击腾讯音乐、网易云音乐等的分享-复制链接，粘贴在这里自动解析',
+                      "Paste a share link from QQ Music, NetEase, etc. — title & artist will be filled in automatically.",
+                    )}
                     rows={1}
                     value={pasteValue}
                     onChange={(e) => setPasteValue(e.target.value)}
@@ -336,9 +340,9 @@ export default function HtmlPasteInput({
                       className="ext-pipeline__share-fill-submit"
                       onClick={submitPaste}
                       onPointerDown={(e) => e.preventDefault()}
-                      title="解析歌名与歌手"
+                      title={L('解析歌名与歌手', 'Parse title and artist')}
                     >
-                      解析
+                      {L('解析', 'Parse')}
                     </button>
                   ) : null}
                 </div>
@@ -348,13 +352,18 @@ export default function HtmlPasteInput({
                   className="ext-pipeline__share-fill-btn"
                   onClick={handlePasteAreaClick}
                   disabled={parseMusicShareBusy}
-                  title="点击后粘贴 QQ / 网易云分享链接，自动解析歌名与歌手"
+                  title={L('点击后粘贴 QQ / 网易云分享链接，自动解析歌名与歌手', 'Tap to paste a QQ / NetEase share link — title and artist will be parsed automatically.')}
                 >
-                  {parseMusicShareBusy ? '识别中…' : '🔗粘贴音乐软件的分享链接'}
+                  {parseMusicShareBusy
+                    ? L('识别中…', 'Recognizing…')
+                    : L('🔗粘贴音乐软件的分享链接', '🔗 Paste a music app share link')}
                 </button>
               )}
               <span className="ext-pipeline__share-fill-hint">
-                点击腾讯音乐、网易云音乐等的“分享-复制链接”，粘贴在这里自动解析
+                {L(
+                  '点击腾讯音乐、网易云音乐等的“分享-复制链接”，粘贴在这里自动解析',
+                  'Tap “Share → Copy link” in QQ Music / NetEase and paste here — it will be parsed automatically.',
+                )}
               </span>
             </div>
           ) : null}
@@ -377,7 +386,7 @@ export default function HtmlPasteInput({
                   pastePrimary ? 'btn-filled' : 'btn-tonal is-dormant'
                 }`}
                 disabled={!pasteLayoutReady}
-                title="读取剪贴板中的结构化歌词并排版（不是分享链接）"
+                title={L('读取剪贴板中的结构化歌词并排版（不是分享链接）', 'Read structured lyrics from clipboard and layout (not share links).')}
                 onClick={() =>
                   onActivatePasteLayout({
                     title: songTitle.trim(),
@@ -385,7 +394,7 @@ export default function HtmlPasteInput({
                   })
                 }
               >
-                粘贴剪贴板歌词
+                {L('粘贴剪贴板歌词', 'Paste clipboard lyrics')}
               </button>
             )}
             <button
@@ -396,7 +405,7 @@ export default function HtmlPasteInput({
               onClick={handleCopyPrompt}
               disabled={!canGenerate}
             >
-              <span>一键生成口令</span>
+              <span>{L('一键生成口令', 'Generate share code')}</span>
             </button>
           </div>
 
@@ -404,7 +413,11 @@ export default function HtmlPasteInput({
           {canGenerate && (
             <p className="ext-pipeline__mode-hint">
               <span className="ext-pipeline__hint-line">
-                <strong>一键生成口令</strong>：复制详细 Prompt，粘贴到任意 AI（Doubao / ChatGPT / DeepSeek 等）后把结果粘贴回此页排版
+                <strong>{L('一键生成口令', 'Generate share code')}</strong>
+                {L(
+                  '：复制详细 Prompt，粘贴到任意 AI（Doubao / ChatGPT / DeepSeek 等）后把结果粘贴回此页排版',
+                  ': copies a detailed prompt — paste it into any AI (Doubao / ChatGPT / DeepSeek, etc.), then paste the response back here to layout.',
+                )}
               </span>
             </p>
           )}

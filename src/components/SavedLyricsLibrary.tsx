@@ -7,6 +7,7 @@ import {
   type SavedLyricsProject,
 } from '../services/savedLyricsStore';
 import { ExpandToggleButton } from './a11y/AriaToggleButtons';
+import { L } from '../utils/i18n';
 
 type SavedLyricsLibraryProps = {
   onOpen: (project: SavedLyricsProject) => void;
@@ -202,8 +203,8 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
     const count = selectedIds.size;
     const msg =
       count === items.length
-        ? `确定删除全部 ${count} 篇歌词？`
-        : `确定删除已选的 ${count} 篇歌词？`;
+        ? `${L('确定删除全部', 'Delete all')} ${count} ${L('篇歌词？', 'lyrics?')}`
+        : `${L('确定删除已选的', 'Delete selected')} ${count} ${L('篇歌词？', 'lyrics?')}`;
     if (!window.confirm(msg)) return;
     setDeleting(true);
     setError('');
@@ -219,7 +220,7 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
   };
 
   const handleDelete = async (id: string, title: string) => {
-    if (!window.confirm(`确定删除「${title}」？`)) return;
+    if (!window.confirm(L(`确定删除「${title}」？`, `Delete "${title}"?`))) return;
     await deleteSavedLyricsProject(id);
     await reload();
   };
@@ -362,7 +363,7 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
             {!loading && (
               <span className="saved-library-count">
                 <span className="saved-library-count__num">{items.length}</span>
-                <span className="saved-library-count__unit">篇</span>
+                <span className="saved-library-count__unit">{L('篇', 'lyrics')}</span>
               </span>
             )}
           </span>

@@ -91,7 +91,7 @@ export function useEmbeddedAiGenerate() {
             requestId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
             prompt,
             targetLanguage: params.matrix.activeTarget,
-            interfaceLanguage: 'zh',
+            interfaceLanguage: params.matrix.interfaceLanguage,
           },
           signal,
         );

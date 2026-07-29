@@ -107,8 +107,8 @@ export function buildEncoderPrompt(
   body += buildFullSampleBlock(lang, include, iface);
   body += buildHeaderLyricsSeparationBlock(a, t);
   body += buildStreamCloseBlock(phase === 'lyrics' ? { lyricsOnly: true } : undefined);
-  body += buildSelfCheckBlock(lang, include, pedagogicalLevel);
-  body += buildModelComplianceBlock(options.modelHint);
+  body += buildSelfCheckBlock(lang, include, pedagogicalLevel, iface);
+  body += buildModelComplianceBlock(options.modelHint, iface);
 
   return fillEncoderMeta(body, a, t);
 }
@@ -163,8 +163,8 @@ function buildStudyMaterialsPrompt(
 
   body += buildFullSampleBlock(lang, true, iface);
   body += buildStreamCloseBlock({ requireStudySections: true });
-  body += buildSelfCheckBlock(lang, true, pedagogicalLevel);
-  body += buildModelComplianceBlock(options.modelHint);
+  body += buildSelfCheckBlock(lang, true, pedagogicalLevel, iface);
+  body += buildModelComplianceBlock(options.modelHint, iface);
 
   return fillEncoderMeta(body, a, t);
 }

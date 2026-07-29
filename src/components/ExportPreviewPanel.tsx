@@ -5,6 +5,7 @@ import {
   usePosterDocumentContext,
   usePosterTypographyContext,
 } from '../context/PosterWorkspaceContext';
+import { L } from '../utils/i18n';
 
 export default function ExportPreviewPanel() {
   const {
@@ -34,7 +35,7 @@ export default function ExportPreviewPanel() {
           <button
             type="button"
             className="preview-back-btn"
-            aria-label="返回编辑"
+            aria-label={L('返回编辑', 'Back to editor')}
             onClick={handleBackToEdit}
           >
             <ArrowLeftIcon className="preview-back-btn__icon" />
@@ -46,9 +47,15 @@ export default function ExportPreviewPanel() {
         </div>
 
         <div className="preview-toolbar-actions">
-          <span className="page-count">共 {pages.length} 页</span>
-          {repaginating && <span className="preview-repaginate-hint">排版中…</span>}
-          <span className="export-gallery-hint">长按页面保存到图库</span>
+          <span className="page-count">
+            {L(`共 ${pages.length} 页`, `${pages.length} pages in total`)}
+          </span>
+          {repaginating && (
+            <span className="preview-repaginate-hint">{L('排版中…', 'Repaginating…')}</span>
+          )}
+          <span className="export-gallery-hint">
+            {L('长按页面保存到图库', 'Long-press a page to save to gallery')}
+          </span>
           <div className="export-buttons">
             <button
               type="button"
@@ -56,7 +63,7 @@ export default function ExportPreviewPanel() {
               onClick={() => void handleSave()}
               disabled={saving}
             >
-              {saving ? '保存中…' : '保存'}
+              {saving ? L('保存中…', 'Saving…') : L('保存', 'Save')}
             </button>
             <button
               type="button"
@@ -64,7 +71,7 @@ export default function ExportPreviewPanel() {
               onClick={() => void handleExportPdf()}
               disabled={exporting}
             >
-              {exporting ? '导出中…' : '导出 PDF'}
+              {exporting ? L('导出中…', 'Exporting…') : L('导出 PDF', 'Export PDF')}
             </button>
           </div>
         </div>

@@ -383,6 +383,7 @@ export function buildSelfCheckBlock(
   activeTarget: SampleLang,
   includeVocab: boolean,
   pedagogicalLevel?: PedagogicalLevel,
+  interfaceLanguage?: InterfaceLanguage,
 ): string {
   const col6Line = includeVocab
     ? '\n4. V/G col6 differs from every L|n|col3 — new poster sentence only (see [Pedagogical_example])'
@@ -401,14 +402,22 @@ export function buildSelfCheckBlock(
     activeTarget === 'jp'
       ? `\n${jpNum}. jp L/V/G ruby: every "{" has ":" + kanji base; NO bare {る}/{アルバム}; okurigana plain after ruby ({出:で}る not {出:で}{る})`
       : '';
+  const langNum = (includeVocab ? (pedagogicalLevel ? 7 : 6) : 5);
+  const langCheck =
+    interfaceLanguage === 'en' && activeTarget !== 'en'
+      ? `\n${langNum}. ALL L col4 / meaning / detail / pedagogical_translation fields MUST be natural English — zero Chinese characters in translation fields`
+      : '';
   return `
 [Self_Check — before send]
 1. Last non-empty line is exactly @9
 2. L line numbers contiguous 1..N
-3. H col3 = prompt title; L|1 exists; L lyrics transcribed from web search — not memory recall${col6Line}${levelLine}${zhLine}${jpLine}`;
+3. H col3 = prompt title; L|1 exists; L lyrics transcribed from web search — not memory recall${col6Line}${levelLine}${zhLine}${jpLine}${langCheck}`;
 }
 
-export function buildModelComplianceBlock(modelHint?: EncoderPromptOptions['modelHint']): string {
+export function buildModelComplianceBlock(
+  modelHint?: EncoderPromptOptions['modelHint'],
+  interfaceLanguage?: InterfaceLanguage,
+): string {
   let extra = '';
   if (modelHint === 'qwen') {
     extra =
@@ -420,9 +429,13 @@ export function buildModelComplianceBlock(modelHint?: EncoderPromptOptions['mode
     extra =
       '\n- Doubao: backend enforces web_search via Responses API for Step1; transcribe ONLY from search results — never guess from memory';
   }
+  const langRule =
+    interfaceLanguage === 'en'
+      ? '\n- CRITICAL: All L col4 translations and all gloss/meaning fields MUST be in natural English. The user interface is English — do NOT output Chinese in ANY translation field. The sample artist/title names are in CJK for metadata only — translations MUST be English.'
+      : '';
   return `
 [Model_Compliance]
-- Output RAW record stream only — first line @0; no \`\`\` fences, HTML, bullet lists, JSON, or epilogue after @9${extra}`;
+- Output RAW record stream only — first line @0; no \`\`\` fences, HTML, bullet lists, JSON, or epilogue after @9${extra}${langRule}`;
 }
 
 export type SampleLang = 'jp' | 'ko' | 'en' | 'zh';

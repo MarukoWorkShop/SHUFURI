@@ -30,6 +30,7 @@ import {
   type GrammarItemPayload,
 } from '../../utils/studySectionItems';
 import { extractLyricsOnlyBodyHtml } from '../../utils/lyricsOnlyBodyHtml';
+import { L } from '../../utils/i18n';
 
 type StudyEditorKind = 'vocab' | 'grammar';
 
@@ -137,7 +138,7 @@ export default function EditScreen() {
       if (!noteId) {
         // 旧笔记无 id：先补齐后请用户再点一次（避免 DOM 与 bodyHtml 脱节）
         ensureExplainNoteIds();
-        showToast('笔记已刷新，请再点一次编辑');
+        showToast(L('笔记已刷新，请再点一次编辑', 'Notes refreshed, please click edit again'));
         return;
       }
 
@@ -169,7 +170,7 @@ export default function EditScreen() {
       const note = listExplainNotesFromBodyHtml(bodyHtml).find((n) => n.id === noteId);
       if (!note || note.id.startsWith('orphan-')) {
         ensureExplainNoteIds();
-        showToast('笔记已刷新，请再点一次编辑');
+        showToast(L('笔记已刷新，请再点一次编辑', 'Notes refreshed, please click edit again'));
         return;
       }
       if (explain.panelOpen) explain.closePanel();
@@ -189,7 +190,7 @@ export default function EditScreen() {
       const item = listStudyEntriesFromBodyHtml(bodyHtml).vocab.find((n) => n.id === itemId);
       if (!item || item.id.startsWith('orphan-')) {
         ensureStudyItemIds();
-        showToast('条目已刷新，请再点一次编辑');
+        showToast(L('条目已刷新，请再点一次编辑', 'Entries refreshed, please click edit again'));
         return;
       }
       if (explain.panelOpen) explain.closePanel();
@@ -211,7 +212,7 @@ export default function EditScreen() {
       const item = listStudyEntriesFromBodyHtml(bodyHtml).grammar.find((n) => n.id === itemId);
       if (!item || item.id.startsWith('orphan-')) {
         ensureStudyItemIds();
-        showToast('条目已刷新，请再点一次编辑');
+        showToast(L('条目已刷新，请再点一次编辑', 'Entries refreshed, please click edit again'));
         return;
       }
       if (explain.panelOpen) explain.closePanel();
@@ -239,7 +240,7 @@ export default function EditScreen() {
           : 'vocab';
       if (!itemId) {
         ensureStudyItemIds();
-        showToast('条目已刷新，请再点一次编辑');
+        showToast(L('条目已刷新，请再点一次编辑', 'Entries refreshed, please click edit again'));
         return;
       }
 
@@ -350,14 +351,14 @@ export default function EditScreen() {
 
   const enableExplainFromNotebook = useCallback(() => {
     if (explain.explainMode) {
-      showToast('划词已开启：在左侧选中词语');
+      showToast(L('划词已开启：在左侧选中词语', 'Selection mode on: select text on the left'));
       return;
     }
     ink.closeInkPopover();
     ink.setInkEditMode(false);
     explain.arm();
     collapseToolbox();
-    showToast('划词已开启：选中后先出本地释义，需要时再点 AI讲解');
+    showToast(L('划词已开启：选中后先出本地释义，需要时再点 AI讲解', 'Selection mode on: local dictionary first, tap AI Explain for more'));
   }, [collapseToolbox, explain, ink, showToast]);
 
   const toggleInkToolbox = useCallback(() => {
@@ -374,27 +375,27 @@ export default function EditScreen() {
       ink.setInkEditMode(false);
       ink.closeInkPopover();
       collapseToolbox();
-      showToast('已退出铅笔编辑');
+      showToast(L('已退出铅笔编辑', 'Pencil edit exited'));
       return;
     }
     if (explain.explainMode) explain.disarm();
     ink.setInkEditMode(true);
     collapseToolbox();
-    showToast('铅笔编辑已开启：点选注音或译文');
+    showToast(L('铅笔编辑已开启：点选注音或译文', 'Pencil edit on: tap to edit readings or translations'));
   }, [collapseToolbox, explain, ink, showToast]);
 
   const handleToggleExplain = useCallback(() => {
     if (explain.explainMode) {
       explain.disarm();
       collapseToolbox();
-      showToast('已退出划词解释');
+      showToast(L('已退出划词解释', 'Selection explain exited'));
       return;
     }
     ink.closeInkPopover();
     ink.setInkEditMode(false);
     explain.arm();
     collapseToolbox();
-    showToast('划词已开启：选中后先出本地释义，需要时再点 AI讲解');
+    showToast(L('划词已开启：选中后先出本地释义，需要时再点 AI讲解', 'Selection mode on: local dictionary first, tap AI Explain for more'));
   }, [collapseToolbox, explain, ink, showToast]);
 
   const handleRubyChangeAndCollapse = useCallback(
@@ -443,7 +444,8 @@ export default function EditScreen() {
       onSelect: (sel) => {
         explain.analyzeSelection(sel.text, sel.context);
       },
-      onOverflow: () => showToast('已超出讲解范围，请缩小选区'),
+      onOverflow: () => showToast(L('已超出讲解范围，请缩小选区', 'Selection too large, please narrow it down')),
+      onTranslationOnly: () => showToast(L('请涂抹原文行，不要选中翻译部分', 'Please select original text, not translations')),
     });
 
     return () => {
@@ -467,11 +469,11 @@ export default function EditScreen() {
     >
       <div className="edit-toolbar">
         <button type="button" className="btn-secondary" onClick={handleReset}>
-          ← 重新输入
+          ← {L('重新输入', 'Re-enter')}
         </button>
         <div className="toolbar-actions">
           {explain.explainMode && (
-            <span className="preview-explain-hint">划词解释中</span>
+            <span className="preview-explain-hint">{L('划词解释中', 'Selection explaining')}</span>
           )}
           <button
             type="button"
@@ -479,7 +481,7 @@ export default function EditScreen() {
             onClick={() => void handleSave()}
             disabled={saving || !bodyHtml.trim()}
           >
-            {saving ? '保存中…' : '保存'}
+            {saving ? L('保存中…', 'Saving…') : L('保存', 'Save')}
           </button>
           <button
             type="button"
@@ -487,7 +489,7 @@ export default function EditScreen() {
             onClick={() => void enterExportFlow()}
             disabled={!bodyHtml.trim()}
           >
-            导出
+            {L('导出', 'Export')}
           </button>
         </div>
       </div>
@@ -606,10 +608,10 @@ export default function EditScreen() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>编辑划词笔记</h3>
+                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>{L('编辑划词笔记', 'Edit Selection Note')}</h3>
                 <button
                   type="button"
-                  aria-label="关闭"
+                  aria-label={L('关闭', 'Close')}
                   className="btn-tonal"
                   onClick={closeEditors}
                   style={{ minHeight: 30, padding: '0 10px' }}
@@ -620,7 +622,7 @@ export default function EditScreen() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  词条
+                  {L('词条', 'Term')}
                   <input
                     className="shufuri-explain-note-editor__input"
                     value={draftTerm}
@@ -630,7 +632,7 @@ export default function EditScreen() {
                 </label>
 
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  语境释义
+                  {L('语境释义', 'Context sense')}
                   <textarea
                     value={draftContextSense}
                     rows={2}
@@ -640,7 +642,7 @@ export default function EditScreen() {
                 </label>
 
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  语法
+                  {L('语法', 'Grammar')}
                   <textarea
                     value={draftGrammar}
                     rows={2}
@@ -650,7 +652,7 @@ export default function EditScreen() {
                 </label>
 
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  意境
+                  {L('意境', 'Mood')}
                   <textarea
                     value={draftMood}
                     rows={2}
@@ -661,7 +663,7 @@ export default function EditScreen() {
 
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                   <button type="button" className="btn-tonal" onClick={closeEditors}>
-                    取消
+                    {L('取消', 'Cancel')}
                   </button>
                   <button
                     type="button"
@@ -677,7 +679,7 @@ export default function EditScreen() {
                       closeEditors();
                     }}
                   >
-                    保存
+                    {L('保存', 'Save')}
                   </button>
                 </div>
               </div>
@@ -717,10 +719,10 @@ export default function EditScreen() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>编辑重点词汇</h3>
+                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>{L('编辑重点词汇', 'Edit Key Vocabulary')}</h3>
                 <button
                   type="button"
-                  aria-label="关闭"
+                  aria-label={L('关闭', 'Close')}
                   className="btn-tonal"
                   onClick={closeEditors}
                   style={{ minHeight: 30, padding: '0 10px' }}
@@ -731,7 +733,7 @@ export default function EditScreen() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  词条
+                  {L('词条', 'Term')}
                   <input
                     value={vocabDraft.term}
                     onChange={(ev) =>
@@ -741,7 +743,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  释义
+                  {L('释义', 'Meaning')}
                   <textarea
                     value={vocabDraft.meaning}
                     rows={2}
@@ -752,7 +754,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  例句
+                  {L('例句', 'Example')}
                   <textarea
                     value={vocabDraft.example}
                     rows={2}
@@ -763,7 +765,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  例句译文
+                  {L('例句译文', 'Example translation')}
                   <textarea
                     value={vocabDraft.translation}
                     rows={2}
@@ -775,7 +777,7 @@ export default function EditScreen() {
                 </label>
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                   <button type="button" className="btn-tonal" onClick={closeEditors}>
-                    取消
+                    {L('取消', 'Cancel')}
                   </button>
                   <button
                     type="button"
@@ -791,7 +793,7 @@ export default function EditScreen() {
                       closeEditors();
                     }}
                   >
-                    保存
+                    {L('保存', 'Save')}
                   </button>
                 </div>
               </div>
@@ -831,10 +833,10 @@ export default function EditScreen() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>编辑重点语法</h3>
+                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>{L('编辑重点语法', 'Edit Key Grammar')}</h3>
                 <button
                   type="button"
-                  aria-label="关闭"
+                  aria-label={L('关闭', 'Close')}
                   className="btn-tonal"
                   onClick={closeEditors}
                   style={{ minHeight: 30, padding: '0 10px' }}
@@ -845,7 +847,7 @@ export default function EditScreen() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  语法点
+                  {L('语法点', 'Grammar point')}
                   <input
                     value={grammarDraft.titlePrimary}
                     onChange={(ev) =>
@@ -855,7 +857,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  旁注释义
+                  {L('旁注释义', 'Gloss')}
                   <input
                     value={grammarDraft.titleSecondary}
                     onChange={(ev) =>
@@ -865,7 +867,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  详细解析
+                  {L('详细解析', 'Detail')}
                   <textarea
                     value={grammarDraft.detail}
                     rows={3}
@@ -876,7 +878,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  例句
+                  {L('例句', 'Example')}
                   <textarea
                     value={grammarDraft.example}
                     rows={2}
@@ -887,7 +889,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  例句译文
+                  {L('例句译文', 'Example translation')}
                   <textarea
                     value={grammarDraft.translation}
                     rows={2}
@@ -899,7 +901,7 @@ export default function EditScreen() {
                 </label>
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                   <button type="button" className="btn-tonal" onClick={closeEditors}>
-                    取消
+                    {L('取消', 'Cancel')}
                   </button>
                   <button
                     type="button"
@@ -916,7 +918,7 @@ export default function EditScreen() {
                       closeEditors();
                     }}
                   >
-                    保存
+                    {L('保存', 'Save')}
                   </button>
                 </div>
               </div>
