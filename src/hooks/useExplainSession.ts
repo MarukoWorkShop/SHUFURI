@@ -384,6 +384,7 @@ export function useExplainSession({
             songTitle: title,
             artist,
             seedExample: seed,
+            interfaceLanguage: settings.interfaceLanguage,
           });
           const requestId = nanoid();
 

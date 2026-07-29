@@ -798,9 +798,13 @@ export function buildGrammarPointLessonPrompt(opts: {
   artist?: string;
   /** 本地学习卡命中的可选例句，供模型优先采用 */
   seedExample?: { source: string; text: string; zh: string } | null;
+  /** 界面语言：决定讲义说明文字的输出语言（EN 用户得英文讲义） */
+  interfaceLanguage?: InterfaceLanguage;
 }): string {
   const lang = opts.language;
   const langLock = AI_EXPLAIN_LANG_LOCK[lang] ?? AI_EXPLAIN_LANG_LOCK.English;
+  const ifaceLabel = INTERFACE_LANG_LABEL[opts.interfaceLanguage ?? 'zh'];
+  const isEn = ifaceLabel === 'English';
   const keyword = opts.term.trim();
   const surface = keyword.replace(/^[~～〜]+/, '').trim() || keyword;
   const examTag = opts.exam?.trim() || examTagForLanguage(lang);
@@ -813,8 +817,10 @@ export function buildGrammarPointLessonPrompt(opts: {
     : '';
 
   return `
+【输出语言 — 硬性 / STRICT】讲义的「通常含义」「如何使用」「情感语气」及例句翻译必须用 ${ifaceLabel} 书写；仅检索键、语法标记与例句原文保留原文语种。${isEn ? 'Do NOT write Chinese explanations; output English only.' : ''}
+
 【系统角色】
-你是一个精通流行歌词语境的微型讲义生成器。简体中文。
+你是一个精通流行歌词语境的微型讲义生成器。${ifaceLabel}。
 ${langLock}
 
 【当前请求核心参数】
@@ -826,8 +832,13 @@ ${langLock}
 
 【任务指令】
 请针对检索键「${keyword}」生成一份极致精简的交互式微型语法讲义，并附带 1 条含有该检索键的著名歌词或高质量造句。
-说明语言统一使用简体中文。每段内容（含例句）严格控制在 40 字以内，禁止任何废话和 Markdown/代码块。
+说明语言统一使用${ifaceLabel}。每段内容（含例句）严格控制在 40 字以内，禁止任何废话和 Markdown/代码块。
 语法体系与例句原文必须属于【${lang}】；禁止其它语种句子；例句原文必须原样包含「${surface}」。
+${
+  isEn && lang === 'Chinese'
+    ? `- 用英语讲解中文语法，采用 HSK / 对外汉语教学的标准表述（如用 English 解释词性、语序、语气），便于英语母语者理解。`
+    : ''
+}
 ${
   lang === 'Japanese'
     ? `- 紧紧围绕「${keyword}」本身的 JLPT 用法/等级/近义辨析；禁止改讲泛化的「な形容词修饰名词」等词类课。
@@ -840,11 +851,11 @@ ${
 }
 ${avoidLine}
 
-【严格输出格式（必须完全一致）】
+【严格输出格式（必须完全一致，说明文字一律用 ${ifaceLabel}）】
 【通常含义】用最通俗的语言说明该语法/词的核心字面意思。
 【如何使用】说明接续规则或位置；日语须结合本检索键，勿只写词类通识。
 【情感语气】用拟人化或情绪词描述其传达的隐性语感（如：表示傲娇反问、无可奈何、或中性稳定）。
-【例句】严格格式：《歌名》｜原文（必须包含${keyword}，含汉字词请用{汉字|平假名}标注振假名）｜中文翻译。如果没有合适的著名歌名，请用《造句》作为书名号内容，并确保原文极其适合流行音乐语境。
+【例句】严格格式：《歌名》｜原文（必须包含${keyword}，含汉字词请用{汉字|平假名}标注振假名）｜${ifaceLabel}翻译。如果没有合适的著名歌名，请用《造句》作为书名号内容，并确保原文极其适合流行音乐语境。
 `.trim();
 }
 
