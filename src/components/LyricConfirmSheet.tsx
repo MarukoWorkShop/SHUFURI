@@ -20,7 +20,8 @@ type Props = {
   onConfirmLayout: () => void;
   onConfirmStudy: () => void;
   onFallbackExternal: () => void;
-  onRetry: () => void;
+  /** 旧"复制口令重试"，已改为返回首页（onDismiss）；保留可选以兼容外部传值 */
+  onRetry?: () => void;
   onDismiss: () => void;
 };
 
@@ -44,7 +45,6 @@ export default function LyricConfirmSheet({
   onConfirmLayout,
   onConfirmStudy,
   onFallbackExternal,
-  onRetry,
   onDismiss,
 }: Props) {
   const titleId = useId();
@@ -137,8 +137,12 @@ export default function LyricConfirmSheet({
             checked={wantStudy}
             onChange={(e) => setWantStudy(e.target.checked)}
           />
-          <span>让系统为我生成词解与语法讲解</span>
+          <span>AI自动补充词语与语法讲解</span>
+          <span className="lyric-confirm-sheet__pro-badge" title="PRO 功能">PRO</span>
         </label>
+        <p className="lyric-confirm-sheet__subhint">
+          语法级别可在首页「系统设置」中设置
+        </p>
 
         {studyError ? (
           <p className="lyric-confirm-sheet__hint lyric-confirm-sheet__hint--error">
@@ -152,7 +156,7 @@ export default function LyricConfirmSheet({
             {isGeneratingStudy
               ? 'AI 正在生成词解与语法讲解，请稍候…'
               : wantStudy
-                ? '确认后由系统内部 AI 生成词解与语法讲解，并自动合并排版。'
+                ? '确认后由 AI 自动补充词语与语法讲解，并合并排版。'
                 : '不需要词解时，确认后直接排版预览。'}
           </p>
         )}
@@ -189,11 +193,11 @@ export default function LyricConfirmSheet({
               <button
                 type="button"
                 className="btn-tonal lyric-confirm-sheet__btn"
-                onClick={onRetry}
+                onClick={onDismiss}
                 disabled={isGeneratingStudy}
-                title="使用外部 AI 重新生成歌词"
+                title="歌词不对，返回首页重新粘贴"
               >
-                复制口令重试
+                歌词不对，返回重试
               </button>
               <button
                 type="button"

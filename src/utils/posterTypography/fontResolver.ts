@@ -21,6 +21,9 @@ import {
   JP_RUBY_COLOR,
   JP_RUBY_RT_EM_MOBILE,
   JP_RUBY_RT_EM_PRINT,
+  ZH_RUBY_RT_EM_MOBILE,
+  ZH_RUBY_RT_EM_PRINT,
+  ZH_RUBY_COLOR,
   JP_RUBY_WEIGHT,
   KAMI_GROUP_MB_EM,
   KAMI_LETTER_SPACING_EM,
@@ -44,7 +47,7 @@ import type {
 } from './tokenRegistry.ts';
 
 export function resolvePinyinAccentColor(_theme: ColorTheme = 'mono'): string {
-  return '#000000';
+  return ZH_RUBY_COLOR;
 }
 
 export interface ResolverContext {
@@ -180,6 +183,8 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   let zhLayout: ZhLayoutTokens | undefined;
   if (isZhPipeline) {
     const pinyinColor = resolvePinyinAccentColor(ctx.colorTheme);
+    // 中文拼音比日文振假名大一档，提升可读性
+    const zhRtEm = isMobile ? ZH_RUBY_RT_EM_MOBILE : ZH_RUBY_RT_EM_PRINT;
     const cnFs = zhMainPx;
     const glossFs = auxPx;
     const lyricsAuxGapEm = (isMobile ? 0.06 : 0.04) * lineScale;
@@ -190,7 +195,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
       pinyinColor,
       cnFs,
       mainLh: jpLh,
-      rtEm: mainRtEm,
+      rtEm: zhRtEm,
       glossFs,
       glossLh: zhLyricsLh,
       lyricsAuxGapEm,
@@ -199,7 +204,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
       bulletLegPx,
       bulletBasePx,
       grammarItemMbPx: Math.round(cnFs * jpLh * 1.2),
-      bulletTopPx: Math.round(cnFs * (mainRtEm * 1.05 + 0.06)),
+      bulletTopPx: Math.round(cnFs * (zhRtEm * 1.05 + 0.06)),
     };
   }
 

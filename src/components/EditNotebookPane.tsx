@@ -58,7 +58,7 @@ export default function EditNotebookPane({
             <h3 className="edit-notebook__empty-title">在这里留下笔记</h3>
             <ul className="edit-notebook__empty-list">
               <li>在上一步勾选重点词汇和语法点解释，将直接在这里生成笔记</li>
-              <li>也可在左侧划选词语，写入划词笔记</li>
+              <li>点击下方的「开启划词」，对字词和句子展开解析</li>
               <li>点条目可编辑，右上角 × 可删除</li>
               <li>导出时笔记将与歌词原文一并生成文档</li>
             </ul>

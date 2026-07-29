@@ -34,6 +34,12 @@ export const JP_RUBY_COLOR = '#64748b';
 export const JP_RUBY_RT_EM_MOBILE = 0.54;
 export const JP_RUBY_RT_EM_PRINT = 0.58;
 
+/** 中文拼音注音字号：比日文振假名大一档，提升可读性 */
+export const ZH_RUBY_RT_EM_MOBILE = 0.62;
+export const ZH_RUBY_RT_EM_PRINT = 0.66;
+/** 中文拼音颜色（深石板色） */
+export const ZH_RUBY_COLOR = '#0F172A';
+
 /** 韩文 @font-face 匹配字重 */
 export const KO_PRIMARY_WEIGHT = 400;
 
