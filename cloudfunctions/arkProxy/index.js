@@ -98,10 +98,46 @@ function resolveModelId(result, fallbackModel) {
 function normalizeUsage(result) {
   const usage = result?.usage;
   if (!usage) return undefined;
+  const input = usage.input_tokens ?? usage.prompt_tokens;
+  const output = usage.output_tokens ?? usage.completion_tokens;
+  const cacheHit = usage?.prompt_tokens_details?.cached_tokens ?? null;
   return {
-    inputTokens: usage.input_tokens ?? usage.prompt_tokens,
-    outputTokens: usage.output_tokens ?? usage.completion_tokens,
+    inputTokens: input,
+    outputTokens: output,
+    totalTokens: usage.total_tokens ?? (input != null && output != null ? input + output : undefined),
+    cacheHitTokens: cacheHit,
   };
+}
+
+/** 联网搜索次数（best-effort，火山 action_usage 结构可能变化） */
+function countWebSearches(result) {
+  try {
+    const au = result?.action_usage;
+    if (Array.isArray(au) && au.length) {
+      return au.reduce((n, x) => n + (Number(x?.count) || 0), 0) || au.length;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** 结构化 AI 用量日志：单行 JSON，便于在 CloudBase 函数日志中聚合做成本校准 */
+function logAiUsage({ requestId, action, model, usage, searchCount, contentLen }) {
+  const entry = {
+    type: 'ai_usage',
+    ts: new Date().toISOString(),
+    requestId: requestId || null,
+    action: action || null,
+    model: model || null,
+    inputTokens: usage?.inputTokens ?? null,
+    outputTokens: usage?.outputTokens ?? null,
+    totalTokens: usage?.totalTokens ?? null,
+    cacheHitTokens: usage?.cacheHitTokens ?? null,
+    searchCount: searchCount ?? null,
+    contentLen: contentLen ?? null,
+  };
+  console.log(JSON.stringify(entry));
 }
 
 function classifyError(err) {
@@ -200,14 +236,14 @@ exports.main = async function (event, _context) {
       };
     }
 
-    console.log(
-      '[arkProxy] success',
-      `requestId=${requestId}`,
-      `action=${action}`,
-      `model=${resolvedModel}`,
-      `contentLen=${content.length}`,
-      `tokens: in=${usage?.inputTokens ?? '?'} out=${usage?.outputTokens ?? '?'}`,
-    );
+    logAiUsage({
+      requestId,
+      action,
+      model: resolvedModel,
+      usage,
+      searchCount: countWebSearches(result),
+      contentLen: content.length,
+    });
 
     return {
       ok: true,

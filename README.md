@@ -30,9 +30,9 @@ Vite + React（Web）/ iOS WebView 壳（Capacitor 桥接）
 
 | 资源 | 说明 |
 |------|------|
-| 静态托管 | `https://shufu-life-d8g9j8v5385543c1a-1435171508.tcloudbaseapp.com/?v=20260728-2` |
-| 云函数 arkProxy | `explain.selection`（划词/语法讲解）/ `lyrics.step2`（词解与语法生成，已开启 `web_search` 联网搜索） |
-| 云函数 arkExplainStream | 流式讲解（备用） |
+| 静态托管 | `https://shufu-life-d8g9j8v5385543c1a-1435171508.tcloudbaseapp.com/?v=20260729` |
+| 云函数 arkProxy | `explain.selection`（划词/语法讲解）/ `lyrics.step2`（词解与语法生成，已开启 `web_search` 联网搜索）；已接入 `ai_usage` 结构化用量日志（input/output/total/cache/searchCount） |
+| 云函数 arkExplainStream | 流式讲解（主路径，已开启 `stream_options.include_usage` 并记录 `ai_usage` 用量日志） |
 | 环境 ID | `shufu-life-d8g9j8v5385543c1a` |
 
 **部署命令**：

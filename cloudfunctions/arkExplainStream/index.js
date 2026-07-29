@@ -73,6 +73,7 @@ async function collectArkStream(prompt) {
       temperature: 0.2,
       max_tokens: MAX_TOKENS,
       stream: true,
+      stream_options: { include_usage: true },
       thinking: { type: 'disabled' },
     }),
   });
@@ -95,6 +96,7 @@ async function collectArkStream(prompt) {
   let buffer = '';
   let content = '';
   let model = MODEL_ID;
+  let usage = null;
 
   for await (const chunk of upstream.body) {
     buffer += decoder.decode(chunk, { stream: true });
@@ -114,12 +116,34 @@ async function collectArkStream(prompt) {
       if (typeof json.model === 'string' && json.model.trim()) {
         model = json.model.trim();
       }
+      // 流末尾的 usage 块（依赖 stream_options.include_usage）
+      if (json.usage) {
+        usage = json.usage;
+      }
       const delta = json.choices?.[0]?.delta?.content;
       if (typeof delta === 'string' && delta.length > 0) content += delta;
     }
   }
 
-  return { model, content };
+  return { model, content, usage };
+}
+
+function logUsage(model, usage) {
+  try {
+    const entry = {
+      type: 'ai_usage',
+      ts: new Date().toISOString(),
+      action: 'explain.selection',
+      model: model || MODEL_ID,
+      inputTokens: usage?.input_tokens ?? usage?.prompt_tokens ?? null,
+      outputTokens: usage?.output_tokens ?? usage?.completion_tokens ?? null,
+      totalTokens: usage?.total_tokens ?? null,
+      cacheHitTokens: usage?.prompt_tokens_details?.cached_tokens ?? null,
+    };
+    console.log(JSON.stringify(entry));
+  } catch {
+    /* 埋点失败不影响主流程 */
+  }
 }
 
 function toSseBody(model, content) {
@@ -153,7 +177,8 @@ exports.main = async function (event /*, context */) {
 
   try {
     const body = parseHttpBody(event);
-    const { model, content } = await collectArkStream(body.prompt);
+    const { model, content, usage } = await collectArkStream(body.prompt);
+    if (usage) logUsage(model, usage);
     if (!content.trim()) {
       const errBody = [
         `data: ${JSON.stringify({ type: 'meta', model, stage: 'upstream' })}`,
