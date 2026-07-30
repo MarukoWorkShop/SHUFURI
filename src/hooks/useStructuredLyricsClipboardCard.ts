@@ -94,6 +94,8 @@ export function useStructuredLyricsClipboardCard({
   const [confirmStreaming, setConfirmStreaming] = useState(false);
   const [isGeneratingStudy, setIsGeneratingStudy] = useState(false);
   const [studyError, setStudyError] = useState<string | null>(null);
+  /** 最近一次词解与语法是否命中缓存 */
+  const [studyFromCache, setStudyFromCache] = useState(false);
   const [confirmTitle, setConfirmTitle] = useState('');
   const [confirmArtist, setConfirmArtist] = useState('');
   const [confirmLang, setConfirmLang] = useState<LangCode | undefined>(undefined);
@@ -302,6 +304,7 @@ export function useStructuredLyricsClipboardCard({
 
     // 优先走内部 AI 生成学习材料；失败时留在弹窗内显示错误，不自动跳到外部粘贴
     setStudyError(null);
+    setStudyFromCache(false);
     setIsGeneratingStudy(true);
     try {
       const result = await studyAi.generateStudy({
@@ -326,6 +329,8 @@ export function useStructuredLyricsClipboardCard({
               : L('已按确认歌词排版', 'Laid out as confirmed lyrics'),
           );
           hapticSuccess();
+          // 命中缓存标记（用于 UI 展示「重新进行 AI 分析」按钮）
+          if (result.fromCache) setStudyFromCache(true);
           return;
         } catch (e) {
           const msg = e instanceof Error ? e.message : L('合并失败', 'Merge failed');
@@ -340,6 +345,72 @@ export function useStructuredLyricsClipboardCard({
       const msg = e instanceof Error ? e.message : L('网络错误', 'Network error');
       setStudyError(`${L('生成失败：', 'Generation failed: ')}${msg}`);
       showToast(`${L('生成失败：', 'Generation failed: ')}${msg}`);
+    }     finally {
+      setIsGeneratingStudy(false);
+    }
+  }, [
+    confirmTitle,
+    confirmArtist,
+    confirmLang,
+    studyAi,
+    onRenderLayout,
+    buildLayoutPayloadRef,
+    showToast,
+    homeFormMetaRef,
+    pedagogicalLevel,
+    matrix,
+    L,
+  ]);
+
+  /** 重新进行 AI 分析：使用与首次完全相同的参数 + forceRefresh，覆盖错误缓存 */
+  const handleConfirmReanalyze = useCallback(async () => {
+    setStudyError(null);
+    setStudyFromCache(false);
+    setIsGeneratingStudy(true);
+    try {
+      const result = await studyAi.reanalyze();
+      if (!result || result.status !== 'ok') {
+        const msg = result?.status === 'error' ? result.message : L('重新生成失败', 'Re-generate failed');
+        setStudyError(msg);
+        showToast(`${L('重新生成失败：', 'Re-generate failed: ')}${msg}`);
+        return;
+      }
+
+      // 成功：合并并重新渲染
+      const stream = confirmedStreamRef.current;
+      if (!stream) return;
+
+      const payload = buildLayoutPayloadRef.current(stream);
+      if (!payload) return;
+
+      try {
+        const merged = mergeStudyResult(result, payload, {
+          artist: homeFormMetaRef.current.artist.trim() || confirmArtist.trim(),
+          matrix,
+          pedagogicalLevel,
+          L,
+        });
+        const container = buildRenderContainer(merged, {
+          title: homeFormMetaRef.current.title.trim() || confirmTitle.trim(),
+          artist: homeFormMetaRef.current.artist.trim() || confirmArtist.trim(),
+          lang: confirmLang,
+          pedagogicalLevel,
+          matrix,
+        });
+        if (!container) throw new Error('container create failed');
+        const html = container.getLayoutResult();
+        container.free();
+        onRenderLayout(html);
+        hapticSuccess();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : L('合并失败', 'Merge failed');
+        setStudyError(`${L('合并失败：', 'Merge failed: ')}${msg}`);
+        showToast(`${L('合并失败：', 'Merge failed: ')}${msg}`);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : L('网络错误', 'Network error');
+      setStudyError(`${L('重新生成失败：', 'Re-generate failed: ')}${msg}`);
+      showToast(`${L('重新生成失败：', 'Re-generate failed: ')}${msg}`);
     } finally {
       setIsGeneratingStudy(false);
     }
@@ -411,6 +482,7 @@ export function useStructuredLyricsClipboardCard({
     confirmStreaming,
     isGeneratingStudy,
     studyError,
+    studyFromCache,
     confirmTitle,
     confirmArtist,
     confirmLang,
@@ -418,6 +490,7 @@ export function useStructuredLyricsClipboardCard({
     confirmPreviewLines,
     handleConfirmLayout,
     handleConfirmStudy,
+    handleConfirmReanalyze,
     handleConfirmStudyFallback,
     handleConfirmRetry,
     handleConfirmDismiss,

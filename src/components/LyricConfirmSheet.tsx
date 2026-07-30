@@ -17,6 +17,9 @@ type Props = {
   isGeneratingStudy?: boolean;
   /** 内部生成学习材料的错误信息 */
   studyError?: string | null;
+  /** 最近一次词解与语法是否来自缓存 */
+  studyFromCache?: boolean;
+  onReanalyze?: () => void;
   onConfirmLayout: () => void;
   onConfirmStudy: () => void;
   onFallbackExternal: () => void;
@@ -42,6 +45,8 @@ export default function LyricConfirmSheet({
   streamingDelayMs = 0,
   isGeneratingStudy = false,
   studyError,
+  studyFromCache = false,
+  onReanalyze,
   onConfirmLayout,
   onConfirmStudy,
   onFallbackExternal,
@@ -162,6 +167,25 @@ export default function LyricConfirmSheet({
                 ? L('确认后由 AI 自动补充词语与语法讲解，并合并排版。', 'After confirm, AI will auto-fill vocab & grammar and merge layout.')
                 : L('不需要词解时，确认后直接排版预览。', 'Without vocab, confirm to layout preview directly.')}
           </p>
+        )}
+
+        {/* 缓存命中标识 + 重新 AI 分析按钮 */}
+        {studyFromCache && !studyError && !isGeneratingStudy && (
+          <div className="lyric-confirm-sheet__cache-bar">
+            <span className="lyric-confirm-sheet__cache-tag" title={L('此语法词解来自已有缓存，未消耗 AI 配额', 'Result from cache, no AI quota consumed')}>
+              ⚡ {L('缓存 · ', 'Cached · ')}{'<'}1s
+            </span>
+            {onReanalyze && (
+              <button
+                type="button"
+                className="lyric-confirm-sheet__cache-reanalyze-btn"
+                onClick={onReanalyze}
+                title={L('发现缓存数据有误？重新调用 AI 生成并覆盖旧缓存', 'Cached data wrong? Re-generate with AI and overwrite cache')}
+              >
+                {L('重新进行 AI 分析', 'Re-analyze with AI')}
+              </button>
+            )}
+          </div>
         )}
 
         <div className="lyric-confirm-sheet__actions">

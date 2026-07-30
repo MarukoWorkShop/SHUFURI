@@ -9,6 +9,7 @@ import type { ParsedStreamLyrics } from '../codec/types';
 import { cloudbaseGateway } from '../services/ai/cloudbaseGateway';
 import type { AiGatewayResponse, ArkProxyUsage } from '../services/ai/types';
 import { useAiLimit } from '../components/AiLimitContext';
+import { computeLyricsHash } from '../services/ai/lyricsHash';
 
 type LastApiInfo = {
   model?: string;
@@ -22,6 +23,10 @@ export interface GenerateStudyResultOk {
   rawText: string;
   document: ParsedStreamLyrics;
   apiInfo: LastApiInfo;
+  /** 是否命中歌词语法词解缓存（未调用 AI） */
+  fromCache?: boolean;
+  /** 本次缓存命中节省的费用（元） */
+  costSaved?: number;
 }
 
 export interface GenerateStudyResultError {
@@ -42,6 +47,8 @@ export interface GenerateStudyParams {
   pedagogicalLevel: PedagogicalLevel;
   includeVocabAndGrammar?: boolean;
   retry?: boolean;
+  /** 强制重新生成并覆盖已有缓存（用于修复毒数据） */
+  forceRefresh?: boolean;
 }
 
 /**
@@ -55,6 +62,10 @@ export function useEmbeddedAiGenerate() {
   const [lastApiInfo, setLastApiInfo] = useState<LastApiInfo>({});
   const [progressMessage, setProgressMessage] = useState('');
   const abortRef = useRef<AbortController | null>(null);
+
+  // 保存最近一次 generateStudy 的参数和哈希，供「重新进行 AI 分析」复用
+  const lastParamsRef = useRef<GenerateStudyParams | null>(null);
+  const lastContentHashRef = useRef<string | undefined>();
 
   const { tryUse } = useAiLimit();
 
@@ -71,6 +82,9 @@ export function useEmbeddedAiGenerate() {
       setProgressMessage('正在生成词解与语法…');
       setAttemptCount((c) => c + 1);
 
+      // 保存参数用于后续 forceRefresh
+      lastParamsRef.current = params;
+
       const controller = new AbortController();
       abortRef.current = controller;
       const { signal } = controller;
@@ -78,7 +92,7 @@ export function useEmbeddedAiGenerate() {
       setProgressMessage('AI 正在产出词解与语法（联网多源检索）…');
 
       // AI 限额检查（词解与语法生成）
-      if (!tryUse('lyrics')) {
+      if (!params.forceRefresh && !tryUse('lyrics')) {
         setStatus('error');
         return {
           status: 'error',
@@ -86,6 +100,23 @@ export function useEmbeddedAiGenerate() {
           message: 'AI 调用次数已用完',
           apiInfo: {},
         } as const;
+      }
+
+      // 计算 6 维结构哈希（非 forceRefresh 场景，为缓存匹配做准备）
+      let contentHash: string | undefined;
+      if (params.includeVocabAndGrammar !== false) {
+        try {
+          contentHash = await computeLyricsHash({
+            confirmedLyrics: params.confirmedLyrics,
+            sourceLanguage: params.matrix.activeTarget,
+            targetLanguage: params.matrix.interfaceLanguage,
+            pedagogicalLevel: params.pedagogicalLevel,
+          });
+          lastContentHashRef.current = contentHash;
+        } catch {
+          // 哈希计算失败不应阻塞主流程（Web Crypto 异常概率极低）
+          console.warn('[useEmbeddedAiGenerate] hash computation failed, skipping cache');
+        }
       }
 
       const prompt = buildEncoderPrompt(params.artist ?? '', params.title ?? '', {
@@ -106,6 +137,10 @@ export function useEmbeddedAiGenerate() {
             prompt,
             targetLanguage: params.matrix.activeTarget,
             interfaceLanguage: params.matrix.interfaceLanguage,
+            contentHash,
+            title: params.title,
+            artist: params.artist,
+            forceRefresh: params.forceRefresh ?? false,
           },
           signal,
         );
@@ -131,7 +166,12 @@ export function useEmbeddedAiGenerate() {
         };
       }
 
-      const cleaned = cleanDoubaoPaste(resp.content ?? '');
+      const fromCache = !!resp.fromCache;
+      const costSaved = resp.costSaved;
+      const rawContent = resp.content ?? '';
+
+      // 缓存命中的结果同样需要 parse / compile
+      const cleaned = cleanDoubaoPaste(rawContent);
       const normalized = normalizeStreamInput(cleaned);
       if (!normalized) {
         return {
@@ -154,9 +194,13 @@ export function useEmbeddedAiGenerate() {
         };
       }
 
+      const progress = fromCache
+        ? `⚡ 缓存命中（< 1s，节省 ¥${costSaved != null ? costSaved.toFixed(4) : '0.0000'}）`
+        : '词解与语法已生成';
+
       setStatus('ok');
-      setProgressMessage('词解与语法已生成');
-      return { status: 'ok', rawText: normalized, document: parsed, apiInfo };
+      setProgressMessage(progress);
+      return { status: 'ok', rawText: normalized, document: parsed, apiInfo, fromCache, costSaved };
 
       function finishStudyAborted(): GenerateStudyResult {
         setStatus('idle');
@@ -181,7 +225,7 @@ export function useEmbeddedAiGenerate() {
         };
       }
     },
-    [],
+    [tryUse],
   );
 
   const reset = useCallback(() => {
@@ -191,7 +235,26 @@ export function useEmbeddedAiGenerate() {
     setAttemptCount(0);
     setLastApiInfo({});
     setProgressMessage('');
+    lastParamsRef.current = null;
+    lastContentHashRef.current = undefined;
   }, []);
+
+  /**
+   * 重新进行 AI 分析（forceRefresh: true）。
+   * 使用与首次完全相同的参数，但跳过缓存并覆盖已有错误数据。
+   */
+  const reanalyze = useCallback(async (): Promise<GenerateStudyResult> => {
+    const params = lastParamsRef.current;
+    if (!params) {
+      return {
+        status: 'error',
+        code: 'api_error',
+        message: '没有可重试的歌词参数',
+        apiInfo: {},
+      };
+    }
+    return generateStudy({ ...params, forceRefresh: true });
+  }, [generateStudy]);
 
   return {
     status,
@@ -199,6 +262,7 @@ export function useEmbeddedAiGenerate() {
     lastApiInfo,
     progressMessage,
     generateStudy,
+    reanalyze,
     cancel,
     reset,
   };

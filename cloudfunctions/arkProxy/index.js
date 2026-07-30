@@ -83,6 +83,10 @@ function isRateLimited(ip) {
 const COLLECTION_USAGE = 'ai_daily_usage';
 const COLLECTION_RECORDS = 'ai_call_records';
 
+// ===== 歌词语法词解缓存（NoSQL，对应设计文档 lyrics_grammar_cache） =====
+
+const COLLECTION_CACHE = 'lyrics_grammar_cache';
+
 function todayStr() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
@@ -362,10 +366,79 @@ function classifyError(err) {
   };
 }
 
+// ===== 歌词语法词解缓存 =====
+
+/**
+ * 按 6 维 contentHash 查询已有缓存。
+ * @returns {object|null} 缓存文档或 null
+ */
+async function queryLyricsCache(contentHash) {
+  if (!contentHash || typeof contentHash !== 'string' || contentHash.length !== 64) return null;
+  try {
+    const res = await db.collection(COLLECTION_CACHE).doc(contentHash).get();
+    if (res && res.data) {
+      const doc = Array.isArray(res.data) ? res.data[0] : res.data;
+      if (doc && doc._id && doc.raw_response) return doc;
+    }
+  } catch {
+    // doc not found — 正常情况，MISS
+  }
+  return null;
+}
+
+/**
+ * 写入或覆盖歌词语法词解缓存。
+ * @param {object} doc - 缓存文档（必须包含 _id = contentHash）
+ * @param {{ overwrite?: boolean }} opts
+ */
+async function storeLyricsCache(doc, { overwrite = false } = {}) {
+  if (!doc || !doc._id || !doc.raw_response) return;
+  try {
+    if (overwrite) {
+      // forceRefresh: 全量覆盖毒数据
+      await db.collection(COLLECTION_CACHE).doc(doc._id).set(doc);
+      console.log('[arkProxy][cache] OVERWRITE', `hash=${doc._id.slice(0, 12)}...`);
+    } else {
+      // 首次写入：add 幂等（重复 _id 会抛异常，静默忽略）
+      await db.collection(COLLECTION_CACHE).add(doc);
+      console.log('[arkProxy][cache] STORE', `hash=${doc._id.slice(0, 12)}...`);
+    }
+  } catch (err) {
+    // 首次写入时 _id 冲突（并发写入）→ 静默忽略
+    if (!overwrite) {
+      // 并发场景，另一请求已写入，无需处理
+    } else {
+      console.error('[arkProxy][cache] storeLyricsCache error:', err?.message || err);
+    }
+  }
+}
+
+/**
+ * 更新缓存命中计数。
+ */
+async function incrementCacheHit(contentHash) {
+  if (!contentHash) return;
+  try {
+    const coll = db.collection(COLLECTION_CACHE);
+    const res = await coll.doc(contentHash).get();
+    if (res && res.data) {
+      const doc = Array.isArray(res.data) ? res.data[0] : res.data;
+      const currentCount = (doc && doc.hit_count) || 0;
+      await coll.doc(contentHash).update({
+        hit_count: currentCount + 1,
+        last_hit_at: cbApp.serverDate(),
+      });
+    }
+  } catch {
+    // 静默
+  }
+}
+
 // ===== 云函数入口 =====
 
 exports.main = async function (event, context) {
-  const { action, requestId, prompt, targetLanguage, interfaceLanguage, userId } = event;
+  const { action, requestId, prompt, targetLanguage, interfaceLanguage, userId,
+          contentHash, title, artist, forceRefresh } = event;
 
   const validActions = ['explain.selection', 'lyrics.step2'];
   if (!validActions.includes(action)) {
@@ -447,6 +520,43 @@ exports.main = async function (event, context) {
     console.warn('[arkProxy] no-valid-uid', `ip=${clientIp}`, `action=${action}`);
   }
 
+  // ===== 歌词语法词解缓存查询（仅 lyrics.step2） =====
+  let cacheDoc = null;
+
+  if (isLyricsStep && contentHash && !forceRefresh) {
+    cacheDoc = await queryLyricsCache(contentHash);
+    if (cacheDoc) {
+      void incrementCacheHit(contentHash);
+
+      // 估算本次命中节省的费用
+      const savedInputCost = (cacheDoc.input_tokens || 0) / 1000 * PRICING_LYRICS.inputPerK;
+      const savedOutputCost = (cacheDoc.output_tokens || 0) / 1000 * PRICING_LYRICS.outputPerK;
+      const savedSearchCost = PRICING_LYRICS.searchCost;
+      const costSaved = Math.round((savedInputCost + savedOutputCost + savedSearchCost) * 1e6) / 1e6;
+
+      console.log('[arkProxy][cache] HIT', `hash=${contentHash.slice(0, 12)}...`, `saved=¥${costSaved}`);
+      return {
+        ok: true,
+        requestId,
+        action,
+        model: cacheDoc.model_used || MODEL_ID_LYRICS,
+        content: cacheDoc.raw_response,
+        usage: {
+          inputTokens: cacheDoc.input_tokens || 0,
+          outputTokens: cacheDoc.output_tokens || 0,
+          totalTokens: (cacheDoc.input_tokens || 0) + (cacheDoc.output_tokens || 0),
+        },
+        fromCache: true,
+        costSaved,
+      };
+    }
+    console.log('[arkProxy][cache] MISS', `hash=${contentHash.slice(0, 12)}...`);
+  }
+
+  if (isLyricsStep && forceRefresh && contentHash) {
+    console.log('[arkProxy][cache] forceRefresh — skip cache, will OVERWRITE');
+  }
+
   const model = isLyricsStep ? MODEL_ID_LYRICS : MODEL_ID_EXPLAIN;
 
   console.log(
@@ -510,6 +620,35 @@ exports.main = async function (event, context) {
       searchCount: countWebSearches(result),
       contentLen: content.length,
     });
+
+    // 歌词语法词解：写入/覆盖缓存
+    if (isLyricsStep && contentHash) {
+      const cacheDoc = {
+        _id: contentHash,
+        title: typeof title === 'string' ? title.slice(0, 512) : '',
+        artist: typeof artist === 'string' ? artist.slice(0, 512) : '',
+        source_lang: targetLanguage || '',
+        target_lang: interfaceLanguage || '',
+        peda_level: event.pedagogicalLevel || '', // 注意：前端目前不传，为空是为兼容
+        line_count: -1,  // 云函数不解析歌词行，置 -1 表示未记录
+        first_line: '',
+        last_line: '',
+        lyrics_text: '', // 云函数不存原文（仅 hash 匹配用，隐私保护）
+        raw_response: content,
+        model_used: resolvedModel,
+        input_tokens: usage?.inputTokens || 0,
+        output_tokens: usage?.outputTokens || 0,
+        est_cost: Math.round(
+          ((usage?.inputTokens || 0) / 1000 * PRICING_LYRICS.inputPerK +
+           (usage?.outputTokens || 0) / 1000 * PRICING_LYRICS.outputPerK +
+           PRICING_LYRICS.searchCost) * 1e6
+        ) / 1e6,
+        hit_count: 0,
+        created_at: new Date().toISOString(),
+        last_hit_at: new Date().toISOString(),
+      };
+      void storeLyricsCache(cacheDoc, { overwrite: !!forceRefresh });
+    }
 
     return {
       ok: true,
