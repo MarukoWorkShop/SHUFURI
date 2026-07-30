@@ -42,6 +42,8 @@ export type ArkProxyRequest = {
   prompt: string;
   targetLanguage: 'jp' | 'ko' | 'en' | 'zh';
   interfaceLanguage: 'zh' | 'en';
+  /** CloudBase 匿名用户 UID，用于后端硬配额校验 */
+  userId?: string;
 };
 
 /** 云函数返回的响应 */
@@ -64,6 +66,8 @@ export type AiGatewayRequest = {
   prompt: string;
   targetLanguage: 'jp' | 'ko' | 'en' | 'zh';
   interfaceLanguage: 'zh' | 'en';
+  /** CloudBase 匿名用户 UID，用于后端硬配额校验 */
+  userId?: string;
 };
 
 /** 网关响应（与 ArkProxyResponse 结构一致） */

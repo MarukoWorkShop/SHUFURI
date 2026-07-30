@@ -1,4 +1,5 @@
 import type { AiGatewayResponse } from './types';
+import { getCloudbaseUserId } from './cloudbaseGateway';
 
 /** 流式讲解事件（与 /api/explain-stream SSE 协议一致） */
 export type ExplainStreamEvent =
@@ -90,6 +91,9 @@ export async function streamExplanation(params: {
     };
   }
 
+  // 获取 CloudBase 匿名用户 UID，用于后端硬配额校验
+  const userId = await getCloudbaseUserId();
+
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -100,6 +104,7 @@ export async function streamExplanation(params: {
       targetLanguage: params.targetLanguage,
       interfaceLanguage: params.interfaceLanguage,
       stream: true,
+      userId,
     }),
     signal: params.signal,
   });

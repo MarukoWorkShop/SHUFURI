@@ -8,6 +8,7 @@ import { compileDocument } from '../codec/compileDocument';
 import type { ParsedStreamLyrics } from '../codec/types';
 import { cloudbaseGateway } from '../services/ai/cloudbaseGateway';
 import type { AiGatewayResponse, ArkProxyUsage } from '../services/ai/types';
+import { useAiLimit } from '../components/AiLimitContext';
 
 type LastApiInfo = {
   model?: string;
@@ -25,7 +26,7 @@ export interface GenerateStudyResultOk {
 
 export interface GenerateStudyResultError {
   status: 'error';
-  code: 'aborted' | 'no_parse' | 'compile_failed' | 'api_error';
+  code: 'aborted' | 'no_parse' | 'compile_failed' | 'api_error' | 'limit_reached';
   message: string;
   apiInfo: LastApiInfo;
 }
@@ -55,6 +56,8 @@ export function useEmbeddedAiGenerate() {
   const [progressMessage, setProgressMessage] = useState('');
   const abortRef = useRef<AbortController | null>(null);
 
+  const { tryUse } = useAiLimit();
+
   const cancel = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
@@ -73,6 +76,17 @@ export function useEmbeddedAiGenerate() {
       const { signal } = controller;
 
       setProgressMessage('AI 正在产出词解与语法（联网多源检索）…');
+
+      // AI 限额检查（词解与语法生成）
+      if (!tryUse('lyrics')) {
+        setStatus('error');
+        return {
+          status: 'error',
+          code: 'limit_reached',
+          message: 'AI 调用次数已用完',
+          apiInfo: {},
+        } as const;
+      }
 
       const prompt = buildEncoderPrompt(params.artist ?? '', params.title ?? '', {
         matrix: params.matrix,

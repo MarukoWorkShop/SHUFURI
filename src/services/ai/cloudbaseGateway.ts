@@ -43,6 +43,23 @@ async function ensureAuth(): Promise<void> {
   await auth.signInAnonymously();
 }
 
+/**
+ * 获取当前 CloudBase 匿名用户 UID，用于后端硬配额校验。
+ * 获取失败返回 undefined（不阻塞主流程，由 IP 限流兜底）。
+ */
+export async function getCloudbaseUserId(): Promise<string | undefined> {
+  try {
+    await ensureAuth();
+    const loginState = await auth!.getLoginState();
+    if (loginState) {
+      return (loginState as any).user?.uid || (loginState as any).uid;
+    }
+  } catch {
+    // 静默
+  }
+  return undefined;
+}
+
 async function callCloudFunction(
   name: string,
   data: Record<string, unknown>,
@@ -101,6 +118,9 @@ export const cloudbaseGateway: AiGateway = {
   },
 
   async send(req: AiGatewayRequest, signal?: AbortSignal): Promise<AiGatewayResponse> {
+    // 获取 CloudBase 匿名用户 UID，用于后端硬配额校验
+    const userId = await getCloudbaseUserId();
+
     // 构建云函数兼容的请求体
     const cloudFuncData: ArkProxyRequest = {
       action: req.action,
@@ -108,6 +128,7 @@ export const cloudbaseGateway: AiGateway = {
       prompt: req.prompt,
       targetLanguage: req.targetLanguage,
       interfaceLanguage: req.interfaceLanguage,
+      userId,
     };
 
     const raw = (await callCloudFunction(

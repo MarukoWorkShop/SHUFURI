@@ -8,6 +8,7 @@ import {
 } from '../services/savedLyricsStore';
 import { ExpandToggleButton } from './a11y/AriaToggleButtons';
 import { L } from '../utils/i18n';
+import BatchExportPanel from './BatchExportPanel';
 
 type SavedLyricsLibraryProps = {
   onOpen: (project: SavedLyricsProject) => void;
@@ -41,6 +42,7 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
   const [closing, setClosing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [showBatchExport, setShowBatchExport] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
   const unlatchTimerRef = useRef<number | null>(null);
   const dismissDragStartYRef = useRef(0);
@@ -280,6 +282,16 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
                 {allSelected ? '取消全选' : '全选'}
               </button>
             )}
+            {items.length > 0 && (
+              <button
+                type="button"
+                className="saved-library-drawer__batch-export"
+                onClick={() => setShowBatchExport(true)}
+              >
+                批量导出 PDF
+                <span className="pro-badge" aria-label="Pro 功能">PRO</span>
+              </button>
+            )}
             <button type="button" className="saved-library-drawer__close" onClick={closeDrawer}>
               帰 / 收起
             </button>
@@ -370,6 +382,15 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
         </ExpandToggleButton>
       </section>
       {drawerPortal}
+      {showBatchExport &&
+        createPortal(
+          <BatchExportPanel
+            open={showBatchExport}
+            onClose={() => setShowBatchExport(false)}
+          />,
+          document.body,
+        )
+      }
     </>
   );
 }

@@ -17,6 +17,7 @@ import {
 } from '../codec/prompt/buildMicroscopePrompt';
 import { cloudbaseGateway, generateExplanation } from '../services/ai';
 import { resolveExplainStreamUrl, streamExplanation } from '../services/ai/explainStream';
+import { useAiLimit } from '../components/AiLimitContext';
 import type { InterfaceLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
 import {
@@ -158,6 +159,8 @@ export function useExplainSession({
   const resultRef = useRef<MicroscopeExplainResult | null>(null);
   const aiExplainRef = useRef<string | null>(null);
 
+  const { tryUse } = useAiLimit();
+
   const buildContext = useCallback(
     (
       phrase: string,
@@ -243,6 +246,8 @@ export function useExplainSession({
   const requestAiDeepDive = useCallback(() => {
     const meta = analyzeMetaRef.current;
     if (!meta.phrase || deepDiveLoading || loading) return;
+
+    if (!tryUse('explain')) return; // AI 限额检查（划词）
 
     clearGrammarExamples();
     cancelInFlight();
@@ -357,6 +362,8 @@ export function useExplainSession({
       setActiveGrammarCapsule(capsule);
       setGrammarLesson(null);
       setGrammarExamplesError(null);
+      if (!tryUse('explain')) return; // AI 限额检查（语法例句）
+
       setGrammarExamplesLoading(true);
 
       const meta = analyzeMetaRef.current;

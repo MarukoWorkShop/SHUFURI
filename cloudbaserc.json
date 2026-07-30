@@ -14,7 +14,21 @@
       "timeout": 60,
       "runtime": "Nodejs18.15",
       "handler": "index.main",
-      "installDependency": false
+      "installDependency": true
+    },
+    {
+      "name": "costReport",
+      "timeout": 30,
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "installDependency": true
+    },
+    {
+      "name": "aiFeedback",
+      "timeout": 15,
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "installDependency": true
     }
   ]
 }
