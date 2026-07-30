@@ -113,8 +113,9 @@ function applyPosterBodyMaxHeightToPx(body: HTMLElement, maxPx: number): void {
 
 export function detectFuriganaPosterBodyOverflow(
   body: HTMLElement,
-  profile: PosterLayoutProfile = 'clipPosterPrint',
+  _profile: PosterLayoutProfile = 'clipPosterPrint',
 ): boolean {
+  void _profile;
   void body.offsetHeight;
   const clientH = body.clientHeight;
   if (clientH < 1) return false;

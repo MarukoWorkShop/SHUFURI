@@ -1,7 +1,20 @@
 /**
  * 韩语划选表面形轻量规范化（假分词）：助词剥离 + 常见词尾还原。
- * 无词典依赖，便于单测。
+ * 无词典依赖，便于单测。Garu 失败时作回退。
  */
+
+/** 宾格缩约（날=나+를）→ 代词词典形 */
+export const KO_OBJECT_CONTRACTS: Record<string, string> = {
+  날: '나',
+  널: '너',
+  뭘: '무엇',
+  이걸: '이것',
+  그걸: '그것',
+  저걸: '저것',
+  우릴: '우리',
+  절: '저',
+  날로: '나',
+};
 
 /** 长的优先 */
 export const KO_TRAILING_PARTICLES = [
@@ -47,11 +60,32 @@ export const KO_CONJ_RULES: ConjRule[] = [
   { from: /ㅂ니다$/u, to: '다', note: 'ㅂ니다→다' },
   { from: /이에요$/u, to: '다', note: '이에요→다' },
   { from: /예요$/u, to: '다', note: '예요→다' },
+  // 确认语气：너였잖아 → 너 / …이다
+  { from: /였잖아요$/u, to: '이다', note: '였잖아요→이다' },
+  { from: /였잖아$/u, to: '이다', note: '였잖아→이다' },
+  { from: /이잖아요$/u, to: '이다', note: '이잖아요→이다' },
+  { from: /이잖아$/u, to: '이다', note: '이잖아→이다' },
+  { from: /잖아요$/u, to: '다', note: '잖아요→다' },
+  { from: /잖아$/u, to: '다', note: '잖아→다' },
   { from: /아요$/u, to: '다', note: '아요→다' },
   { from: /어요$/u, to: '다', note: '어요→다' },
   { from: /아서$/u, to: '다', note: '아서→다' },
   { from: /어서$/u, to: '다', note: '어서→다' },
   { from: /여서$/u, to: '다', note: '여서→다' },
+  // 受益/定语：믿어준 → 믿다；잡아준 → 잡다
+  { from: /어줬어$/u, to: '다', note: '어줬어→다' },
+  { from: /아줬어$/u, to: '다', note: '아줬어→다' },
+  { from: /해줬어$/u, to: '하다', note: '해줬어→하다' },
+  { from: /어줬$/u, to: '다', note: '어줬→다' },
+  { from: /아줬$/u, to: '다', note: '아줬→다' },
+  { from: /해줬$/u, to: '하다', note: '해줬→하다' },
+  { from: /어준$/u, to: '다', note: '어준→다' },
+  { from: /아준$/u, to: '다', note: '아준→다' },
+  { from: /여준$/u, to: '다', note: '여준→다' },
+  { from: /해준$/u, to: '하다', note: '해준→하다' },
+  { from: /어줄$/u, to: '다', note: '어줄→다' },
+  { from: /아줄$/u, to: '다', note: '아줄→다' },
+  { from: /해줄$/u, to: '하다', note: '해줄→하다' },
   // 定语修饰：잡혀온 → 잡히다；먹어온 → 먹다
   { from: /혀온$/u, to: '히다', note: '혀온→히다' },
   { from: /아온$/u, to: '다', note: '아온→다' },
@@ -131,11 +165,21 @@ export function applyKoConjRules(q: string): { form: string; note: string }[] {
     push(`${q.slice(0, -1)}다`, '었/았/였→다');
   }
 
+  // 너였잖아 → 剥确认语气后留下「너」
+  if (/였잖아요?$/u.test(q) && q.length > 3) {
+    const stem = q.replace(/였잖아요?$/u, '');
+    if (stem) push(stem, '剥였잖아');
+  }
+  if (/이잖아요?$/u.test(q) && q.length > 3) {
+    const stem = q.replace(/이잖아요?$/u, '');
+    if (stem) push(stem, '剥이잖아');
+  }
+
   return out;
 }
 
 /**
- * 生成查词候选（精确表面形优先，再助词剥离、词尾还原）。
+ * 生成查词候选（精确表面形优先，再缩约/助词剥离、词尾还原）。
  * 不含前缀枚举（前缀由查词侧对 index 探测）。
  */
 export function koLookupCandidates(raw: string): { form: string; note: string }[] {
@@ -151,9 +195,18 @@ export function koLookupCandidates(raw: string): { form: string; note: string }[
 
   push(q, 'exact');
 
+  const contracted = KO_OBJECT_CONTRACTS[q];
+  if (contracted) {
+    push(contracted, `缩约宾格 ${q}→${contracted}`);
+  }
+
   const { stem, particles } = stripKoParticles(q);
   if (stem !== q) {
     push(stem, particles.length ? `剥助词 ${particles.join('+')}` : '剥助词');
+    const stemContract = KO_OBJECT_CONTRACTS[stem];
+    if (stemContract) {
+      push(stemContract, `剥助词+缩约→${stemContract}`);
+    }
     for (const c of applyKoConjRules(stem)) {
       push(c.form, `${particles.join('+') || '剥助词'}+${c.note}`);
     }

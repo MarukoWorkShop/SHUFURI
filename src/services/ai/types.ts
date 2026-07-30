@@ -37,11 +37,13 @@ export type ArkProxyUsage = {
 
 /** 发送到云函数的请求 */
 export type ArkProxyRequest = {
-  action: 'explain.selection';
+  action: 'explain.selection' | 'lyrics.step2';
   requestId: string;
   prompt: string;
   targetLanguage: 'jp' | 'ko' | 'en' | 'zh';
   interfaceLanguage: 'zh' | 'en';
+  /** CloudBase 匿名用户 UID，用于后端硬配额校验 */
+  userId?: string;
 };
 
 /** 云函数返回的响应 */
@@ -59,11 +61,13 @@ export type ArkProxyResponse = {
 
 /** 网关请求（与 ArkProxyRequest 解耦，便于未来切换后端） */
 export type AiGatewayRequest = {
-  action: 'explain.selection';
+  action: 'explain.selection' | 'lyrics.step2';
   requestId: string;
   prompt: string;
   targetLanguage: 'jp' | 'ko' | 'en' | 'zh';
   interfaceLanguage: 'zh' | 'en';
+  /** CloudBase 匿名用户 UID，用于后端硬配额校验 */
+  userId?: string;
 };
 
 /** 网关响应（与 ArkProxyResponse 结构一致） */

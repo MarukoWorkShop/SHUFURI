@@ -1,0 +1,9 @@
+{
+  "name": "aiFeedback",
+  "version": "1.0.0",
+  "description": "AI 反馈墙收集 + 行为埋点上报",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.10.0"
+  }
+}

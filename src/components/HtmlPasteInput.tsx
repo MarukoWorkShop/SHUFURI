@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildLyricsStep1Prompt } from '../codec/prompt/buildLyricsStep1Prompt';
 import type { EncoderPromptOptions } from '../codec/prompt/encoderCommon';
 import { resolveEncoderModelHint } from '../codec/prompt/buildEncoderPrompt';
@@ -7,7 +7,7 @@ import type { LanguageMatrixContext } from '../services/languageMatrix/types';
 import { postClipboardWrite, openAiApp } from '../utils/nativeBridge';
 import type { AiAppInfo } from '../bridge/deepLinkPlugin';
 import { useAppToast } from '../context/AppToastContext';
-import ArrowRightIcon from './icons/ArrowRightIcon';
+import { L } from '../utils/i18n';
 import AiAppActionSheet from './AiAppActionSheet';
 import LanguageWheel from './LanguageWheel';
 import type { ExternalPromptRequest } from '../hooks/useStructuredLyricsClipboardCard';
@@ -22,7 +22,7 @@ function normalizeTitleKey(title: string): string {
 }
 
 type Props = {
-  /** Step1 始终仅歌词；保留 prop 以免调用方断裂。词解由确认页勾选驱动。 */
+  /** 词解由确认页勾选驱动（Step2）；保留 prop 以免调用方断裂。 */
   includeVocabAndGrammar: boolean;
   pedagogicalLevel: PedagogicalLevel;
   language?: LyricsLanguage;
@@ -40,11 +40,14 @@ type Props = {
     firstLyricLine?: string;
     rawTexts?: string[];
   };
-  /** 剪贴板含可排版流（完整或学习材料） */
+  /** 剪贴板含可排版流（完整或学习材料）→「粘贴剪贴板歌词」 */
   pasteLayoutReady?: boolean;
   /** 流内 H 歌名；用于表单偏离时把主暗示切到「生成口令」 */
   clipboardStreamTitle?: string;
   onActivatePasteLayout?: (formMeta: { title?: string; artist?: string }) => void;
+  /** 解析粘贴的分享文案，提取歌名/歌手（与粘贴歌词分离） */
+  onParseMusicShareText?: (text: string) => void;
+  parseMusicShareBusy?: boolean;
   onFormMetaChange?: (meta: { title: string; artist: string }) => void;
   /** 确认页触发的学习材料 / 再试口令，写入剪贴板并弹出 AI 选择 */
   externalPrompt?: ExternalPromptRequest | null;
@@ -65,6 +68,8 @@ export default function HtmlPasteInput({
   pasteLayoutReady = false,
   clipboardStreamTitle = '',
   onActivatePasteLayout,
+  onParseMusicShareText,
+  parseMusicShareBusy = false,
   onFormMetaChange,
   externalPrompt,
   onExternalPromptHandled,
@@ -74,7 +79,7 @@ export default function HtmlPasteInput({
   const [artist, setArtist] = useState(initialArtist || '');
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState('');
-  /** 外部注入口令（学习材料 / 再试）时锁定，打开 AI 不再重建 Step1 */
+  /** 外部注入口令（学习材料 / 再试）时锁定，打开 AI 不再重建口令 */
   const [promptLocked, setPromptLocked] = useState(false);
 
   /**
@@ -83,7 +88,7 @@ export default function HtmlPasteInput({
    * - 否则有标题 → 生成口令为主
    * 仅「缺标题」禁用口令；仅「剪贴板无可排版流」禁用粘贴。
    */
-  const { pastePrimary, generatePrimary, canGenerate } = useMemo(() => {
+  const { pastePrimary, canGenerate } = useMemo(() => {
     const formTitle = songTitle.trim();
     const canGen = formTitle.length > 0;
     const streamKey = normalizeTitleKey(clipboardStreamTitle);
@@ -96,10 +101,88 @@ export default function HtmlPasteInput({
     const pasteIsPrimary = pasteLayoutReady && !diverged;
     return {
       pastePrimary: pasteIsPrimary,
-      generatePrimary: canGen && !pasteIsPrimary,
       canGenerate: canGen,
     };
   }, [songTitle, pasteLayoutReady, clipboardStreamTitle]);
+
+  // ---- 粘贴分享链接输入框 ----
+  const [pasteActive, setPasteActive] = useState(false);
+  const [pasteValue, setPasteValue] = useState('');
+  const pasteInputRef = useRef<HTMLTextAreaElement>(null);
+  const pasteActiveRef = useRef(false);
+  pasteActiveRef.current = pasteActive;
+
+  const handlePasteAreaClick = useCallback(() => {
+    if (parseMusicShareBusy) return;
+    setPasteActive(true);
+  }, [parseMusicShareBusy]);
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const text = e.clipboardData.getData('text/plain');
+      if (text) {
+        e.preventDefault();
+        setPasteValue(text);
+      }
+    },
+    [],
+  );
+
+  const submitPaste = useCallback(() => {
+    const text = pasteValue.trim();
+    if (!text || !onParseMusicShareText) return;
+    onParseMusicShareText(text);
+  }, [pasteValue, onParseMusicShareText]);
+
+  const resetPaste = useCallback(() => {
+    setPasteActive(false);
+    setPasteValue('');
+  }, []);
+
+  const handlePasteBlur = useCallback(() => {
+    requestAnimationFrame(() => {
+      if (pasteActiveRef.current) {
+        resetPaste();
+      }
+    });
+  }, [resetPaste]);
+
+  const handlePasteKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        resetPaste();
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitPaste();
+      }
+    },
+    [resetPaste, submitPaste],
+  );
+
+  // parseMusicShareBusy 结束后自动关闭输入框
+  const prevParseBusyRef = useRef(false);
+  useEffect(() => {
+    if (prevParseBusyRef.current && !parseMusicShareBusy && pasteActiveRef.current) {
+      resetPaste();
+    }
+    prevParseBusyRef.current = parseMusicShareBusy;
+  }, [parseMusicShareBusy, resetPaste]);
+
+  // textarea 自动调整高度
+  const autoResizeTextarea = useCallback(() => {
+    const ta = pasteInputRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = `${ta.scrollHeight}px`;
+  }, []);
+
+  useEffect(() => {
+    if (!pasteActive) return;
+    const ta = pasteInputRef.current;
+    if (!ta) return;
+    autoResizeTextarea();
+  }, [pasteActive, pasteValue, autoResizeTextarea]);
 
   useEffect(() => {
     if (initialTitle) setSongTitle(initialTitle);
@@ -179,10 +262,10 @@ export default function HtmlPasteInput({
         setCopiedPrompt(prompt);
         setPromptLocked(false);
         setActionSheetVisible(true);
-        showAppToast('✓ 歌词口令已复制（第一步：仅完整歌词）');
+        showAppToast(L('✓ 歌词口令已复制（第一步：仅完整歌词）', '✓ Lyrics prompt copied (Step 1: full lyrics only)'));
       })
       .catch(() => {
-        // 静默失败
+        showAppToast(L('⚠ 复制失败，请检查浏览器权限后重试', '⚠ Copy failed. Please check browser permissions and retry.'));
       });
   }, [songTitle, buildPrompt, writePromptToClipboard, showAppToast]);
 
@@ -194,7 +277,7 @@ export default function HtmlPasteInput({
       try {
         await writePromptToClipboard(prompt);
         setCopiedPrompt(prompt);
-        await openAiApp(app.scheme);
+        await openAiApp(app);
         setActionSheetVisible(false);
       } catch {
         // 静默失败
@@ -215,7 +298,7 @@ export default function HtmlPasteInput({
               id="title-input"
               value={songTitle}
               onChange={(e) => setSongTitle(e.target.value)}
-              placeholder="歌曲名称"
+              placeholder={L('歌曲名称', 'Enter the song title you want to search for')}
               required
               aria-required="true"
             />
@@ -228,9 +311,62 @@ export default function HtmlPasteInput({
               id="artist-input"
               value={artist}
               onChange={(e) => setArtist(e.target.value)}
-              placeholder="歌手信息"
+              placeholder={L('歌手信息', 'Artist')}
             />
           </label>
+          {onParseMusicShareText ? (
+            <div className={`ext-pipeline__share-fill ${pasteActive ? 'is-active' : ''}`}>
+              {pasteActive ? (
+                <div className="ext-pipeline__share-fill-field">
+                  <textarea
+                    ref={pasteInputRef}
+                    className="ext-pipeline__share-fill-input"
+                    placeholder={L(
+                      '点击腾讯音乐、网易云音乐等的分享-复制链接，粘贴在这里自动解析',
+                      "Paste a share link from QQ Music, NetEase, etc. — title & artist will be filled in automatically.",
+                    )}
+                    rows={1}
+                    value={pasteValue}
+                    onChange={(e) => setPasteValue(e.target.value)}
+                    onPaste={handlePaste}
+                    onBlur={handlePasteBlur}
+                    onKeyDown={handlePasteKeyDown}
+                    disabled={parseMusicShareBusy}
+                    autoFocus
+                  />
+                  {pasteValue.trim() && !parseMusicShareBusy ? (
+                    <button
+                      type="button"
+                      className="ext-pipeline__share-fill-submit"
+                      onClick={submitPaste}
+                      onPointerDown={(e) => e.preventDefault()}
+                      title={L('解析歌名与歌手', 'Parse title and artist')}
+                    >
+                      {L('解析', 'Parse')}
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="ext-pipeline__share-fill-btn"
+                  onClick={handlePasteAreaClick}
+                  disabled={parseMusicShareBusy}
+                  title={L('点击后粘贴 QQ / 网易云分享链接，自动解析歌名与歌手', 'Tap to paste a QQ / NetEase share link — title and artist will be parsed automatically.')}
+                >
+                  {parseMusicShareBusy
+                    ? L('识别中…', 'Recognizing…')
+                    : L('🔗粘贴音乐软件的分享链接', '🔗 Paste a music app share link')}
+                </button>
+              )}
+              <span className="ext-pipeline__share-fill-hint">
+                {L(
+                  '点击腾讯音乐、网易云音乐等的“分享-复制链接”，粘贴在这里自动解析',
+                  'Tap “Share → Copy link” in QQ Music / NetEase and paste here — it will be parsed automatically.',
+                )}
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {onLanguageChange && (
@@ -250,6 +386,7 @@ export default function HtmlPasteInput({
                   pastePrimary ? 'btn-filled' : 'btn-tonal is-dormant'
                 }`}
                 disabled={!pasteLayoutReady}
+                title={L('读取剪贴板中的结构化歌词并排版（不是分享链接）', 'Read structured lyrics from clipboard and layout (not share links).')}
                 onClick={() =>
                   onActivatePasteLayout({
                     title: songTitle.trim(),
@@ -257,21 +394,33 @@ export default function HtmlPasteInput({
                   })
                 }
               >
-                粘贴并排版
+                {L('粘贴剪贴板歌词', 'Paste clipboard lyrics')}
               </button>
             )}
             <button
               type="button"
-              className={`ext-pipeline__action-btn ext-pipeline__gen-btn ${
-                generatePrimary ? 'btn-filled' : 'btn-tonal is-dormant'
+              className={`ext-pipeline__action-btn ext-pipeline__gen-btn btn-tonal ${
+                !canGenerate ? 'is-dormant' : ''
               }`}
               onClick={handleCopyPrompt}
               disabled={!canGenerate}
             >
-              {generatePrimary && <ArrowRightIcon size={16} />}
-              <span>一键生成口令</span>
+              <span>{L('一键生成口令', 'Generate share code')}</span>
             </button>
           </div>
+
+          {/* 模式的说明文案 */}
+          {canGenerate && (
+            <p className="ext-pipeline__mode-hint">
+              <span className="ext-pipeline__hint-line">
+                <strong>{L('一键生成口令', 'Generate share code')}</strong>
+                {L(
+                  '：复制详细 Prompt，粘贴到任意 AI（Doubao / ChatGPT / DeepSeek 等）后把结果粘贴回此页排版',
+                  ': copies a detailed prompt — paste it into any AI (Doubao / ChatGPT / DeepSeek, etc.), then paste the response back here to layout.',
+                )}
+              </span>
+            </p>
+          )}
         </div>
       </div>
 

@@ -15,6 +15,7 @@ import type {
   PosterRenderOptions,
 } from '../utils/shufuriPoster/types';
 import { postToNative } from '../bridge/nativeBridge';
+import { L } from '../utils/i18n';
 
 const EXPORT_DEADLINE_MS = 180_000;
 
@@ -74,7 +75,7 @@ export function usePosterExport({
     const currentProfile = layoutProfileRef.current;
 
     if (!currentBodyHtml.trim()) {
-      postToNative({ event: 'error', data: { message: '没有可导出的内容' } });
+      postToNative({ event: 'error', data: { message: L('没有可导出的内容', 'No content to export') } });
       nativeExportingRef.current = false;
       setExporting(false);
       return;
@@ -96,7 +97,7 @@ export function usePosterExport({
       setPages(currentPages);
 
       if (currentPages.length === 0) {
-        postToNative({ event: 'error', data: { message: '分页结果为空' } });
+        postToNative({ event: 'error', data: { message: L('分页结果为空', 'Pagination result is empty') } });
         return;
       }
 
@@ -139,7 +140,7 @@ export function usePosterExport({
       console.error('[native-export]', e);
       postToNative({
         event: 'error',
-        data: { message: e instanceof Error ? e.message : '导出失败' },
+        data: { message: e instanceof Error ? e.message : L('导出失败', 'Export failed') },
       });
     } finally {
       nativeExportingRef.current = false;
@@ -162,7 +163,7 @@ export function usePosterExport({
 
   const handleExportPdf = useCallback(async () => {
     if (!pages.length) {
-      alert('没有可导出的页面');
+      alert(L('没有可导出的页面', 'No pages to export'));
       return;
     }
     if (exportingRef.current) return;
@@ -170,7 +171,7 @@ export function usePosterExport({
     setExporting(true);
 
     const deadline = new Promise<void>((_, reject) =>
-      setTimeout(() => reject(new Error(`导出超时（${EXPORT_DEADLINE_MS / 1000}s），请重试`)), EXPORT_DEADLINE_MS),
+      setTimeout(() => reject(new Error(L(`导出超时（${EXPORT_DEADLINE_MS / 1000}s），请重试`, `Export timed out (${EXPORT_DEADLINE_MS / 1000}s). Please try again.`))), EXPORT_DEADLINE_MS),
     );
 
     try {
@@ -188,7 +189,7 @@ export function usePosterExport({
       ]);
     } catch (e) {
       console.error('[export-pdf]', e);
-      alert(e instanceof Error ? e.message : '导出失败');
+      alert(e instanceof Error ? e.message : L('导出失败', 'Export failed'));
     } finally {
       exportingRef.current = false;
       setExporting(false);

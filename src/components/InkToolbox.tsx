@@ -1,6 +1,7 @@
 import SquarePenIcon from './icons/SquarePenIcon';
 import Undo2Icon from './icons/Undo2Icon';
 import PosterRubyToggleButton from './PosterRubyToggleButton';
+import { L } from '../utils/i18n';
 import './InkToolbox.css';
 
 type Props = {
@@ -35,17 +36,17 @@ export default function InkToolbox({
       <button
         type="button"
         className="ink-toolbox__trigger"
-        aria-label={open ? '收起文具盒' : '打开文具盒'}
+        aria-label={open ? L('收起文具盒', 'Close toolbox') : L('打开文具盒', 'Open toolbox')}
         aria-expanded={open}
         onClick={onToggle}
       >
         <span className="ink-toolbox__chevron" aria-hidden="true" />
       </button>
-      <div className="ink-toolbox__panel" role="toolbar" aria-label="编辑工具">
+      <div className="ink-toolbox__panel" role="toolbar" aria-label={L('编辑工具', 'Edit tools')}>
         <button
           type="button"
           className={`ink-toolbox__tool${inkEditActive ? ' is-active' : ''}`}
-          aria-label={inkEditActive ? '退出铅笔编辑' : '铅笔编辑'}
+          aria-label={inkEditActive ? L('退出铅笔编辑', 'Exit pencil edit') : L('铅笔编辑', 'Pencil edit')}
           aria-pressed={inkEditActive}
           onClick={() => onToggleInkEdit?.()}
         >
@@ -61,7 +62,7 @@ export default function InkToolbox({
           <button
             type="button"
             className={`ink-toolbox__tool ink-toolbox__tool--explain${explainActive ? ' is-active' : ''}`}
-            aria-label={explainActive ? '退出划词解释' : '划词解释'}
+            aria-label={explainActive ? L('退出划词解释', 'Exit selection explain') : L('划词解释', 'Selection explain')}
             aria-pressed={explainActive}
             onClick={onToggleExplain}
           >
@@ -73,7 +74,7 @@ export default function InkToolbox({
         <button
           type="button"
           className="ink-toolbox__tool ink-toolbox__tool--undo"
-          aria-label="回退上一步修改"
+          aria-label={L('回退上一步修改', 'Undo')}
           disabled={!canUndo}
           onClick={onUndo}
         >

@@ -339,7 +339,7 @@ function assertValidPdfBlob(blob: Blob): void {
 }
 
 /** 将栅格 canvas 写入 jsPDF 当前页（与 shufu life 对齐：先 toDataURL 再 addImage） */
-function addCanvasToPdfPage(
+export function addCanvasToPdfPage(
   pdf: jsPDF,
   canvas: HTMLCanvasElement,
   wMm: number,

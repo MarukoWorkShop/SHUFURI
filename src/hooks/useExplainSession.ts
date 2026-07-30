@@ -1,16 +1,23 @@
 import { useCallback, useRef, useState } from 'react';
 import { nanoid } from 'nanoid';
 import {
+  buildGrammarPointLessonPrompt,
   buildMicroscopeAiExplainPrompt,
+  formatLoanwordsForNote,
   langCodeToMicroscopeLanguage,
   normalizeAiExplainText,
   parseAiExplainParts,
+  parseGrammarPointLesson,
+  type AiGrammarCapsule,
+  type GrammarExampleItem,
+  type GrammarPointLesson,
   type MicroscopeExplainResult,
   type MicroscopeLocalLemma,
   type MicroscopeSongContext,
 } from '../codec/prompt/buildMicroscopePrompt';
 import { cloudbaseGateway, generateExplanation } from '../services/ai';
 import { resolveExplainStreamUrl, streamExplanation } from '../services/ai/explainStream';
+import { useAiLimit } from '../components/AiLimitContext';
 import type { InterfaceLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
 import {
@@ -25,7 +32,11 @@ import {
   krdictHitToMicroscope,
   lookupKrdictLite,
 } from '../services/dict/krdictLite';
+import { ensureGaruKoLoaded } from '../services/dict/garuKoTokenizer';
+import { findGrammarExamplesFromStudyCards } from '../services/grammarExamplesFromStudyCards';
+
 import { ensureKuromojiLoaded } from '../services/dict/kuromojiTokenizer';
+import { L } from '../utils/i18n';
 import type { ExplainPickContext } from '../utils/readSelectionForExplain';
 
 export type ExplainResultSource = 'local' | 'ai' | null;
@@ -43,6 +54,7 @@ export type UseExplainSessionOptions = {
     term: string;
     contextSense: string;
     grammar?: string;
+    formula?: string;
     mood?: string;
   }) => void;
 };
@@ -58,6 +70,8 @@ export type UseExplainSessionResult = {
 
   targetPhrase: string;
   surroundingLine: string;
+  /** 曲目语种（用于 AI 解析防串行） */
+  lang: LangCode | undefined;
   result: MicroscopeExplainResult | null;
   resultSource: ExplainResultSource;
   /** AI讲解纯文本（不覆盖本地词条） */
@@ -76,6 +90,15 @@ export type UseExplainSessionResult = {
   requestAiDeepDive: () => void;
   /** 将当前 AI 讲解追加为歌词正文笔记条 */
   addToLyricsNote: () => void;
+  /** 点击语法胶囊：短讲义（含义/用法/情感）+ 一条例句 */
+  requestGrammarExamples: (capsule: AiGrammarCapsule) => void;
+  clearGrammarExamples: () => void;
+  activeGrammarCapsule: AiGrammarCapsule | null;
+  /** @deprecated 兼容：由 grammarLesson.example 派生 */
+  grammarExamples: GrammarExampleItem[];
+  grammarLesson: GrammarPointLesson | null;
+  grammarExamplesLoading: boolean;
+  grammarExamplesError: string | null;
 };
 
 type AnalyzeMeta = {
@@ -116,6 +139,13 @@ export function useExplainSession({
   const [loading, setLoading] = useState(false);
   const [deepDiveLoading, setDeepDiveLoading] = useState(false);
   const [aiStreamReady, setAiStreamReady] = useState(false);
+  const [activeGrammarCapsule, setActiveGrammarCapsule] = useState<AiGrammarCapsule | null>(
+    null,
+  );
+  const [grammarLesson, setGrammarLesson] = useState<GrammarPointLesson | null>(null);
+  const [grammarExamplesLoading, setGrammarExamplesLoading] = useState(false);
+  const [grammarExamplesError, setGrammarExamplesError] = useState<string | null>(null);
+  const grammarAbortRef = useRef<AbortController | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dictMetaLabel, setDictMetaLabel] = useState<string | null>(null);
 
@@ -128,6 +158,8 @@ export function useExplainSession({
   });
   const resultRef = useRef<MicroscopeExplainResult | null>(null);
   const aiExplainRef = useRef<string | null>(null);
+
+  const { tryUse } = useAiLimit();
 
   const buildContext = useCallback(
     (
@@ -157,6 +189,21 @@ export function useExplainSession({
       abortRef.current.abort();
       abortRef.current = null;
     }
+    if (grammarAbortRef.current) {
+      grammarAbortRef.current.abort();
+      grammarAbortRef.current = null;
+    }
+  }, []);
+
+  const clearGrammarExamples = useCallback(() => {
+    if (grammarAbortRef.current) {
+      grammarAbortRef.current.abort();
+      grammarAbortRef.current = null;
+    }
+    setActiveGrammarCapsule(null);
+    setGrammarLesson(null);
+    setGrammarExamplesLoading(false);
+    setGrammarExamplesError(null);
   }, []);
 
   const arm = useCallback(() => {
@@ -170,6 +217,9 @@ export function useExplainSession({
     } else if (code === 'ko') {
       void ensureKrdictLiteLoaded().catch((err) => {
         console.warn('[krdict] preload failed', err);
+      });
+      void ensureGaruKoLoaded().catch((err) => {
+        console.warn('[garu-ko] preload failed', err);
       });
     }
   }, [lang]);
@@ -187,12 +237,19 @@ export function useExplainSession({
     setPanelOpen(false);
     setError(null);
     setDeepDiveLoading(false);
+    setActiveGrammarCapsule(null);
+    setGrammarLesson(null);
+    setGrammarExamplesLoading(false);
+    setGrammarExamplesError(null);
   }, [cancelInFlight]);
 
   const requestAiDeepDive = useCallback(() => {
     const meta = analyzeMetaRef.current;
     if (!meta.phrase || deepDiveLoading || loading) return;
 
+    if (!tryUse('explain')) return; // AI 限额检查（划词）
+
+    clearGrammarExamples();
     cancelInFlight();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -263,14 +320,14 @@ export function useExplainSession({
         setAiStreamReady(false);
         if (!res.ok || !res.content) {
           setError(
-            (res.error?.message || 'AI讲解失败') +
+            (res.error?.message || L('AI讲解失败', 'AI explanation failed')) +
               (res.model ? `（model: ${res.model}）` : ''),
           );
           return;
         }
         const text = normalizeAiExplainText(res.content);
         if (!text) {
-          setError('AI讲解为空，请重试' + (res.model ? `（model: ${res.model}）` : ''));
+          setError(L('AI讲解为空，请重试', 'AI explanation empty, please retry') + (res.model ? `（model: ${res.model}）` : ''));
           return;
         }
         applyDelta(text);
@@ -278,24 +335,123 @@ export function useExplainSession({
         if (controller.signal.aborted) return;
         setDeepDiveLoading(false);
         setAiStreamReady(false);
-        const raw = err instanceof Error ? err.message : '请求失败';
+        const raw = err instanceof Error ? err.message : L('请求失败', 'Request failed');
         const isTimeout =
           (err instanceof DOMException && err.name === 'AbortError') ||
           /超时|timeout|AbortError/i.test(raw);
         setError(
           isTimeout
-            ? 'AI讲解超时：请检查网络或云函数超时≥60s'
+            ? L('AI讲解超时：请检查网络或云函数超时≥60s', 'AI timed out. Check network or cloud function timeout ≥60s')
             : raw,
         );
       }
     })();
-  }, [buildContext, cancelInFlight, deepDiveLoading, lang, loading]);
+  }, [buildContext, cancelInFlight, clearGrammarExamples, deepDiveLoading, lang, loading]);
+
+  const requestGrammarExamples = useCallback(
+    (capsule: AiGrammarCapsule) => {
+      if (!capsule.term || grammarExamplesLoading || deepDiveLoading || loading) return;
+
+      if (grammarAbortRef.current) {
+        grammarAbortRef.current.abort();
+        grammarAbortRef.current = null;
+      }
+      const controller = new AbortController();
+      grammarAbortRef.current = controller;
+
+      setActiveGrammarCapsule(capsule);
+      setGrammarLesson(null);
+      setGrammarExamplesError(null);
+      if (!tryUse('explain')) return; // AI 限额检查（语法例句）
+
+      setGrammarExamplesLoading(true);
+
+      const meta = analyzeMetaRef.current;
+      const settings = getAppSettings();
+      const language = langCodeToMicroscopeLanguage(lang);
+
+      void (async () => {
+        try {
+          const local = await findGrammarExamplesFromStudyCards({
+            lang,
+            term: capsule.term,
+            excludeText: meta.line || meta.phrase,
+            limit: 1,
+          });
+          if (controller.signal.aborted) return;
+
+          const seed = local[0]
+            ? { source: local[0].source, text: local[0].text, zh: local[0].zh }
+            : null;
+
+          const prompt = buildGrammarPointLessonPrompt({
+            language,
+            exam: capsule.exam,
+            term: capsule.term,
+            title: capsule.title,
+            songTitle: title,
+            artist,
+            seedExample: seed,
+            interfaceLanguage: settings.interfaceLanguage,
+          });
+          const requestId = nanoid();
+
+          await cloudbaseGateway.init();
+          const res = await generateExplanation(
+            cloudbaseGateway,
+            requestId,
+            prompt,
+            lang ?? 'jp',
+            settings.interfaceLanguage,
+            controller.signal,
+          );
+          if (controller.signal.aborted) return;
+
+          if (!res.ok || !res.content) {
+            // AI 失败时：若有本地例句，仍给一条极简回落
+            if (seed) {
+              setGrammarLesson({
+                meaning: capsule.title || `关于「${capsule.term}」`,
+                usage: L('（网络讲解暂不可用，以下为学习卡例句）', '(Online explanation unavailable, showing study card example)'),
+                emotion: '—',
+                example: { ...local[0], via: 'local' },
+                raw: '',
+              });
+              setGrammarExamplesLoading(false);
+              setGrammarExamplesError(res.error?.message || L('讲解生成失败，已显示本地例句', 'Explanation failed, showing local example'));
+              return;
+            }
+            setGrammarExamplesLoading(false);
+            setGrammarExamplesError(res.error?.message || L('获取语法讲解失败', 'Failed to get grammar explanation'));
+            return;
+          }
+
+          const lesson = parseGrammarPointLesson(res.content, capsule.term);
+          // 模型例句不合格时，用本地种子补上
+          if (!lesson.example && seed) {
+            lesson.example = { ...local[0], via: 'local' };
+          }
+          setGrammarLesson(lesson);
+          setGrammarExamplesLoading(false);
+          if (!lesson.meaning && !lesson.usage && !lesson.example) {
+            setGrammarExamplesError(L('未生成有效讲解，请重试', 'No valid explanation generated, please retry'));
+          }
+        } catch (err) {
+          if (controller.signal.aborted) return;
+          setGrammarExamplesLoading(false);
+          const raw = err instanceof Error ? err.message : L('请求失败', 'Request failed');
+          setGrammarExamplesError(raw);
+        }
+      })();
+    },
+    [artist, deepDiveLoading, grammarExamplesLoading, lang, loading, title],
+  );
 
   const analyzeSelection = useCallback(
     (selection: string, context?: string | ExplainPickContext) => {
       const phrase = selection.replace(/\s+/g, ' ').trim();
       if (!phrase) {
-        showToast('请先划选要分析的词或句');
+        showToast(L('请先划选要分析的词或句', 'Please select a word or sentence to analyze'));
         return;
       }
 
@@ -324,13 +480,17 @@ export function useExplainSession({
       setLastModel(null);
       setPanelOpen(true);
       setDeepDiveLoading(false);
+      setActiveGrammarCapsule(null);
+      setGrammarLesson(null);
+      setGrammarExamplesLoading(false);
+      setGrammarExamplesError(null);
 
       const code = lang ?? 'jp';
       const useLocal = code === 'jp' || code === 'ko';
 
       if (!useLocal) {
         setLoading(false);
-        setError('当前语言暂无本地词典，可点「AI讲解」。');
+        setError(L('当前语言暂无本地词典，可点「AI讲解」。', 'No local dictionary for this language. Tap "AI Explain".'));
         return;
       }
 
@@ -356,7 +516,7 @@ export function useExplainSession({
             setResult(null);
             setResultSource(null);
             setLoading(false);
-            setError('本地词典未命中。可缩短选区，或直接点「AI讲解」。');
+            setError(L('本地词典未命中。可缩短选区，或直接点「AI讲解」。', 'Not found in local dictionary. Shorten selection or tap "AI Explain".'));
           })
           .catch((err) => {
             console.warn('[krdict]', err);
@@ -366,8 +526,8 @@ export function useExplainSession({
             setLoading(false);
             setError(
               err instanceof Error
-                ? `本地词典加载失败：${err.message}。可点「AI讲解」。`
-                : '本地词典加载失败。可点「AI讲解」。',
+                ? `${L('本地词典加载失败：', 'Local dictionary load failed: ')}${err.message}${L('。可点「AI讲解」。', '. Tap "AI Explain".')}`
+                : L('本地词典加载失败。可点「AI讲解」。', 'Local dictionary load failed. Tap "AI Explain".'),
             );
           });
         return;
@@ -392,7 +552,7 @@ export function useExplainSession({
           setResult(null);
           setResultSource(null);
           setLoading(false);
-          setError('本地词典未命中。可缩短选区，或直接点「AI讲解」。');
+          setError(L('本地词典未命中。可缩短选区，或直接点「AI讲解」。', 'Not found in local dictionary. Shorten selection or tap "AI Explain".'));
         })
         .catch((err) => {
           console.warn('[jmdict]', err);
@@ -402,8 +562,8 @@ export function useExplainSession({
           setLoading(false);
           setError(
             err instanceof Error
-              ? `本地词典加载失败：${err.message}。可点「AI讲解」。`
-              : '本地词典加载失败。可点「AI讲解」。',
+              ? `${L('本地词典加载失败：', 'Local dictionary load failed: ')}${err.message}${L('。可点「AI讲解」。', '. Tap "AI Explain".')}`
+              : L('本地词典加载失败。可点「AI讲解」。', 'Local dictionary load failed. Tap "AI Explain".'),
           );
         });
     },
@@ -418,33 +578,43 @@ export function useExplainSession({
 
   const addToLyricsNote = useCallback(() => {
     if (!appendExplainNote) {
-      showToast('当前页面无法添加笔记');
+      showToast(L('当前页面无法添加笔记', 'Cannot add notes on this page'));
       return;
     }
     const noteId = nanoid();
     const micro = result?.micro_analysis;
-    const aiParts = aiExplain ? parseAiExplainParts(aiExplain) : null;
+    const aiParts = aiExplain
+      ? parseAiExplainParts(aiExplain, { language: langCodeToMicroscopeLanguage(lang) })
+      : null;
     const contextSense = aiParts?.contextSense?.trim() || '';
     const grammar = aiParts?.grammar?.trim() || '';
+    const formula = aiParts?.formulaRaw?.trim() || '';
     const mood = aiParts?.mood?.trim() || '';
+    const slang = aiParts?.slang?.trim() || '';
+    const loanSummary = formatLoanwordsForNote(aiParts?.loanwords ?? []);
+    const moodCombined = [mood, slang].filter(Boolean).join('\n');
+    const senseWithLoan = [contextSense, loanSummary ? `外来语：${loanSummary}` : '']
+      .filter(Boolean)
+      .join('\n');
     const term = (targetPhrase || micro?.dictionary_form || '').replace(/\s+/g, '').trim();
     if (!term) {
-      showToast('暂无可添加的内容');
+      showToast(L('暂无可添加的内容', 'Nothing to add'));
       return;
     }
-    if (!contextSense && !grammar && !mood) {
-      showToast('请先完成 AI讲解');
+    if (!senseWithLoan && !grammar && !moodCombined) {
+      showToast(L('请先完成 AI讲解', 'Please complete AI explanation first'));
       return;
     }
     appendExplainNote({
       id: noteId,
       term,
-      contextSense: contextSense || micro?.direct_meaning?.trim() || term,
+      contextSense: senseWithLoan || micro?.direct_meaning?.trim() || term,
       grammar: grammar || undefined,
-      mood: mood || undefined,
+      formula: formula || undefined,
+      mood: moodCombined || undefined,
     });
-    showToast('已添加到笔记');
-  }, [aiExplain, appendExplainNote, result, showToast, targetPhrase]);
+    showToast(L('已添加到笔记', 'Added to notes'));
+  }, [aiExplain, appendExplainNote, lang, result, showToast, targetPhrase]);
 
   return {
     explainMode,
@@ -455,6 +625,7 @@ export function useExplainSession({
     closePanel,
     targetPhrase,
     surroundingLine,
+    lang,
     result,
     resultSource,
     aiExplain,
@@ -468,5 +639,12 @@ export function useExplainSession({
     retryAnalyze,
     requestAiDeepDive,
     addToLyricsNote,
+    requestGrammarExamples,
+    clearGrammarExamples,
+    activeGrammarCapsule,
+    grammarExamples: grammarLesson?.example ? [grammarLesson.example] : [],
+    grammarLesson,
+    grammarExamplesLoading,
+    grammarExamplesError,
   };
 }

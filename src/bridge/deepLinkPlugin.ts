@@ -12,6 +12,8 @@ export interface AiAppInfo {
   id: string;
   name: string;
   scheme: string;
+  /** 网页版地址：浏览器端唤起客户端失败时降级打开 */
+  webUrl?: string;
 }
 
 export interface DeepLinkPlugin {

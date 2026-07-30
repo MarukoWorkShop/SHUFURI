@@ -10,6 +10,8 @@ export type ExplainNotePayload = {
   term: string;
   contextSense: string;
   grammar?: string;
+  /** 语法分子式（如「[语素|标签] + [语素|标签]」），保存与导出时保留 */
+  formula?: string;
   mood?: string;
   /** 正文语种；决定 vocab-word / vocab-word-ko 等 class */
   lang?: LangCode;
@@ -45,6 +47,10 @@ export function buildExplainNoteItemHtml(payload: ExplainNotePayload): string {
   const detail = grammar
     ? `<p class="grammar-detail">${grammarHtml}</p>`
     : '';
+  const formula = payload.formula?.trim() || '';
+  const formulaLine = formula
+    ? `<p class="vocab-formula">${escapeHtml(formula)}</p>`
+    : '';
   const moodLine = mood
     ? `<p class="vocab-ex-zh">${escapeHtml(mood)}</p>`
     : '';
@@ -58,6 +64,7 @@ export function buildExplainNoteItemHtml(payload: ExplainNotePayload): string {
       id,
     )}" aria-label="删除划词笔记" style="display:none">×</button>` +
     `<p class="vocab-line1"><span class="${vocabWordClass}">${escapeHtml(term)}</span>${meaning}</p>` +
+    formulaLine +
     detail +
     moodLine +
     `</div>`
@@ -102,6 +109,42 @@ function noteNodesInSection(section: HTMLElement): HTMLElement[] {
   ).filter((n): n is HTMLElement => n instanceof HTMLElement);
 }
 
+export type ExplainNoteListItem = {
+  id: string;
+  term: string;
+  contextSense: string;
+  grammar: string;
+  formula: string;
+  mood: string;
+};
+
+/** 从正文解析划词笔记列表（桌面笔记本页镜像；不另持久化） */
+export function listExplainNotesFromBodyHtml(bodyHtml: string): ExplainNoteListItem[] {
+  const parsed = parseExplainNotesRoot(bodyHtml);
+  if (!parsed?.section) return [];
+
+  return noteNodesInSection(parsed.section).map((note, index) => {
+    const id =
+      note.getAttribute('data-shufuri-explain-note-id')?.trim() || `orphan-${index}`;
+    const term =
+      (
+        note.querySelector(
+          '.vocab-line1 .vocab-word, .vocab-line1 .vocab-word-ko, .vocab-line1 .vocab-word-cn',
+        ) as HTMLElement | null
+      )?.textContent?.trim() ?? '';
+    const contextSense =
+      (note.querySelector('.vocab-line1 .vocab-meaning') as HTMLElement | null)?.textContent?.trim() ??
+      '';
+    const grammar =
+      (note.querySelector('.grammar-detail') as HTMLElement | null)?.textContent?.trim() ?? '';
+    const formula =
+      (note.querySelector('.vocab-formula') as HTMLElement | null)?.textContent?.trim() ?? '';
+    const mood =
+      (note.querySelector('.vocab-ex-zh') as HTMLElement | null)?.textContent?.trim() ?? '';
+    return { id, term, contextSense, grammar, formula, mood };
+  });
+}
+
 function serializeExplainNotesRoot(root: HTMLElement): string {
   // 若仅有单个 clip-body 子节点，写回时保持单一根（与 normalizeLyricsBodyHtml 一致）
   if (
@@ -119,7 +162,7 @@ function ensureNoteDeleteButton(note: HTMLElement, noteId: string): boolean {
   let btn = note.querySelector('.shufuri-explain-note__delete') as HTMLElement | null;
   if (!btn) {
     btn = document.createElement('button');
-    btn.type = 'button';
+    (btn as HTMLButtonElement).type = 'button';
     btn.className = 'shufuri-explain-note__delete';
     btn.setAttribute('aria-label', '删除划词笔记');
     btn.setAttribute('style', 'display:none');

@@ -11,6 +11,14 @@ import type { PedagogicalLevel } from '../../services/pedagogicalLevel';
  */
 export type EncoderPromptPhase = 'full' | 'lyrics' | 'study';
 
+/**
+ * 重试原因（替换旧的 `retry: boolean`）：
+ * - 'truncation': AI 截断了歌词，未输出到最后一行（原 `retry=true` 行为）
+ * - 'hallucination': AI 编造了错误的歌词，返回了不属于这首歌的内容
+ * - 'general': 一般性失败（格式错误等）
+ */
+export type RetryReason = 'truncation' | 'hallucination' | 'general';
+
 export type EncoderPromptOptions = {
   includeVocabAndGrammar: boolean;
   pedagogicalLevel?: PedagogicalLevel;
@@ -20,6 +28,8 @@ export type EncoderPromptOptions = {
   phase?: EncoderPromptPhase;
   /** 第一步（lyrics）重试：上一趟被截断，强化"必须输出到最后一句"。 */
   retry?: boolean;
+  /** 重试原因（推荐使用，会注入更有针对性的纠正提示词）。覆盖 `retry`。 */
+  retryReason?: RetryReason;
   /** 第二步（study）：已由用户确认的歌词记录流（含 @0/H/L/@9），逐字回显。 */
   confirmedLyrics?: string;
   ocrContext?: {
@@ -264,6 +274,8 @@ ${langNotes[activeTarget]}`;
 export function buildStreamCloseBlock(opts?: {
   lyricsOnly?: boolean;
   prioritizeLyrics?: boolean;
+  /** 学习材料阶段：必须保留 V/G，只能压缩示例长度 */
+  requireStudySections?: boolean;
 }): string {
   let budgetLine =
     '- If token budget is tight: shorten V/G or omit @1/@2 entirely, but NEVER omit @9';
@@ -273,6 +285,9 @@ export function buildStreamCloseBlock(opts?: {
   } else if (opts?.prioritizeLyrics) {
     budgetLine =
       '- NEVER stop before the last sung line; If token budget is tight: shorten/omit V/G first — NEVER truncate L rows; NEVER omit @9';
+  } else if (opts?.requireStudySections) {
+    budgetLine =
+      '- This is the STUDY phase: you MUST output @1 V section and @2 G section after all L rows. If token budget is tight, shorten col6/7 example sentences but NEVER omit @1/@2 entirely; NEVER omit @9';
   }
   return `
 [Stream_Close — REQUIRED]
@@ -288,6 +303,7 @@ export function buildConfirmedLyricsBlock(confirmedLyrics: string): string {
 [Confirmed_Lyrics — FINAL, user-verified]
 - The record stream below is the FINAL lyrics. Do NOT search, re-transcribe, translate differently, add, remove, reorder, split, merge, or alter ANY H/L row.
 - Re-emit @0, the H row, and EVERY L row below VERBATIM (same text, same 1..N indices); then append @1 V / @2 G study rows; end with @9.
+- This is the STUDY phase: the @1 V and @2 G sections are REQUIRED. Output at least one V| row and at least one G| row after all L rows.
 - V/G col5 (lyric_line_no) MUST be one of the L indices below; base every study item on these confirmed lyrics only.
 <<<CONFIRMED
 ${stream}
@@ -309,7 +325,7 @@ export function buildSourceIntegrityBlock(
   artist: string,
   title: string,
   firstLyricLine?: string,
-  opts?: { completeness?: boolean; retry?: boolean },
+  opts?: { completeness?: boolean; retry?: boolean; retryReason?: RetryReason },
 ): string {
   const searchQuery =
     artist.trim() && artist.trim() !== '佚名'
@@ -322,22 +338,52 @@ export function buildSourceIntegrityBlock(
     ? `\n- COMPLETENESS: transcribe the ENTIRE song end-to-end — every verse, pre-chorus, chorus (including repeats as actually sung), bridge and outro. Keep going until the final sung line, THEN @9.
 - NEVER stop early, NEVER summarize with "…", "（略）", "以下省略", "副歌重复", or placeholders; write out repeated sections in full as sung.`
     : '';
-  const retry = opts?.retry
-    ? `\n- ⚠ RETRY: the previous attempt was INCOMPLETE / truncated mid-song. This time output EVERY line to the very end. Full lyric coverage is the top priority; drop nothing.`
-    : '';
+
+  // Resolve retry content: `retryReason` takes precedence over `retry: boolean`
+  const reason = opts?.retryReason ?? (opts?.retry ? 'truncation' as RetryReason : undefined);
+  const retryBlock = buildRetryBlock(reason);
+
   return `
 [Source_Integrity]
 - Target: "${artist} - ${title}" — studio OFFICIAL published lyrics ONLY (not memory, paraphrase, fan lyric)
 - BEFORE encoding: search web for ${searchQuery}; transcribe verbatim from ≥2 matching lyric pages; turn on 联网/搜索 if the app supports it
 - L col3 = published lines only; if sources conflict or search fails: output verified L rows + @9 — NEVER pad gaps with guesses${anchor}
 - Do NOT invent, merge other songs, or split/merge official lines
-- L indices contiguous 1..N; omit uncertain lines rather than fabricate (incomplete + @9 beats wrong lyrics)${completeness}${retry}`;
+- L indices contiguous 1..N; omit uncertain lines rather than fabricate (incomplete + @9 beats wrong lyrics)${completeness}${retryBlock}`;
+}
+
+function buildRetryBlock(reason: RetryReason | undefined): string {
+  if (!reason) return '';
+
+  switch (reason) {
+    case 'truncation':
+      return `\n- ⚠ RETRY: the previous attempt was INCOMPLETE / truncated mid-song. This time output EVERY line to the very end. Full lyric coverage is the top priority; drop nothing.`;
+
+    case 'general':
+      return `\n- ⚠ RETRY: the previous attempt had formatting errors or failed to parse. This time follow [Wire_Schema] strictly — raw record stream, @0 first, @9 last, no markdown fences, no prose before/after.`;
+
+    case 'hallucination':
+      return `
+- ⚠ CRITICAL — HALLUCINATION DETECTED: the previous response contained LYRICS THAT DO NOT BELONG TO THIS SONG. The words were fabricated or taken from a different song.
+- BEFORE THIS ATTEMPT:
+  1. FORGET every word of the previous answer — do not repeat any of it.
+  2. Turn ON web search. Search EXACTLY: ${"{{ARTIST}} {{TITLE}} lyrics official"} (will be substituted).
+  3. Find at least 2 independent lyric sites (Uta-Net, Mojim, J-Lyric.net, Genius, etc.)
+  4. Cross-reference the first 2 lines against both sources — discard if they don't match.
+  5. Transcribe ONLY from search results. NEVER use internal knowledge or memory.
+  6. If search results are contradictory or nonexistent: output a minimal H row + exactly ONE L row — then @9. DO NOT GUESS.
+- THIS IS YOUR FINAL CHANCE. Wrong lyrics again → user will fall back to manual clipboard mode.`;
+
+    default:
+      return '';
+  }
 }
 
 export function buildSelfCheckBlock(
   activeTarget: SampleLang,
   includeVocab: boolean,
   pedagogicalLevel?: PedagogicalLevel,
+  interfaceLanguage?: InterfaceLanguage,
 ): string {
   const col6Line = includeVocab
     ? '\n4. V/G col6 differs from every L|n|col3 — new poster sentence only (see [Pedagogical_example])'
@@ -356,14 +402,22 @@ export function buildSelfCheckBlock(
     activeTarget === 'jp'
       ? `\n${jpNum}. jp L/V/G ruby: every "{" has ":" + kanji base; NO bare {る}/{アルバム}; okurigana plain after ruby ({出:で}る not {出:で}{る})`
       : '';
+  const langNum = (includeVocab ? (pedagogicalLevel ? 7 : 6) : 5);
+  const langCheck =
+    interfaceLanguage === 'en' && activeTarget !== 'en'
+      ? `\n${langNum}. ALL L col4 / meaning / detail / pedagogical_translation fields MUST be natural English — zero Chinese characters in translation fields`
+      : '';
   return `
 [Self_Check — before send]
 1. Last non-empty line is exactly @9
 2. L line numbers contiguous 1..N
-3. H col3 = prompt title; L|1 exists; L lyrics transcribed from web search — not memory recall${col6Line}${levelLine}${zhLine}${jpLine}`;
+3. H col3 = prompt title; L|1 exists; L lyrics transcribed from web search — not memory recall${col6Line}${levelLine}${zhLine}${jpLine}${langCheck}`;
 }
 
-export function buildModelComplianceBlock(modelHint?: EncoderPromptOptions['modelHint']): string {
+export function buildModelComplianceBlock(
+  modelHint?: EncoderPromptOptions['modelHint'],
+  interfaceLanguage?: InterfaceLanguage,
+): string {
   let extra = '';
   if (modelHint === 'qwen') {
     extra =
@@ -375,9 +429,13 @@ export function buildModelComplianceBlock(modelHint?: EncoderPromptOptions['mode
     extra =
       '\n- Doubao: backend enforces web_search via Responses API for Step1; transcribe ONLY from search results — never guess from memory';
   }
+  const langRule =
+    interfaceLanguage === 'en'
+      ? '\n- CRITICAL: All L col4 translations and all gloss/meaning fields MUST be in natural English. The user interface is English — do NOT output Chinese in ANY translation field. The sample artist/title names are in CJK for metadata only — translations MUST be English.'
+      : '';
   return `
 [Model_Compliance]
-- Output RAW record stream only — first line @0; no \`\`\` fences, HTML, bullet lists, JSON, or epilogue after @9${extra}`;
+- Output RAW record stream only — first line @0; no \`\`\` fences, HTML, bullet lists, JSON, or epilogue after @9${extra}${langRule}`;
 }
 
 export type SampleLang = 'jp' | 'ko' | 'en' | 'zh';

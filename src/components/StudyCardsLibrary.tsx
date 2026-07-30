@@ -5,6 +5,7 @@ import type { StudyCard } from '../studyCards/types';
 import type { LangCode } from '../services/appSettings';
 import { shareAnkiDeckTsv } from '../studyCards/shareAnkiDeck';
 import StudyCardDetailOverlay from './StudyCardDetailOverlay';
+import { L } from '../utils/i18n';
 import './StudyCardsLibrary.css';
 
 type Props = Record<string, never>;
@@ -18,7 +19,7 @@ type LangFilter = 'all' | LangCode;
 const LANG_FILTER_ORDER: LangFilter[] = ['all', 'jp', 'ko', 'en', 'zh'];
 
 function kindLabel(kind: StudyCard['kind']): string {
-  return kind === 'vocab' ? '词汇' : '语法';
+  return kind === 'vocab' ? L('词汇', 'Vocab') : L('语法', 'Grammar');
 }
 
 function langTagLabel(lang: LangCode): string {
@@ -60,7 +61,7 @@ export default function StudyCardsLibrary(_props: Props) {
     try {
       setItems(await listStudyCards());
     } catch (e) {
-      setError(e instanceof Error ? e.message : '加载失败');
+      setError(e instanceof Error ? e.message : L('加载失败', 'Load failed'));
     } finally {
       setLoading(false);
     }
@@ -236,7 +237,7 @@ export default function StudyCardsLibrary(_props: Props) {
     try {
       await shareAnkiDeckTsv(cardsToExport);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '导出失败');
+      setError(e instanceof Error ? e.message : L('导出失败', 'Export failed'));
     } finally {
       setExporting(false);
     }
@@ -247,8 +248,8 @@ export default function StudyCardsLibrary(_props: Props) {
     const count = selectedIds.size;
     const msg =
       count === items.length
-        ? `确定删除全部 ${count} 张学习卡？`
-        : `确定删除已选的 ${count} 张学习卡？`;
+        ? `${L('确定删除全部', 'Delete all')} ${count} ${L('张学习卡？', ' study cards?')}`
+        : `${L('确定删除已选的', 'Delete selected')} ${count} ${L('张学习卡？', ' study cards?')}`;
     if (!window.confirm(msg)) return;
     setDeleting(true);
     setError('');
@@ -259,15 +260,15 @@ export default function StudyCardsLibrary(_props: Props) {
       const nextItems = await listStudyCards();
       setItems(nextItems);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '删除失败');
+      setError(e instanceof Error ? e.message : L('删除失败', 'Delete failed'));
     } finally {
       setDeleting(false);
     }
   };
 
   const handleDelete = async (id: string, front: string) => {
-    const label = front.trim() || '此卡片';
-    if (!window.confirm(`确定删除「${label}」？`)) return;
+    const label = front.trim() || L('此卡片', 'this card');
+    if (!window.confirm(`${L('确定删除「', 'Delete "')}${label}」？`)) return;
     const removedIndex = items.findIndex((item) => item.id === id);
     await deleteStudyCard(id);
     setSelectedIds((prev) => {
@@ -308,7 +309,7 @@ export default function StudyCardsLibrary(_props: Props) {
         style={drawerDragStyle}
         role="dialog"
         aria-modal="true"
-        aria-label="学习卡片"
+        aria-label={L('学习卡片', 'Study Cards')}
       >
         <div
           className="study-cards-drawer__dismiss-handle"
@@ -316,7 +317,7 @@ export default function StudyCardsLibrary(_props: Props) {
           onPointerMove={onDismissHandlePointerMove}
           onPointerUp={onDismissHandlePointerUp}
           onPointerCancel={onDismissHandlePointerCancel}
-          aria-label="下拉收起"
+          aria-label={L('下拉收起', 'Collapse')}
         >
           <div className="study-cards-drawer__binding" aria-hidden />
         </div>
@@ -328,7 +329,7 @@ export default function StudyCardsLibrary(_props: Props) {
                 type="button"
                 className="study-cards-drawer__lang-filter"
                 onClick={cycleLangFilter}
-                aria-label={`语言筛选：${langFilterLabel(langFilter)}`}
+                aria-label={`${L('语言筛选：', 'Lang filter: ')}${langFilterLabel(langFilter)}`}
               >
                 {langFilterLabel(langFilter)}
               </button>
@@ -342,33 +343,33 @@ export default function StudyCardsLibrary(_props: Props) {
                 disabled={deleting}
                 onClick={() => void handleDeleteSelected()}
               >
-                {deleting ? '删除中…' : '删除所选'}
+                {deleting ? L('删除中…', 'Deleting…') : L('删除所选', 'Delete selected')}
               </button>
             )}
             {items.length > 0 && (
               <button type="button" className="study-cards-drawer__select-all" onClick={toggleSelectAll}>
-                {allSelected ? '取消全选' : '全选'}
+                {allSelected ? L('取消全选', 'Deselect all') : L('全选', 'Select all')}
               </button>
             )}
             <button type="button" className="study-cards-drawer__close" onClick={closeDrawer}>
-              帰 / 收起
+              {L('帰 / 收起', 'Collapse')}
             </button>
           </div>
         </header>
 
         <div className="study-cards-drawer__body">
-          {loading && <p className="saved-library-hint">加载中…</p>}
+          {loading && <p className="saved-library-hint">{L('加载中…', 'Loading…')}</p>}
           {error && <p className="error-msg">{error}</p>}
 
           {!loading && items.length === 0 && (
             <p className="saved-library-hint saved-library-hint--drawer">
-              暂无学习卡。粘贴含「重点词汇 / 重点语法」的 AI 歌词并排版后，卡片会自动收录于此。
+              {L('暂无学习卡。粘贴含「重点词汇 / 重点语法」的 AI 歌词并排版后，卡片会自动收录于此。', 'No study cards. Paste AI lyrics with vocab/grammar and layout to auto-populate.')}
             </p>
           )}
 
           {!loading && items.length > 0 && visibleItems.length === 0 && (
             <p className="saved-library-hint saved-library-hint--drawer">
-              暂无 {langFilterLabel(langFilter)} 卡片，点击标题旁标签切换语言。
+              {L('暂无', 'No')} {langFilterLabel(langFilter)} {L('卡片，点击标题旁标签切换语言。', 'cards. Tap tags near title to switch language.')}
             </p>
           )}
 
@@ -389,7 +390,7 @@ export default function StudyCardsLibrary(_props: Props) {
                       className="study-cards-drawer__checkbox"
                       checked={selectedIds.has(item.id)}
                       onChange={() => toggleSelect(item.id)}
-                      aria-label={`选择 ${item.front}`}
+                      aria-label={`${L('选择', 'Select')} ${item.front}`}
                     />
                   </label>
                   <button
@@ -413,9 +414,9 @@ export default function StudyCardsLibrary(_props: Props) {
                       e.stopPropagation();
                       void handleDelete(item.id, item.front);
                     }}
-                    aria-label={`删除 ${item.front}`}
+                    aria-label={`${L('删除', 'Delete')} ${item.front}`}
                   >
-                    删除
+                    {L('删除', 'Delete')}
                   </button>
                 </li>
               ))}
@@ -430,10 +431,10 @@ export default function StudyCardsLibrary(_props: Props) {
             disabled={!cardsToExport.length || exporting}
             onClick={() => void handleExport()}
           >
-            {exporting ? '导出中…' : ' 导出至 Anki '}
+            {exporting ? L('导出中…', 'Exporting…') : ` ${L('导出至 Anki', 'Export to Anki')} `}
           </button>
           {selectedIds.size > 0 && (
-            <p className="study-cards-drawer__export-hint">已选 {selectedIds.size} 张；未选时导出全部</p>
+            <p className="study-cards-drawer__export-hint">{`${L('已选', 'Selected')} ${selectedIds.size} ${L('张；未选时导出全部', 'cards; export all if none selected')}`}</p>
           )}
         </footer>
       </div>,
@@ -455,7 +456,7 @@ export default function StudyCardsLibrary(_props: Props) {
             {!loading && (
               <span className="saved-library-count">
                 <span className="saved-library-count__num">{items.length}</span>
-                <span className="saved-library-count__unit">张</span>
+                <span className="saved-library-count__unit">{L('张', 'cards')}</span>
               </span>
             )}
           </span>

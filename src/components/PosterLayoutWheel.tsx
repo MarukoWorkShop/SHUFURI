@@ -8,22 +8,19 @@ import {
 import { hapticButton } from '../hooks/useHaptics';
 import { isInteractionSoundEnabled } from '../services/appSettings';
 import type { PosterLayoutProfile } from '../utils/shufuriPoster/types';
+import { L } from '../utils/i18n';
 import './PosterLayoutWheel.css';
 
 const ITEM_W = 104;
 
 type LayoutOption = {
   profile: PosterLayoutProfile;
-  caption: string;
-  ariaLabel: string;
   icon: ReactNode;
 };
 
-const LAYOUTS: readonly LayoutOption[] = [
+const LAYOUT_OPTIONS: readonly LayoutOption[] = [
   {
     profile: 'clipPosterPrint',
-    caption: '(A5、A6、B5、B6)',
-    ariaLabel: 'B5 打印 (A5、A6、B5、B6)',
     icon: (
       <span className="layout-icon-paper" aria-hidden="true">
         <span className="layout-icon-paper__lines">
@@ -36,8 +33,6 @@ const LAYOUTS: readonly LayoutOption[] = [
   },
   {
     profile: 'squarePoster',
-    caption: '1:1 方形',
-    ariaLabel: '1:1 方形',
     icon: (
       <span className="layout-icon-square" aria-hidden="true">
         <span className="layout-icon-square__lines">
@@ -50,8 +45,6 @@ const LAYOUTS: readonly LayoutOption[] = [
   },
   {
     profile: 'mobilePoster',
-    caption: '手机预览/A6P',
-    ariaLabel: '手机预览 / A6P',
     icon: (
       <span className="layout-icon-phone" aria-hidden="true">
         <span className="layout-icon-phone__lines">
@@ -65,8 +58,31 @@ const LAYOUTS: readonly LayoutOption[] = [
 ];
 
 function layoutIndex(profile: PosterLayoutProfile): number {
-  const i = LAYOUTS.findIndex((item) => item.profile === profile);
+  const i = LAYOUT_OPTIONS.findIndex((item) => item.profile === profile);
   return i >= 0 ? i : 0;
+}
+
+/** 解析每个布局的本地化文案（仅在渲染时调用，响应界面语言切换） */
+function resolveLayoutLabels(profile: PosterLayoutProfile): {
+  caption: string;
+  ariaLabel: string;
+} {
+  if (profile === 'clipPosterPrint') {
+    return {
+      caption: L('(A5、A6、B5、B6)', '(A5, A6, B5, B6)'),
+      ariaLabel: L('B5 打印 (A5、A6、B5、B6)', 'B5 print (A5, A6, B5, B6)'),
+    };
+  }
+  if (profile === 'squarePoster') {
+    return {
+      caption: L('1:1 方形', '1:1 square'),
+      ariaLabel: L('1:1 方形', '1:1 square'),
+    };
+  }
+  return {
+    caption: L('手机预览/A6P', 'Mobile preview / A6P'),
+    ariaLabel: L('手机预览 / A6P', 'Mobile preview / A6P'),
+  };
 }
 
 function triggerWheelSnapFeedback(soundEnabled: boolean): void {
@@ -124,7 +140,7 @@ export default function PosterLayoutWheel({ value, onChange, soundEnabled }: Pro
   const scrollToIndex = useCallback((index: number, smooth: boolean) => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
-    const clamped = Math.max(0, Math.min(LAYOUTS.length - 1, index));
+    const clamped = Math.max(0, Math.min(LAYOUT_OPTIONS.length - 1, index));
     scroller.scrollTo({
       left: clamped * ITEM_W,
       behavior: smooth ? 'smooth' : 'auto',
@@ -133,13 +149,13 @@ export default function PosterLayoutWheel({ value, onChange, soundEnabled }: Pro
 
   const commitIndex = useCallback(
     (index: number, fromUser: boolean) => {
-      const clamped = Math.max(0, Math.min(LAYOUTS.length - 1, index));
+      const clamped = Math.max(0, Math.min(LAYOUT_OPTIONS.length - 1, index));
       if (clamped === indexRef.current) {
         applyItemVisuals();
         return;
       }
       indexRef.current = clamped;
-      onChange(LAYOUTS[clamped]!.profile);
+      onChange(LAYOUT_OPTIONS[clamped]!.profile);
       if (fromUser) {
         triggerWheelSnapFeedback(feedbackEnabled);
       }
@@ -211,30 +227,33 @@ export default function PosterLayoutWheel({ value, onChange, soundEnabled }: Pro
           className="paper-wheel__scroller"
           tabIndex={0}
           role="listbox"
-          aria-label="导出纸张规格"
+          aria-label={L('导出纸张规格', 'Export paper size')}
         >
           <div className="paper-wheel__list">
-            {LAYOUTS.map((item, i) => (
-              <button
-                key={item.profile}
-                type="button"
-                ref={(el) => {
-                  itemRefs.current[i] = el;
-                }}
-                className="paper-wheel__item"
-                role="option"
-                data-no-press-feedback
-                aria-label={item.ariaLabel}
-                aria-selected={item.profile === value}
-                onClick={() => scrollToIndex(i, true)}
-              >
-                <span className="paper-wheel__icon">{item.icon}</span>
-                <span className="paper-wheel__foot">
-                  <span className="paper-wheel__line" aria-hidden="true" />
-                  <span className="paper-wheel__caption">{item.caption}</span>
-                </span>
-              </button>
-            ))}
+            {LAYOUT_OPTIONS.map((item, i) => {
+              const labels = resolveLayoutLabels(item.profile);
+              return (
+                <button
+                  key={item.profile}
+                  type="button"
+                  ref={(el) => {
+                    itemRefs.current[i] = el;
+                  }}
+                  className="paper-wheel__item"
+                  role="option"
+                  data-no-press-feedback
+                  aria-label={labels.ariaLabel}
+                  aria-selected={item.profile === value}
+                  onClick={() => scrollToIndex(i, true)}
+                >
+                  <span className="paper-wheel__icon">{item.icon}</span>
+                  <span className="paper-wheel__foot">
+                    <span className="paper-wheel__line" aria-hidden="true" />
+                    <span className="paper-wheel__caption">{labels.caption}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
         <div className="paper-wheel__mask" aria-hidden />

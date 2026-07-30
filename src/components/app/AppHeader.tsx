@@ -19,7 +19,6 @@ export default function AppHeader({
         <div className="app-brand-bar__top">
           <div className="app-brand-stack">
             <p className="app-brand">SHUFURI</p>
-            <p className="app-brand-tagline">优雅简洁的日语释音与排版助手</p>
           </div>
           {showHomeChrome && (
             <div className="app-header-buttons">

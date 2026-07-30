@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import InkFineTuneEditor from '../InkFineTuneEditor';
 import InkToolbox from '../InkToolbox';
 import ShufuriPosterEditCanvas from '../ShufuriPosterEditCanvas';
 import ExplainMicroscopePanel from '../ExplainMicroscopePanel';
+import EditNotebookPane from '../EditNotebookPane';
 import {
   usePosterDocumentContext,
   usePosterInkContext,
@@ -12,13 +13,24 @@ import { useEditCanvasScrollPerfProbe } from '../../hooks/useEditCanvasScrollPer
 import { useEditCanvasScrollInteractionLock } from '../../hooks/useEditCanvasScrollInteractionLock';
 import { useExplainSession } from '../../hooks/useExplainSession';
 import { useAppToast } from '../../context/AppToastContext';
-import { readSelectionForExplain, clampSelectionToExplainBlock } from '../../utils/readSelectionForExplain';
+import { EDIT_DESKTOP_SPLIT_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
 import {
+  createBrushController,
+  tokenizeBrushableHtml,
+  originalLineClassesForLang,
+  BRUSH_MAX_CHARS,
+  BRUSH_READY_CLASS,
+} from '../../utils/highlighterBrush';
+import { listExplainNotesFromBodyHtml } from '../../utils/appendExplainNoteToBody';
+import {
+  listStudyEntriesFromBodyHtml,
   readVocabItemFromElement,
   readGrammarItemFromElement,
   type VocabItemPayload,
   type GrammarItemPayload,
 } from '../../utils/studySectionItems';
+import { extractLyricsOnlyBodyHtml } from '../../utils/lyricsOnlyBodyHtml';
+import { L } from '../../utils/i18n';
 
 type StudyEditorKind = 'vocab' | 'grammar';
 
@@ -54,6 +66,8 @@ export default function EditScreen() {
 
   const ink = usePosterInkContext();
   const showToast = useAppToast();
+  const isDesktopSplit = useMediaQuery(EDIT_DESKTOP_SPLIT_QUERY);
+  const notebookScrollRef = useRef<HTMLDivElement>(null);
   const appendExplainNoteAndScroll = useCallback(
     (payload: {
       id: string;
@@ -64,12 +78,19 @@ export default function EditScreen() {
     }) => {
       appendExplainNote(payload);
       window.requestAnimationFrame(() => {
+        if (isDesktopSplit) {
+          const nb = notebookScrollRef.current;
+          if (nb) {
+            nb.scrollTo({ top: nb.scrollHeight, behavior: 'smooth' });
+            return;
+          }
+        }
         const el = editCanvasRef.current;
         if (!el) return;
         el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
       });
     },
-    [appendExplainNote, editCanvasRef],
+    [appendExplainNote, editCanvasRef, isDesktopSplit],
   );
   const explain = useExplainSession({
     title,
@@ -117,7 +138,7 @@ export default function EditScreen() {
       if (!noteId) {
         // 旧笔记无 id：先补齐后请用户再点一次（避免 DOM 与 bodyHtml 脱节）
         ensureExplainNoteIds();
-        showToast('笔记已刷新，请再点一次编辑');
+        showToast(L('笔记已刷新，请再点一次编辑', 'Notes refreshed, please click edit again'));
         return;
       }
 
@@ -144,6 +165,71 @@ export default function EditScreen() {
     [ensureExplainNoteIds, explain, showToast],
   );
 
+  const openEditForNoteId = useCallback(
+    (noteId: string) => {
+      const note = listExplainNotesFromBodyHtml(bodyHtml).find((n) => n.id === noteId);
+      if (!note || note.id.startsWith('orphan-')) {
+        ensureExplainNoteIds();
+        showToast(L('笔记已刷新，请再点一次编辑', 'Notes refreshed, please click edit again'));
+        return;
+      }
+      if (explain.panelOpen) explain.closePanel();
+      window.getSelection()?.removeAllRanges();
+      setEditingStudy(null);
+      setEditingNoteId(note.id);
+      setDraftTerm(note.term);
+      setDraftContextSense(note.contextSense);
+      setDraftGrammar(note.grammar);
+      setDraftMood(note.mood);
+    },
+    [bodyHtml, ensureExplainNoteIds, explain, showToast],
+  );
+
+  const openEditForVocabId = useCallback(
+    (itemId: string) => {
+      const item = listStudyEntriesFromBodyHtml(bodyHtml).vocab.find((n) => n.id === itemId);
+      if (!item || item.id.startsWith('orphan-')) {
+        ensureStudyItemIds();
+        showToast(L('条目已刷新，请再点一次编辑', 'Entries refreshed, please click edit again'));
+        return;
+      }
+      if (explain.panelOpen) explain.closePanel();
+      window.getSelection()?.removeAllRanges();
+      setEditingNoteId(null);
+      setEditingStudy({ id: item.id, kind: 'vocab' });
+      setVocabDraft({
+        term: item.term,
+        meaning: item.meaning,
+        example: item.example,
+        translation: item.translation,
+      });
+    },
+    [bodyHtml, ensureStudyItemIds, explain, showToast],
+  );
+
+  const openEditForGrammarId = useCallback(
+    (itemId: string) => {
+      const item = listStudyEntriesFromBodyHtml(bodyHtml).grammar.find((n) => n.id === itemId);
+      if (!item || item.id.startsWith('orphan-')) {
+        ensureStudyItemIds();
+        showToast(L('条目已刷新，请再点一次编辑', 'Entries refreshed, please click edit again'));
+        return;
+      }
+      if (explain.panelOpen) explain.closePanel();
+      window.getSelection()?.removeAllRanges();
+      setEditingNoteId(null);
+      setEditingStudy({ id: item.id, kind: 'grammar' });
+      setGrammarDraft({
+        titlePrimary: item.titlePrimary,
+        titleSecondary: item.titleSecondary,
+        detail: item.detail,
+        example: item.example,
+        translation: item.translation,
+      });
+    },
+    [bodyHtml, ensureStudyItemIds, explain, showToast],
+  );
+
   const openEditForStudyEl = useCallback(
     (itemEl: HTMLElement) => {
       const itemId = itemEl.getAttribute('data-shufuri-study-id')?.trim() ?? '';
@@ -154,7 +240,7 @@ export default function EditScreen() {
           : 'vocab';
       if (!itemId) {
         ensureStudyItemIds();
-        showToast('条目已刷新，请再点一次编辑');
+        showToast(L('条目已刷新，请再点一次编辑', 'Entries refreshed, please click edit again'));
         return;
       }
 
@@ -263,6 +349,18 @@ export default function EditScreen() {
     ink.setInkToolboxOpen(false);
   }, [ink]);
 
+  const enableExplainFromNotebook = useCallback(() => {
+    if (explain.explainMode) {
+      showToast(L('划词已开启：在左侧选中词语', 'Selection mode on: select text on the left'));
+      return;
+    }
+    ink.closeInkPopover();
+    ink.setInkEditMode(false);
+    explain.arm();
+    collapseToolbox();
+    showToast(L('划词已开启：选中后先出本地释义，需要时再点 AI讲解', 'Selection mode on: local dictionary first, tap AI Explain for more'));
+  }, [collapseToolbox, explain, ink, showToast]);
+
   const toggleInkToolbox = useCallback(() => {
     if (ink.inkToolboxOpen) {
       ink.closeInkPopover();
@@ -277,27 +375,27 @@ export default function EditScreen() {
       ink.setInkEditMode(false);
       ink.closeInkPopover();
       collapseToolbox();
-      showToast('已退出铅笔编辑');
+      showToast(L('已退出铅笔编辑', 'Pencil edit exited'));
       return;
     }
     if (explain.explainMode) explain.disarm();
     ink.setInkEditMode(true);
     collapseToolbox();
-    showToast('铅笔编辑已开启：点选注音或译文');
+    showToast(L('铅笔编辑已开启：点选注音或译文', 'Pencil edit on: tap to edit readings or translations'));
   }, [collapseToolbox, explain, ink, showToast]);
 
   const handleToggleExplain = useCallback(() => {
     if (explain.explainMode) {
       explain.disarm();
       collapseToolbox();
-      showToast('已退出划词解释');
+      showToast(L('已退出划词解释', 'Selection explain exited'));
       return;
     }
     ink.closeInkPopover();
     ink.setInkEditMode(false);
     explain.arm();
     collapseToolbox();
-    showToast('划词已开启：选中后先出本地释义，需要时再点 AI讲解');
+    showToast(L('划词已开启：选中后先出本地释义，需要时再点 AI讲解', 'Selection mode on: local dictionary first, tap AI Explain for more'));
   }, [collapseToolbox, explain, ink, showToast]);
 
   const handleRubyChangeAndCollapse = useCallback(
@@ -308,73 +406,6 @@ export default function EditScreen() {
     [collapseToolbox, handleShowRubyChange],
   );
 
-  useEffect(() => {
-    if (!explain.explainMode) return;
-
-    let timer = 0;
-    const onUp = () => {
-      window.clearTimeout(timer);
-      // WKWebView 松手后选区可能略晚稳定
-      timer = window.setTimeout(() => {
-        void (async () => {
-          const sel = window.getSelection();
-          if (sel?.anchorNode) {
-            const el =
-              sel.anchorNode.nodeType === Node.ELEMENT_NODE
-                ? (sel.anchorNode as Element)
-                : sel.anchorNode.parentElement;
-            // 划词笔记 / 学习条目区内的选区不触发 AI，留给条目编辑
-            if (el?.closest('.shufuri-explain-note, .shufuri-study-item')) return;
-          }
-          const snapJp = (lang ?? lyricsLanguage ?? 'jp') === 'jp';
-          const picked = await readSelectionForExplain({
-            enableJapaneseTokenSnap: snapJp,
-          });
-          if (!picked) return;
-          explain.analyzeSelection(picked.text, picked);
-        })();
-      }, 40);
-    };
-
-    /** 拖选过程中实时钳到单行/单块，避免蓝选区跨日文行+译文 */
-    let clamping = false;
-    const onSelectionChange = () => {
-      if (clamping) return;
-      const root = editCanvasRef.current;
-      if (!root) return;
-      const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || sel.rangeCount < 1) return;
-      const anchorEl =
-        sel.anchorNode?.nodeType === Node.ELEMENT_NODE
-          ? (sel.anchorNode as Element)
-          : sel.anchorNode?.parentElement;
-      if (!anchorEl || !root.contains(anchorEl)) return;
-      clamping = true;
-      try {
-        clampSelectionToExplainBlock(sel);
-      } finally {
-        clamping = false;
-      }
-    };
-
-    const root = editCanvasRef.current;
-    root?.addEventListener('mouseup', onUp);
-    root?.addEventListener('touchend', onUp);
-    document.addEventListener('selectionchange', onSelectionChange);
-    return () => {
-      window.clearTimeout(timer);
-      root?.removeEventListener('mouseup', onUp);
-      root?.removeEventListener('touchend', onUp);
-      document.removeEventListener('selectionchange', onSelectionChange);
-    };
-  }, [
-    editCanvasRef,
-    explain.explainMode,
-    explain.analyzeSelection,
-    lang,
-    lyricsLanguage,
-  ]);
-
   const scrollClass = [
     'edit-canvas-scroll',
     inkEditArmed ? 'is-ink-edit-armed' : '',
@@ -383,28 +414,66 @@ export default function EditScreen() {
     .filter(Boolean)
     .join(' ');
 
+  /** 桌面左栏只渲染歌词原文；完整正文仍用于笔记本 / 保存 */
+  const lyricsPaneBodyHtml = useMemo(
+    () => (isDesktopSplit ? extractLyricsOnlyBodyHtml(bodyHtml) : bodyHtml),
+    [bodyHtml, isDesktopSplit],
+  );
+
+  // 讲解模式下把正文拆成字符级 span 供笔刷命中；关闭时退回原始 HTML
+  const brushBodyHtml = useMemo(
+    () => (explain.explainMode ? tokenizeBrushableHtml(lyricsPaneBodyHtml) : lyricsPaneBodyHtml),
+    [explain.explainMode, lyricsPaneBodyHtml],
+  );
+
+  // 讲解模式：用 Highlighter Brush（笔刷涂抹）彻底替代原生划词。
+  // 笔刷计算出的选区文本 + 上下文原样喂给 analyzeSelection，不改 AI 管线。
+  useEffect(() => {
+    if (!explain.explainMode) return;
+    const root = editCanvasRef.current;
+    const body = root?.querySelector<HTMLElement>('.fv-body-h') ?? null;
+    if (!root || !body) return;
+
+    root.classList.add(BRUSH_READY_CLASS);
+
+    const controller = createBrushController({
+      root,
+      body,
+      maxChars: BRUSH_MAX_CHARS,
+      originalLineClasses: originalLineClassesForLang(lang),
+      onSelect: (sel) => {
+        explain.analyzeSelection(sel.text, sel.context);
+      },
+      onOverflow: () => showToast(L('已超出讲解范围，请缩小选区', 'Selection too large, please narrow it down')),
+      onTranslationOnly: () => showToast(L('请涂抹原文行，不要选中翻译部分', 'Please select original text, not translations')),
+    });
+
+    return () => {
+      controller.destroy();
+      root.classList.remove(BRUSH_READY_CLASS);
+    };
+  }, [
+    editCanvasRef,
+    explain.explainMode,
+    brushBodyHtml,
+    explain.analyzeSelection,
+    showToast,
+    lang,
+  ]);
+
   return (
-    <div className={`edit-area${explain.panelOpen ? ' edit-area--explain' : ''}`}>
-      <InkToolbox
-        open={ink.inkToolboxOpen}
-        canUndo={ink.canUndoInkEdit}
-        inkEditActive={ink.inkEditMode}
-        showRuby={showRubyAnnotations}
-        rubySupported={rubyToggleSupported}
-        explainActive={explain.explainMode}
-        onToggle={toggleInkToolbox}
-        onUndo={ink.handleInkUndo}
-        onShowRubyChange={handleRubyChangeAndCollapse}
-        onToggleInkEdit={handleToggleInkEdit}
-        onToggleExplain={handleToggleExplain}
-      />
+    <div
+      className={`edit-area${explain.panelOpen ? ' edit-area--explain' : ''}${
+        isDesktopSplit ? ' edit-area--desktop-split' : ''
+      }`}
+    >
       <div className="edit-toolbar">
         <button type="button" className="btn-secondary" onClick={handleReset}>
-          ← 重新输入
+          ← {L('重新输入', 'Re-enter')}
         </button>
         <div className="toolbar-actions">
           {explain.explainMode && (
-            <span className="preview-explain-hint">划词解释中</span>
+            <span className="preview-explain-hint">{L('划词解释中', 'Selection explaining')}</span>
           )}
           <button
             type="button"
@@ -412,7 +481,7 @@ export default function EditScreen() {
             onClick={() => void handleSave()}
             disabled={saving || !bodyHtml.trim()}
           >
-            {saving ? '保存中…' : '保存'}
+            {saving ? L('保存中…', 'Saving…') : L('保存', 'Save')}
           </button>
           <button
             type="button"
@@ -420,50 +489,92 @@ export default function EditScreen() {
             onClick={() => void enterExportFlow()}
             disabled={!bodyHtml.trim()}
           >
-            导出
+            {L('导出', 'Export')}
           </button>
         </div>
       </div>
 
       <div className="edit-area__workspace">
-        <div ref={editCanvasRef} className={scrollClass}>
-          <InkFineTuneEditor
-            containerRef={editCanvasRef}
-            focusGroupIndex={ink.inkFocusGroupIndex}
-            editTarget={ink.inkEditTarget}
-            popoverClosing={ink.inkPopoverClosing}
-            draftKanji={ink.inkDraftKanji}
-            draftKana={ink.inkDraftKana}
-            draftZh={ink.inkDraftZh}
-            draftTitle={ink.inkDraftTitle}
-            draftArtist={ink.inkDraftArtist}
-            interaction="click"
-            interactionEnabled={inkEditArmed}
-            onOpenTarget={ink.handleInkOpenTarget}
-            onClose={ink.closeInkPopover}
-            onKanjiChange={ink.setInkDraftKanji}
-            onKanaChange={ink.setInkDraftKana}
-            onZhChange={ink.setInkDraftZh}
-            onTitleChange={ink.setInkDraftTitle}
-            onArtistChange={ink.setInkDraftArtist}
-            onConfirm={() => void ink.handleInkConfirm()}
-          >
-            <ShufuriPosterEditCanvas
-              title={title}
-              artist={artist}
-              bodyHtml={bodyHtml}
-              layoutProfile="mobilePoster"
-              displayScale={editScale}
-              titleMarkupHtml={titleMarkupHtml}
-              lang={lang}
-              language={lyricsLanguage}
-              colorTheme={colorTheme}
-              showRuby={showRubyAnnotations}
-            />
-          </InkFineTuneEditor>
+        <div className="edit-area__lyrics-pane">
+          <InkToolbox
+            open={ink.inkToolboxOpen}
+            canUndo={ink.canUndoInkEdit}
+            inkEditActive={ink.inkEditMode}
+            showRuby={showRubyAnnotations}
+            rubySupported={rubyToggleSupported}
+            explainActive={explain.explainMode}
+            onToggle={toggleInkToolbox}
+            onUndo={ink.handleInkUndo}
+            onShowRubyChange={handleRubyChangeAndCollapse}
+            onToggleInkEdit={handleToggleInkEdit}
+            onToggleExplain={handleToggleExplain}
+          />
+          <div ref={editCanvasRef} className={scrollClass}>
+            <InkFineTuneEditor
+              containerRef={editCanvasRef}
+              focusGroupIndex={ink.inkFocusGroupIndex}
+              editTarget={ink.inkEditTarget}
+              popoverClosing={ink.inkPopoverClosing}
+              draftKanji={ink.inkDraftKanji}
+              draftKana={ink.inkDraftKana}
+              draftZh={ink.inkDraftZh}
+              draftTitle={ink.inkDraftTitle}
+              draftArtist={ink.inkDraftArtist}
+              interaction="click"
+              interactionEnabled={inkEditArmed}
+              onOpenTarget={ink.handleInkOpenTarget}
+              onClose={ink.closeInkPopover}
+              onKanjiChange={ink.setInkDraftKanji}
+              onKanaChange={ink.setInkDraftKana}
+              onZhChange={ink.setInkDraftZh}
+              onTitleChange={ink.setInkDraftTitle}
+              onArtistChange={ink.setInkDraftArtist}
+              onConfirm={() => void ink.handleInkConfirm()}
+            >
+              <ShufuriPosterEditCanvas
+                title={title}
+                artist={artist}
+                bodyHtml={brushBodyHtml}
+                layoutProfile="mobilePoster"
+                displayScale={editScale}
+                titleMarkupHtml={titleMarkupHtml}
+                lang={lang}
+                language={lyricsLanguage}
+                colorTheme={colorTheme}
+                showRuby={showRubyAnnotations}
+              />
+            </InkFineTuneEditor>
+          </div>
         </div>
 
-        <ExplainMicroscopePanel session={explain} />
+        {isDesktopSplit ? (
+          <EditNotebookPane
+            bodyHtml={bodyHtml}
+            explainMode={explain.explainMode}
+            aiOpen={explain.panelOpen}
+            onEnableExplain={enableExplainFromNotebook}
+            onOpenExplainNote={openEditForNoteId}
+            onOpenVocab={openEditForVocabId}
+            onOpenGrammar={openEditForGrammarId}
+            onDeleteExplainNote={(noteId) => {
+              removeExplainNote(noteId);
+              if (editingNoteId === noteId) setEditingNoteId(null);
+            }}
+            onDeleteStudy={(itemId) => {
+              removeStudyItem(itemId);
+              if (editingStudy?.id === itemId) setEditingStudy(null);
+            }}
+            scrollRef={notebookScrollRef}
+            microscope={
+              explain.panelOpen ? (
+                <ExplainMicroscopePanel session={explain} variant="embedded" />
+              ) : null
+            }
+          />
+        ) : (
+          <ExplainMicroscopePanel session={explain} />
+        )}
+      </div>
 
         {editingNoteId && (
           <div
@@ -497,10 +608,10 @@ export default function EditScreen() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>编辑划词笔记</h3>
+                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>{L('编辑划词笔记', 'Edit Selection Note')}</h3>
                 <button
                   type="button"
-                  aria-label="关闭"
+                  aria-label={L('关闭', 'Close')}
                   className="btn-tonal"
                   onClick={closeEditors}
                   style={{ minHeight: 30, padding: '0 10px' }}
@@ -511,7 +622,7 @@ export default function EditScreen() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  词条
+                  {L('词条', 'Term')}
                   <input
                     className="shufuri-explain-note-editor__input"
                     value={draftTerm}
@@ -521,7 +632,7 @@ export default function EditScreen() {
                 </label>
 
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  语境释义
+                  {L('语境释义', 'Context sense')}
                   <textarea
                     value={draftContextSense}
                     rows={2}
@@ -531,7 +642,7 @@ export default function EditScreen() {
                 </label>
 
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  语法
+                  {L('语法', 'Grammar')}
                   <textarea
                     value={draftGrammar}
                     rows={2}
@@ -541,7 +652,7 @@ export default function EditScreen() {
                 </label>
 
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  意境
+                  {L('意境', 'Mood')}
                   <textarea
                     value={draftMood}
                     rows={2}
@@ -552,7 +663,7 @@ export default function EditScreen() {
 
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                   <button type="button" className="btn-tonal" onClick={closeEditors}>
-                    取消
+                    {L('取消', 'Cancel')}
                   </button>
                   <button
                     type="button"
@@ -568,7 +679,7 @@ export default function EditScreen() {
                       closeEditors();
                     }}
                   >
-                    保存
+                    {L('保存', 'Save')}
                   </button>
                 </div>
               </div>
@@ -608,10 +719,10 @@ export default function EditScreen() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>编辑重点词汇</h3>
+                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>{L('编辑重点词汇', 'Edit Key Vocabulary')}</h3>
                 <button
                   type="button"
-                  aria-label="关闭"
+                  aria-label={L('关闭', 'Close')}
                   className="btn-tonal"
                   onClick={closeEditors}
                   style={{ minHeight: 30, padding: '0 10px' }}
@@ -622,7 +733,7 @@ export default function EditScreen() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  词条
+                  {L('词条', 'Term')}
                   <input
                     value={vocabDraft.term}
                     onChange={(ev) =>
@@ -632,7 +743,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  释义
+                  {L('释义', 'Meaning')}
                   <textarea
                     value={vocabDraft.meaning}
                     rows={2}
@@ -643,7 +754,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  例句
+                  {L('例句', 'Example')}
                   <textarea
                     value={vocabDraft.example}
                     rows={2}
@@ -654,7 +765,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  例句译文
+                  {L('例句译文', 'Example translation')}
                   <textarea
                     value={vocabDraft.translation}
                     rows={2}
@@ -666,7 +777,7 @@ export default function EditScreen() {
                 </label>
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                   <button type="button" className="btn-tonal" onClick={closeEditors}>
-                    取消
+                    {L('取消', 'Cancel')}
                   </button>
                   <button
                     type="button"
@@ -682,7 +793,7 @@ export default function EditScreen() {
                       closeEditors();
                     }}
                   >
-                    保存
+                    {L('保存', 'Save')}
                   </button>
                 </div>
               </div>
@@ -722,10 +833,10 @@ export default function EditScreen() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>编辑重点语法</h3>
+                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>{L('编辑重点语法', 'Edit Key Grammar')}</h3>
                 <button
                   type="button"
-                  aria-label="关闭"
+                  aria-label={L('关闭', 'Close')}
                   className="btn-tonal"
                   onClick={closeEditors}
                   style={{ minHeight: 30, padding: '0 10px' }}
@@ -736,7 +847,7 @@ export default function EditScreen() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  语法点
+                  {L('语法点', 'Grammar point')}
                   <input
                     value={grammarDraft.titlePrimary}
                     onChange={(ev) =>
@@ -746,7 +857,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  旁注释义
+                  {L('旁注释义', 'Gloss')}
                   <input
                     value={grammarDraft.titleSecondary}
                     onChange={(ev) =>
@@ -756,7 +867,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  详细解析
+                  {L('详细解析', 'Detail')}
                   <textarea
                     value={grammarDraft.detail}
                     rows={3}
@@ -767,7 +878,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  例句
+                  {L('例句', 'Example')}
                   <textarea
                     value={grammarDraft.example}
                     rows={2}
@@ -778,7 +889,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  例句译文
+                  {L('例句译文', 'Example translation')}
                   <textarea
                     value={grammarDraft.translation}
                     rows={2}
@@ -790,7 +901,7 @@ export default function EditScreen() {
                 </label>
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                   <button type="button" className="btn-tonal" onClick={closeEditors}>
-                    取消
+                    {L('取消', 'Cancel')}
                   </button>
                   <button
                     type="button"
@@ -807,14 +918,13 @@ export default function EditScreen() {
                       closeEditors();
                     }}
                   >
-                    保存
+                    {L('保存', 'Save')}
                   </button>
                 </div>
               </div>
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }

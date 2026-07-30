@@ -302,28 +302,95 @@ export async function requestGalleryPermission(): Promise<GalleryPermissionStatu
 import DeepLink from '../bridge/deepLinkPlugin';
 import type { AiAppInfo } from '../bridge/deepLinkPlugin';
 
-/** 检测已安装的 AI App（仅在原生环境有效） */
+/** 已知 AI App 注册表（id/name/scheme/网页版）。原生端按实际安装过滤；浏览器端无法检测，返回全部以显示 LOGO。 */
+export const KNOWN_AI_APPS: AiAppInfo[] = [
+  { id: 'chatgpt', name: 'ChatGPT', scheme: 'chatgpt://', webUrl: 'https://chat.openai.com/' },
+  { id: 'kimi', name: 'Kimi', scheme: 'kimi://', webUrl: 'https://kimi.moonshot.cn/' },
+  { id: 'doubao', name: '豆包', scheme: 'doubao://', webUrl: 'https://www.doubao.com/chat/' },
+  { id: 'wenxin', name: '文心一言', scheme: 'wenxin://', webUrl: 'https://yiyan.baidu.com/' },
+  { id: 'tongyi', name: '通义千问', scheme: 'tongyi://', webUrl: 'https://tongyi.aliyun.com/' },
+  { id: 'deepseek', name: 'DeepSeek', scheme: 'deepseek://', webUrl: 'https://chat.deepseek.com/' },
+];
+
+/** 检测已安装的 AI App。原生环境返回实际安装项；浏览器无法检测，返回全部已知 App（供展示 LOGO + 点击尝试唤起）。 */
 export async function checkInstalledAiApps(): Promise<AiAppInfo[]> {
-  if (!isNativeWebView()) return [];
+  if (!isNativeWebView()) return KNOWN_AI_APPS;
   try {
     const result = await DeepLink.checkInstalledApps();
     return result.apps;
   } catch (e) {
     console.error('[native-bridge] checkInstalledAiApps error:', e);
-    return [];
+    return KNOWN_AI_APPS;
   }
 }
 
-/** 通过 URL Scheme 唤起指定 AI App */
-export async function openAiApp(scheme: string): Promise<boolean> {
-  if (!isNativeWebView()) return false;
-  try {
-    const result = await DeepLink.openApp({ scheme });
-    return result.opened;
-  } catch (e) {
-    console.error('[native-bridge] openAiApp error:', e);
-    return false;
+/**
+ * 唤起指定 AI App。
+ * - 原生：通过 DeepLink.openApp(scheme) 可靠打开。
+ * - 浏览器：无法预检测是否安装，点击时尝试 scheme 唤起；
+ *   1.2s 内页面失焦/隐藏 → 视为已打开；否则降级打开网页版。
+ */
+export async function openAiApp(app: AiAppInfo): Promise<boolean> {
+  if (isNativeWebView()) {
+    try {
+      const result = await DeepLink.openApp({ scheme: app.scheme });
+      return result.opened;
+    } catch (e) {
+      console.error('[native-bridge] openAiApp error:', e);
+      return false;
+    }
   }
+  return attemptSchemeOpen(app);
+}
+
+/** 浏览器端：尝试 URL Scheme 唤起客户端，失败则打开网页版。 */
+function attemptSchemeOpen(app: AiAppInfo): Promise<boolean> {
+  return new Promise((resolve) => {
+    let opened = false;
+    let timer: number;
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') opened = true;
+    };
+    const onBlur = () => {
+      opened = true;
+    };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('blur', onBlur);
+    const cleanup = () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('blur', onBlur);
+      window.clearTimeout(timer);
+    };
+
+    // 用 <a> 点击触发 scheme，尽量保留用户手势上下文
+    try {
+      const a = document.createElement('a');
+      a.href = app.scheme;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      window.setTimeout(() => a.remove(), 2000);
+    } catch {
+      window.location.href = app.scheme;
+    }
+
+    timer = window.setTimeout(() => {
+      cleanup();
+      if (opened) {
+        resolve(true);
+        return;
+      }
+      // 未唤起客户端 → 打开网页版（新标签；可能被弹窗拦截器拦截）
+      if (app.webUrl) {
+        const w = window.open(app.webUrl, '_blank', 'noopener');
+        if (!w) {
+          // 被拦截：留给「复制好了，自己打开」兜底
+          console.warn('[native-bridge] popup blocked, fallback to manual open');
+        }
+      }
+      resolve(false);
+    }, 1200);
+  });
 }
 
 // ---- QQ 音乐分享链接识别 ------------------------------------------------

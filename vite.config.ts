@@ -40,6 +40,10 @@ export default defineConfig(({ mode }) => {
       },
     ],
     envPrefix: 'VITE_',
+    assetsInclude: ['**/*.gmdl', '**/*.wasm'],
+    optimizeDeps: {
+      exclude: ['garu-ko'],
+    },
     build: {
       assetsDir: 'assets',
       rollupOptions: {

@@ -80,7 +80,9 @@ export function buildEncoderPrompt(
     a,
     t,
     options.ocrContext?.firstLyricLine,
-    phase === 'lyrics' ? { completeness: true, retry: options.retry } : undefined,
+    phase === 'lyrics'
+      ? { completeness: true, retry: options.retry, retryReason: options.retryReason }
+      : undefined,
   );
   body += buildOcrHintBlock(options.ocrContext);
   body += buildWireSchema(include, iface, lang, gloss);
@@ -105,8 +107,8 @@ export function buildEncoderPrompt(
   body += buildFullSampleBlock(lang, include, iface);
   body += buildHeaderLyricsSeparationBlock(a, t);
   body += buildStreamCloseBlock(phase === 'lyrics' ? { lyricsOnly: true } : undefined);
-  body += buildSelfCheckBlock(lang, include, pedagogicalLevel);
-  body += buildModelComplianceBlock(options.modelHint);
+  body += buildSelfCheckBlock(lang, include, pedagogicalLevel, iface);
+  body += buildModelComplianceBlock(options.modelHint, iface);
 
   return fillEncoderMeta(body, a, t);
 }
@@ -160,9 +162,9 @@ function buildStudyMaterialsPrompt(
   }
 
   body += buildFullSampleBlock(lang, true, iface);
-  body += buildStreamCloseBlock();
-  body += buildSelfCheckBlock(lang, true, pedagogicalLevel);
-  body += buildModelComplianceBlock(options.modelHint);
+  body += buildStreamCloseBlock({ requireStudySections: true });
+  body += buildSelfCheckBlock(lang, true, pedagogicalLevel, iface);
+  body += buildModelComplianceBlock(options.modelHint, iface);
 
   return fillEncoderMeta(body, a, t);
 }

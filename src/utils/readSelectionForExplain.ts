@@ -111,7 +111,7 @@ function lineText(el: Element | null): string {
   return textWithoutRubyNotes(el);
 }
 
-function peerSelectorFor(line: HTMLElement): string {
+export function peerSelectorFor(line: HTMLElement): string {
   if (line.classList.contains('jp-line')) return '.jp-line';
   if (line.classList.contains('ko-line')) return '.ko-line';
   return '.zh-line, .cn-line';

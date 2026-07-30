@@ -29,6 +29,7 @@ export const CJK_LINE_BREAK_SELECTOR = [
   '.vocab-ex-zh',
   '.grammar-ex-zh',
   '.vocab-line1',
+  '.vocab-formula',
   'h3.grammar-point-title',
 ].join(',');
 

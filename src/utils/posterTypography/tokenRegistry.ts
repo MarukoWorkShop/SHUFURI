@@ -109,7 +109,7 @@ export const ROLE_SELECTOR_MAP: Record<PosterTextRole, Partial<Record<LangCode |
   rubyAnnotation: { default: 'ruby rt' },
   sectionTitle: { default: 'h2.lyrics-section-title' },
   studyTerm: { default: '.vocab-word, .vocab-word-ko, .grammar-title-ja, .grammar-title-ko, .grammar-title-cn, .grammar-title-zh' },
-  studyAux: { default: '.vocab-meaning, .grammar-detail, .grammar-title-gloss, .grammar-ex-gloss' },
+  studyAux: { default: '.vocab-meaning, .grammar-detail, .vocab-formula, .grammar-title-gloss, .grammar-ex-gloss' },
   studyExample: { default: '.vocab-ex-ja, .vocab-ex-ko, .vocab-ex-zh, .vocab-ex-cn, .grammar-ex-ja, .grammar-ex-ko, .grammar-ex-zh, .grammar-ex-cn' },
   grammarPointShell: { default: 'h3.grammar-point-title' },
   pageNumber: { default: '.fv-poster-page-no' },

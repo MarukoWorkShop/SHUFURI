@@ -46,6 +46,9 @@ export default function AppLayout({
     handleClipboardRenderLayout,
     handleClipboardDismiss,
     confirmVisible,
+    confirmStreaming,
+    isGeneratingStudy,
+    studyError,
     confirmTitle,
     confirmArtist,
     confirmLang,
@@ -53,6 +56,7 @@ export default function AppLayout({
     confirmPreviewLines,
     handleConfirmLayout,
     handleConfirmStudy,
+    handleConfirmStudyFallback,
     handleConfirmRetry,
     handleConfirmDismiss,
   } = useHomeSessionContext();
@@ -96,8 +100,12 @@ export default function AppLayout({
         language={confirmLang}
         lineCount={confirmLineCount}
         previewLines={confirmPreviewLines}
+        streamingDelayMs={confirmStreaming ? 85 : 0}
+        isGeneratingStudy={isGeneratingStudy}
+        studyError={studyError}
         onConfirmLayout={handleConfirmLayout}
         onConfirmStudy={handleConfirmStudy}
+        onFallbackExternal={handleConfirmStudyFallback}
         onRetry={handleConfirmRetry}
         onDismiss={handleConfirmDismiss}
       />

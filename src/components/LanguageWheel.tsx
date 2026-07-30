@@ -8,20 +8,26 @@ import {
 import { hapticButton } from '../hooks/useHaptics';
 import { isInteractionSoundEnabled, type LyricsLanguage } from '../services/appSettings';
 import { playLogitechClickSoundEffect } from '../utils/logitechClickSound';
+import { L } from '../utils/i18n';
 import './LanguageWheel.css';
 
 export type { LyricsLanguage as LangCode };
 
 const ITEM_W = 76;
 
-const LANG_LABELS: Record<LyricsLanguage, string> = {
-  jp: 'JAP',
-  ko: 'KOR',
-  en: 'ENG',
-  zh: '中文',
-};
+const LANG_CODES: LyricsLanguage[] = ['jp', 'ko', 'en', 'zh'];
 
-const DEFAULT_LANGUAGES: LyricsLanguage[] = ['jp', 'ko', 'en', 'zh'];
+function langLabel(code: LyricsLanguage): string {
+  const base: Record<LyricsLanguage, string> = {
+    jp: 'JAP',
+    ko: 'KOR',
+    en: 'ENG',
+    zh: L('中文', 'CHI'),
+  };
+  return base[code];
+}
+
+const DEFAULT_LANGUAGES = LANG_CODES;
 
 function langIndex(code: LyricsLanguage, languages: readonly LyricsLanguage[]): number {
   const i = languages.findIndex((l) => l === code);
@@ -48,7 +54,7 @@ type Props = {
 export default function LanguageWheel({ value, onChange, languages, soundEnabled }: Props) {
   const wheelLanguages = useMemo(() => {
     const list = languages?.length ? languages : DEFAULT_LANGUAGES;
-    return list.filter((code) => code in LANG_LABELS);
+    return list.filter((code) => LANG_CODES.includes(code));
   }, [languages]);
 
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -197,7 +203,7 @@ export default function LanguageWheel({ value, onChange, languages, soundEnabled
                   : ({ 'aria-selected': 'false' } as const))}
                 data-lang={code}
               >
-                {LANG_LABELS[code]}
+                {langLabel(code)}
               </div>
             ))}
           </div>

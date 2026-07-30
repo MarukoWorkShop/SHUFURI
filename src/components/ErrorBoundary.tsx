@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { reportHandledError } from '../services/errorReport';
 
 interface Props {
   children: ReactNode;
@@ -23,6 +24,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('[ErrorBoundary] 捕获到渲染错误:', error, info.componentStack);
+    reportHandledError(error, { componentStack: info.componentStack?.slice(0, 2000) });
   }
 
   handleReset = () => {

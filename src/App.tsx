@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './App.css';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/app/AppLayout';
@@ -11,7 +11,10 @@ import { saveAppSettings } from './services/appSettings';
 import { useClipboardStructuredLyrics } from './hooks/useClipboardHasContent';
 import { useTimedMessage } from './hooks/useTimedMessage';
 import { AppToastContext } from './context/AppToastContext';
+import AiLimitProvider from './components/AiLimitContext';
+import { initErrorReporting } from './services/errorReport';
 import PosterWorkspaceProvider from './context/PosterWorkspaceProvider';
+import { trackPageView } from './services/analytics';
 import HomeSessionProvider from './context/HomeSessionProvider';
 import { usePosterDocumentContext } from './context/PosterWorkspaceContext';
 import { useHomeSessionContext } from './context/HomeSessionContext';
@@ -92,10 +95,11 @@ function AppShell({
           setShareOcrData={homeSession.setShareOcrData}
           setAppSettings={setAppSettings}
           onMusicShareStored={storeMusicShare}
-          onStructuredLyrics={(text) =>
+          onStructuredLyrics={(text, opts) =>
             homeSession.activateClipboardDetectCardFromText(text, {
               title: homeSession.homeFormMetaRef.current.title,
               artist: homeSession.homeFormMetaRef.current.artist,
+              ...(opts ?? {}),
             })
           }
           consumedClipboardRef={homeSession.consumedClipboardRef}
@@ -114,6 +118,12 @@ function AppShell({
 export default function App() {
   useGlobalButtonFeedback();
 
+  // UV 埋点 + 全局错误监听：每次进入 App 记录一次
+  useEffect(() => {
+    trackPageView();
+    initErrorReporting();
+  }, []);
+
   const settings = useAppSettings();
   const { appSettings, lyricsLanguage } = settings;
   const [inputResetKey, setInputResetKey] = useState(0);
@@ -127,6 +137,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AppToastContext.Provider value={appToast.show}>
+        <AiLimitProvider>
         <PosterWorkspaceProvider
           lyricsLanguage={lyricsLanguage}
           colorTheme={appSettings.colorTheme}
@@ -152,6 +163,7 @@ export default function App() {
             />
           </HomeSessionProvider>
         </PosterWorkspaceProvider>
+        </AiLimitProvider>
       </AppToastContext.Provider>
     </ErrorBoundary>
   );

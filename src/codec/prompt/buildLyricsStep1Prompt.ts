@@ -2,7 +2,7 @@ import type { LyricsLanguage } from '../../services/appSettings';
 import type { LanguageMatrixContext } from '../../services/languageMatrix/types';
 import type { OcrDetectedLanguage } from '../../services/ocrTypes';
 import { buildEncoderPrompt } from './buildEncoderPrompt';
-import type { EncoderPromptOptions } from './encoderCommon';
+import type { EncoderPromptOptions, RetryReason } from './encoderCommon';
 
 export type LyricsStep1PromptParams = {
   artist: string;
@@ -12,6 +12,7 @@ export type LyricsStep1PromptParams = {
   ocrDetectedLanguage?: OcrDetectedLanguage;
   ocrContext?: EncoderPromptOptions['ocrContext'];
   retry?: boolean;
+  retryReason?: RetryReason;
   modelHint?: EncoderPromptOptions['modelHint'];
 };
 
@@ -57,6 +58,7 @@ export function buildLyricsStep1EncoderOptions(
     modelHint: params.modelHint,
     phase: 'lyrics',
     retry: params.retry,
+    retryReason: params.retryReason,
     ocrContext: resolveOcrContext(params.ocrContext, params.ocrDetectedLanguage),
   };
 }

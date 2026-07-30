@@ -330,6 +330,7 @@ export default function PosterWorkspaceProvider({
       term: string;
       contextSense: string;
       grammar?: string;
+      formula?: string;
       mood?: string;
     }) => {
       const next = commitExplainNoteToBody(bodyHtmlRef.current, payload, lang);

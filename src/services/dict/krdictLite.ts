@@ -2,10 +2,15 @@
  * KRDICT lite：本地韩中即时查词（读音 / 词性 / 中文释义）。
  * 数据：public/dict/krdict-lite.json.gz（CC-BY-SA 2.0 KR，국립국어원）
  *
- * 查词：精确 → 空白分词 → 助词/词尾 → 左到右最长子串（无重型分词器）。
+ * 查词：Garu 形态分析（优先）→ 精确 / 空白分词 / 助词词尾 / 最长子串（回退）。
  */
 
 import type { MicroscopeExplainResult } from '../../codec/prompt/buildMicroscopePrompt';
+import {
+  analyzeKorean,
+  lemmasFromGaruTokens,
+  type GaruLemmaCandidate,
+} from './garuKoTokenizer';
 import {
   applyKoConjRules,
   koLookupCandidates,
@@ -13,6 +18,7 @@ import {
   splitKoTokens,
   stripKoParticles,
 } from './koSurfaceNormalize';
+import { mergeKrdictSeedPatches } from './krdictSeedPatches';
 
 export type KrdictLiteEntry = {
   f: string[];
@@ -78,6 +84,7 @@ function buildIndex(file: KrdictLiteFile): Map<string, KrdictLiteEntry> {
       else map.set(form, preferEntry(prev, entry, form));
     }
   }
+  mergeKrdictSeedPatches(map);
   return map;
 }
 
@@ -252,8 +259,135 @@ function lookupByLongestScan(
   return best;
 }
 
+function garuLemmaScore(lemma: GaruLemmaCandidate): number {
+  const pos = lemma.pos;
+  const posBonus =
+    pos === 'VV' || pos === 'VA' || pos === 'VX'
+      ? 40
+      : pos.startsWith('NN') || pos === 'NP' || pos === 'NR'
+        ? 35
+        : pos === 'MAG' || pos === 'MAJ' || pos === 'XR'
+          ? 20
+          : 0;
+  return lemma.form.length * 10 + posBonus;
+}
+
+function isGaruContentPos(pos: string): boolean {
+  return (
+    pos.startsWith('NN') ||
+    pos === 'NP' ||
+    pos === 'NR' ||
+    pos === 'VV' ||
+    pos === 'VA' ||
+    pos === 'VX' ||
+    pos === 'MAG' ||
+    pos === 'MAJ' ||
+    pos === 'XR'
+  );
+}
+
+/** 同干的「영원하다」优先于「영원」，避免短语里重复列同一概念 */
+function dedupeGaruContentLemmas(
+  lemmas: GaruLemmaCandidate[],
+): GaruLemmaCandidate[] {
+  const content = lemmas.filter((l) => isGaruContentPos(l.pos));
+  const forms = new Set(content.map((c) => c.form));
+  const filtered = content.filter((c) => !forms.has(`${c.form}하다`));
+  const seen = new Set<string>();
+  const out: GaruLemmaCandidate[] = [];
+  for (const c of filtered) {
+    if (seen.has(c.form)) continue;
+    seen.add(c.form);
+    out.push(c);
+  }
+  return out;
+}
+
+/**
+ * Garu 形态素 → 词典形精确查 KRDICT。
+ * 多内容词（短语划选）时逐要素列出；未命中也占位，避免只剩一个词头。
+ */
+export function lookupViaGaruLemmas(
+  index: Map<string, KrdictLiteEntry>,
+  lemmas: GaruLemmaCandidate[],
+  phrase = '',
+): KrdictLookupHit | null {
+  if (!lemmas.length) return null;
+
+  const q = phrase.trim();
+  const contentLemmas = dedupeGaruContentLemmas(lemmas);
+  const multiPhrase =
+    contentLemmas.length >= 2 &&
+    Boolean(q) &&
+    (/\s/u.test(q) ||
+      normalizeKoSurface(q).length > (contentLemmas[0]?.form.length ?? 0) + 1);
+
+  if (multiPhrase) {
+    const ordered = [...contentLemmas].sort(
+      (a, b) => garuLemmaScore(b) - garuLemmaScore(a),
+    );
+    const parts: string[] = [];
+    const heads: string[] = [];
+    const readings: string[] = [];
+    let anyHit = false;
+    for (const lemma of ordered) {
+      const hit = tryExact(index, lemma.form, lemma.note);
+      if (hit) {
+        anyHit = true;
+        parts.push(`${hit.entry.h}：${hit.entry.g}`);
+        heads.push(hit.entry.h);
+        if (hit.entry.r) readings.push(hit.entry.r);
+      } else {
+        parts.push(`${lemma.form}：（本地无条目）`);
+        heads.push(lemma.form);
+      }
+    }
+    if (!anyHit) return null;
+    return {
+      matched: q,
+      via: `Garu 逐要素（${heads.join('·')}）`,
+      entry: {
+        f: [q],
+        h: q,
+        r: readings.join(' · ') || '—',
+        p: '短语',
+        g: `局部参考：${parts.join(' ｜ ')}`,
+      },
+    };
+  }
+
+  let best: KrdictLookupHit | null = null;
+  let bestSc = -1;
+  for (const lemma of lemmas) {
+    const hit = tryExact(index, lemma.form, lemma.note);
+    if (!hit) continue;
+    const sc = hitScore(hit, lemma.form.length) + garuLemmaScore(lemma);
+    if (sc > bestSc) {
+      best = hit;
+      bestSc = sc;
+    }
+  }
+  return best;
+}
+
+async function lookupViaGaru(
+  index: Map<string, KrdictLiteEntry>,
+  phrase: string,
+): Promise<KrdictLookupHit | null> {
+  try {
+    const tokens = await analyzeKorean(phrase);
+    if (!tokens.length) return null;
+    return lookupViaGaruLemmas(index, lemmasFromGaruTokens(tokens), phrase);
+  } catch (err) {
+    console.warn('[garu-ko] analyze failed, fallback to heuristic', err);
+    return null;
+  }
+}
+
 export async function lookupKrdictLite(phrase: string): Promise<KrdictLookupHit | null> {
   const index = await ensureKrdictLiteLoaded();
+  const viaGaru = await lookupViaGaru(index, phrase);
+  if (viaGaru) return viaGaru;
   return lookupKrdictAgainstIndex(index, phrase);
 }
 
@@ -306,15 +440,24 @@ export function lookupKrdictAgainstIndex(
 
 export function krdictHitToMicroscope(hit: KrdictLookupHit): MicroscopeExplainResult {
   const { entry, matched, via } = hit;
-  const conjugated = matched !== entry.h || via !== '精确';
+  const surfaceOnly =
+    entry.g.includes('本地无整词') || entry.g.startsWith('局部参考');
+  const viaGaru = via.startsWith('Garu');
+  const conjugated = !surfaceOnly && (matched !== entry.h || via !== '精确');
   return {
     micro_analysis: {
       dictionary_form: entry.h,
       pronunciation: entry.r || '—',
       part_of_speech: entry.p,
-      grammar_breakdown: conjugated
-        ? `本地假分词：${via} → 词典形「${entry.h}」。语境可点「AI讲解」。`
-        : 'KRDICT 本地释义。语境可点「AI讲解」。',
+      grammar_breakdown: surfaceOnly
+        ? viaGaru
+          ? `Garu 分段：${via}。短语无整词条目；下列为局部词义，完整主谓宾可点「AI讲解」。`
+          : `划选「${matched}」。${entry.g}。完整结构可点「AI讲解」。`
+        : conjugated
+          ? viaGaru
+            ? `Garu 形态分析：${via} → 词典形「${entry.h}」。语境可点「AI讲解」。`
+            : `本地假分词：${via} → 词典形「${entry.h}」。语境可点「AI讲解」。`
+          : 'KRDICT 本地释义。语境可点「AI讲解」。',
       direct_meaning: entry.g || '—',
     },
   };

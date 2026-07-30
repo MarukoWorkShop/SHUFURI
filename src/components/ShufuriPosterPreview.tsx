@@ -23,6 +23,7 @@ import type { PosterLayoutProfile, PosterPageSlice, PosterRenderOptions } from '
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
 import { useTimedMessage } from '../hooks/useTimedMessage';
+import { L } from '../utils/i18n';
 import AppToast from './AppToast';
 
 /** 页码字体常量 */
@@ -248,20 +249,20 @@ function ShufuriPosterSinglePage({
         });
 
         if (result.success) {
-          showToast('已保存到系统图库');
+          showToast(L('已保存到系统图库', 'Saved to system gallery'));
           return;
         }
 
         // 保存失败 → 根据不同错误码给提示
         switch (result.code) {
           case 'PERMISSION_DENIED':
-            showToast('请在设置中允许 SHUFURI 访问照片库', 4000);
+            showToast(L('请在设置中允许 SHUFURI 访问照片库', 'Please allow SHUFURI to access your photo library in Settings'), 4000);
             break;
           case 'PERMISSION_RESTRICTED':
-            showToast('照片库访问受限（家长控制或企业策略）', 4000);
+            showToast(L('照片库访问受限（家长控制或企业策略）', 'Photo library access restricted (parental controls or device policy)'), 4000);
             break;
           default:
-            showToast(`保存失败：${result.message}`, 3000);
+            showToast(L(`保存失败：${result.message}`, `Save failed: ${result.message}`), 3000);
         }
         return;
       }
@@ -277,10 +278,13 @@ function ShufuriPosterSinglePage({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      showToast('图片已保存');
+      showToast(L('图片已保存', 'Image saved'));
     } catch (e) {
       console.error('[save-page]', e);
-      showToast(e instanceof Error ? e.message : '生成图片失败，请稍后重试', 3500);
+      showToast(
+        e instanceof Error ? e.message : L('生成图片失败，请稍后重试', 'Failed to generate image. Please try again.'),
+        3500,
+      );
     } finally {
       rasterizingRef.current = false;
       setSaving(false);

@@ -133,7 +133,8 @@
   border-radius: 10px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 400;
   line-height: 1.55;
   color: #1e293b;
   white-space: pre-wrap;
@@ -166,10 +167,308 @@
 
 .microscope-ai-card__body {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 400;
   line-height: 1.55;
   color: #1e293b;
   white-space: pre-wrap;
+}
+
+.microscope-loanwords {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.microscope-loanwords__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #1e293b;
+}
+
+.microscope-loanwords__surface {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.microscope-loanwords__arrow {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.microscope-loanwords__src {
+  color: #475569;
+}
+
+.microscope-loanwords__gloss {
+  color: #334155;
+}
+
+/* 逐句解析（多句选区） */
+.microscope-sentences {
+  margin: 0;
+  padding-left: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.microscope-sentences__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #1e293b;
+}
+
+.microscope-sentences__original {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.microscope-sentences__gloss {
+  color: #334155;
+}
+
+.microscope-sentences__note {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.microscope-sentences__note::before {
+  content: '·';
+  margin-right: 4px;
+}
+
+.microscope-formula {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 6px 4px;
+}
+
+.microscope-formula__chip-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.microscope-formula__plus {
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 0 2px;
+}
+
+.microscope-formula__chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.2em;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #f8fafc;
+}
+
+.microscope-formula__surface {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.3;
+  color: #0f172a;
+}
+
+.microscope-formula__label {
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.25;
+  color: #64748b;
+  text-align: center;
+  max-width: 5.5em;
+}
+
+.microscope-formula__fallback {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #334155;
+  white-space: pre-wrap;
+}
+
+.microscope-capsules {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.microscope-capsule {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.microscope-capsule:hover:not(:disabled) {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.microscope-capsule.is-active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #f8fafc;
+}
+
+.microscope-capsule:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.microscope-capsule__exam {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.microscope-capsule.is-active .microscope-capsule__exam {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.microscope-capsule__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.microscope-examples {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.microscope-examples__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.microscope-examples__title {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.microscope-examples__close {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.microscope-examples__error {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #be123c;
+}
+
+.microscope-examples__list {
+  margin: 0;
+  padding: 0 0 0 1.1em;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.microscope-examples__source {
+  margin: 0 0 2px;
+  font-size: 11px;
+  color: #64748b;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.microscope-examples__via {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  font-size: 10px;
+  color: #475569;
+}
+
+.microscope-examples__text {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: #0f172a;
+}
+
+.microscope-examples__zh {
+  margin: 2px 0 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.microscope-lesson {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.microscope-lesson__row + .microscope-lesson__row {
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.microscope-lesson__label {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+
+.microscope-lesson__body {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: #1e293b;
 }
 
 .microscope-ai-actions {
@@ -244,6 +543,8 @@
   overflow-y: auto;
   padding: 14px 16px 20px;
   -webkit-overflow-scrolling: touch;
+  /* 覆盖全局 PingFang Light(300)：解释正文用 Regular */
+  font-weight: 400;
 }
 
 .microscope-section {
@@ -279,18 +580,20 @@
   gap: 8px;
   padding: 6px 0;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 400;
 }
 
 .microscope-dict__row dt {
   margin: 0;
   color: #94a3b8;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .microscope-dict__row dd {
   margin: 0;
   color: #0f172a;
+  font-weight: 400;
   line-height: 1.5;
 }
 
@@ -443,10 +746,10 @@
   }
 }
 
-/* 桌面：右侧并列，无遮罩 */
+/* 桌面：右侧并列，无遮罩（仅非嵌入的旧路径 / 导出页） */
 @media (min-width: 900px) {
   .export-area--explain .microscope-root,
-  .edit-area--explain .microscope-root {
+  .edit-area--explain:not(.edit-area--desktop-split) .microscope-root {
     position: relative;
     flex: 0 0 min(380px, 38vw);
     width: min(380px, 38vw);
@@ -456,12 +759,12 @@
   }
 
   .export-area--explain .microscope-overlay,
-  .edit-area--explain .microscope-overlay {
+  .edit-area--explain:not(.edit-area--desktop-split) .microscope-overlay {
     display: none;
   }
 
   .export-area--explain .microscope-panel,
-  .edit-area--explain .microscope-panel {
+  .edit-area--explain:not(.edit-area--desktop-split) .microscope-panel {
     position: absolute;
     inset: 0;
     border-radius: 16px 0 0 16px;
@@ -503,9 +806,9 @@
     left: 0;
     right: 0;
     bottom: 0;
-    /* 约页面 2/3，抬高顶边，避免与右侧文具盒三角叠在关闭键附近 */
-    height: 66.666vh;
-    max-height: 66.666vh;
+    /* 原约 2/3 屏，再向上抬高 30% 高度 → ~86.7vh */
+    height: 86.666vh;
+    max-height: 86.666vh;
     border-radius: 18px 18px 0 0;
     pointer-events: auto;
     animation: microscope-sheet-up 0.28s ease;
@@ -516,7 +819,7 @@
   }
 
   /* 抽屉打开时隐藏文具盒三角，避免与关闭键抢点 */
-  .edit-area--explain .ink-toolbox,
+  .edit-area--explain:not(.edit-area--desktop-split) .ink-toolbox,
   .export-area--explain .ink-toolbox {
     visibility: hidden;
     pointer-events: none;

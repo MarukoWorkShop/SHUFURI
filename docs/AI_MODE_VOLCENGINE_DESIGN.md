@@ -10,8 +10,8 @@
 
 在**不改变**现有「外部 AI 口令 → 粘贴排版」主流程的前提下，于编辑页提供划词学习能力：
 
-1. **本地优先**：日语用 JMdict lite + Kuromoji；韩语用 KRDICT lite（假分词）即时给出读音 / 词性 / 基础义
-2. **可选 AI讲解**：经腾讯云 CloudBase 代理调用火山方舟（Doubao Mini），输出语境释义 / 语法拆解 / 歌词意境
+1. **本地优先**：日语用 JMdict lite + Kuromoji；韩语用 KRDICT lite（韩→中）+ Garu 形态分析即时给出读音 / 词性 / 基础义
+2. **可选 AI讲解**：经腾讯云 CloudBase 代理调用火山方舟（Doubao Mini），输出语境释义 /（日语）外来语原词 / 语法拆解 / 歌词意境
 3. **添加到笔记**：将 AI 结果写入歌词正文末尾「划词笔记」区（样式与重点词汇条一致）
 
 **不做**：首页 AI 搜歌词、客户端直持 ARK API Key、整句翻译替代划选焦点。
@@ -32,11 +32,15 @@
 
 ```text
 【语境释义】…
+【外来语原词】…   ← 仅日语；片假名外来语须含源语言+原词+译义；非外来语写「—」
+【语法分子式】…
 【语法拆解】…   ← 须还原口语缩略 / 活用 / 接续；禁止敷衍「整段=词典形」
+【语法胶囊】…
 【歌词意境】…   ← ≤50 字；无可写「—」
+【歌词黑话】…
 ```
 
-Prompt：`src/codec/prompt/buildMicroscopePrompt.ts` → `buildMicroscopeAiExplainPrompt`。
+外来语行格式：`片假名 ← 源语言 原词 → 中文译义`（多词连写拆成多行）。
 
 ---
 
@@ -91,17 +95,18 @@ npm run deploy:ark-explain-stream
 | JMdict eng-common lite | `public/dict/jmdict-lite.json.gz` | `npm run generate:jmdict-lite`（约 0.8MB gzip） |
 | Kuromoji IPAdic | `public/dict/kuromoji/*.dat.gz` | `npm run generate:kuromoji-dict` |
 | 日语查词 | `src/services/dict/jmdictLite.ts` | 精确 → Kuromoji → 剥助词 → 活用 → 最长匹配 |
-| KRDICT lite（韩中） | `public/dict/krdict-lite.json.gz` | `npm run generate:krdict-lite`（约 1.4MB gzip / 含中文义全量精简） |
-| 韩语查词 | `src/services/dict/krdictLite.ts` | 精确 → 剥助词 → 词尾规则 → 前缀词干（无 MeCab-ko） |
-| 韩语假分词 | `src/services/dict/koSurfaceNormalize.ts` | 助词 / 常见活用还原 |
+| KRDICT lite（韩中优先） | `public/dict/krdict-lite.json.gz` | `npm run generate:krdict-lite`（释义：中文→英语→韩义兜底；不再因无中文丢词） |
+| 韩语查词 | `src/services/dict/krdictLite.ts` | **Garu 形态分析优先** → 精确 / 剥助词 / 词尾规则 / 前缀词干（失败回退假分词） |
+| 韩语形态分析 | `src/services/dict/garuKoTokenizer.ts` + `garu-ko` | WASM + `public/dict/garu/base.gmdl`（~1.4MB）；词干还原后查 KRDICT |
+| 韩语假分词（回退） | `src/services/dict/koSurfaceNormalize.ts` | 助词 / 常见活用还原 |
 
-**韩语数据与许可**：국립국어원《한국어기초사전》(KRDICT)，经 [spellcheck-ko/korean-dict-nikl](https://github.com/spellcheck-ko/korean-dict-nikl) 镜像构建。许可 **CC-BY-SA 2.0 KR**，再分发须署名国立国语院。构建时仅保留含中文 Equivalent 的条目（约 3.7 万条），按词汇等级排序。短语划选走空白分词 + 左到右最长子串，复杂形态可交「AI讲解」。
+**韩语数据与许可**：국립국어원《한국어기초사전》(KRDICT)，经 [spellcheck-ko/korean-dict-nikl](https://github.com/spellcheck-ko/korean-dict-nikl) 镜像构建。许可 **CC-BY-SA 2.0 KR**，再分发须署名国立国语院。释义优先中文 Equivalent，其次英语，再次韩语 Sense（标记「（韩义）」）；**不再因缺少中文 Equivalent 丢弃词条**。划选优先走 [garu-ko](https://www.npmjs.com/package/garu-ko) 形态分析再查 KRDICT；分析失败时回退假分词。运行时另有 `krdictSeedPatches` 补极少数仍缺的高频洞。
 
 **明确不采用（当前）**：
 
 - 官方「JMdict-chs」（官方无 Mandarin 发行）、SudachiJava/Py（不进 WebView）；日语中文义由 AI讲解补足
 - 社区 Evidict / 无名 StarDict 韩中整包（许可不明，不宜内置）
-- sql.js + SQLite 运行时；韩语重型形态分析器（v1）
+- sql.js + SQLite 运行时；完整 MeCab-ko 重型词典包（数十 MB；已用轻量 garu-ko WASM 替代）
 
 ---
 
@@ -143,7 +148,7 @@ npm run cap:sync:live   # 或 CAP_SERVER_URL=http://<LAN-IP>:5173
 ## 8. 验收清单
 
 - [x] 工具箱 `?` 开启划词，本地词典先出结果
-- [x] 韩语 `lang=ko` 走 KRDICT lite（助词 / 词尾假分词）
+- [x] 韩语 `lang=ko` 走 KRDICT lite + Garu 形态分析（假分词回退）
 - [x] AI讲解三段结构 + 单卡 UI
 - [x] 添加到笔记 → 正文末尾词汇条样式
 - [x] 正式包走 `VITE_EXPLAIN_STREAM_URL`；失败可降级 `arkProxy`

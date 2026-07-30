@@ -20,6 +20,8 @@ import {
 } from '../utils/lyricConfirm';
 import { postClipboardRead, postClipboardWrite } from '../utils/nativeBridge';
 import type { ShowAppToast } from '../context/AppToastContext';
+import { useEmbeddedAiGenerate } from './useEmbeddedAiGenerate';
+import { L } from '../utils/i18n';
 
 type ShareOcrData = {
   title: string;
@@ -63,13 +65,13 @@ async function layoutFromRaw(
       prepared.lang,
     );
   } catch (e) {
-    const msg = e instanceof Error ? e.message : '粘贴解析失败';
+    const msg = e instanceof Error ? e.message : L('粘贴解析失败', 'Paste parse failed');
     if (msg.includes('缺少 @9') || msg.includes('流未闭合')) {
-      showToast('解析失败：缺少 @9 闭合行，请让 AI 在末尾单独输出 @9');
+      showToast(L('解析失败：缺少 @9 闭合行，请让 AI 在末尾单独输出 @9', 'Parse failed: missing @9 closing line. Ask AI to output @9 at the end'));
     } else if (msg.includes('未知行类型')) {
-      showToast('解析失败：含非记录流行（请删除 @9 后的说明文字）');
+      showToast(L('解析失败：含非记录流行（请删除 @9 后的说明文字）', 'Parse failed: non-record line detected. Delete text after @9'));
     } else {
-      showToast(`解析失败：${msg}`);
+      showToast(`${L('解析失败：', 'Parse failed: ')}${msg}`);
     }
   }
 }
@@ -89,6 +91,9 @@ export function useStructuredLyricsClipboardCard({
   );
 
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [confirmStreaming, setConfirmStreaming] = useState(false);
+  const [isGeneratingStudy, setIsGeneratingStudy] = useState(false);
+  const [studyError, setStudyError] = useState<string | null>(null);
   const [confirmTitle, setConfirmTitle] = useState('');
   const [confirmArtist, setConfirmArtist] = useState('');
   const [confirmLang, setConfirmLang] = useState<LangCode | undefined>(undefined);
@@ -99,6 +104,7 @@ export function useStructuredLyricsClipboardCard({
 
   const [externalPrompt, setExternalPrompt] = useState<ExternalPromptRequest | null>(null);
   const promptTokenRef = useRef(0);
+  const studyAi = useEmbeddedAiGenerate();
 
   const consumedClipboardRef = useRef<Set<string>>(new Set());
   const prevClipboardHashRef = useRef('');
@@ -143,13 +149,15 @@ export function useStructuredLyricsClipboardCard({
   );
 
   const openConfirmSheet = useCallback(
-    (raw: string, formMeta?: StructuredLyricsCardFallbacks) => {
+    (raw: string, formMeta?: StructuredLyricsCardFallbacks & { streaming?: boolean }) => {
       const preview = getLyricConfirmPreview(raw, {
         title: formMeta?.title || shareOcrData?.title || homeFormMetaRef.current.title,
         artist: formMeta?.artist || shareOcrData?.artist || homeFormMetaRef.current.artist,
       });
       if (!preview) return false;
       confirmedStreamRef.current = preview.cleanedStream;
+      setConfirmStreaming(formMeta?.streaming === true);
+      setStudyError(null);
       setConfirmTitle(preview.title);
       setConfirmArtist(preview.artist);
       setConfirmLang(preview.lang);
@@ -164,7 +172,7 @@ export function useStructuredLyricsClipboardCard({
   );
 
   const activateClipboardDetectCardFromText = useCallback(
-    (text: string, formMeta?: StructuredLyricsCardFallbacks): boolean => {
+    (text: string, formMeta?: StructuredLyricsCardFallbacks & { streaming?: boolean }): boolean => {
       const trimmed = text.trim();
       if (!trimmed) return false;
 
@@ -185,15 +193,15 @@ export function useStructuredLyricsClipboardCard({
           void layoutFromRaw(merged, onRenderLayout, showToast).then(() => {
             showToast(
               vocabCount + grammarCount > 0
-                ? `已合并词解（V${vocabCount}/G${grammarCount}）并排版`
-                : '未检测到词解行，已按确认歌词排版',
+                ? `${L('已合并词解（V', 'Merged vocab (V')}${vocabCount}/G${grammarCount})${L('并排版', ' and layout')}`
+                : L('未检测到词解行，已按确认歌词排版', 'No vocab lines detected, laid out as confirmed lyrics'),
             );
           });
           hapticSuccess();
           return true;
         } catch (e) {
-          const msg = e instanceof Error ? e.message : '合并失败';
-          showToast(`合并失败：${msg}`);
+          const msg = e instanceof Error ? e.message : L('合并失败', 'Merge failed');
+          showToast(`${L('合并失败：', 'Merge failed: ')}${msg}`);
           return true;
         }
       }
@@ -230,7 +238,7 @@ export function useStructuredLyricsClipboardCard({
         const text = await readClipboardText();
         const trimmed = text.trim();
         if (!trimmed) {
-          showToast('剪贴板为空');
+          showToast(L('剪贴板为空', 'Clipboard is empty'));
           return;
         }
         if (activateClipboardDetectCardFromText(trimmed, formMeta)) {
@@ -239,11 +247,11 @@ export function useStructuredLyricsClipboardCard({
         }
         showToast(
           awaitingStudyPasteRef.current
-            ? '未检测到学习材料记录流（需含 V/G）'
-            : '未检测到结构化歌词',
+            ? L('未检测到学习材料记录流（需含 V/G）', 'No study material stream detected (V/G required)')
+            : L('未检测到结构化歌词', 'No structured lyrics detected'),
         );
       } catch {
-        showToast('无法读取剪贴板');
+        showToast(L('无法读取剪贴板', 'Cannot read clipboard'));
       }
     },
     [activateClipboardDetectCardFromText, showToast],
@@ -258,8 +266,8 @@ export function useStructuredLyricsClipboardCard({
           await layoutFromRaw(text, onRenderLayout, showToast);
         }
       } catch (e) {
-        const msg = e instanceof Error ? e.message : '粘贴解析失败';
-        showToast(`解析失败：${msg}`);
+        const msg = e instanceof Error ? e.message : L('粘贴解析失败', 'Paste parse failed');
+        showToast(`${L('解析失败：', 'Parse failed: ')}${msg}`);
       }
     })();
   }, [onRenderLayout, showToast]);
@@ -276,6 +284,7 @@ export function useStructuredLyricsClipboardCard({
       consumedClipboardRef.current.add(prevClipboardHashRef.current);
     }
     setConfirmVisible(false);
+    setConfirmStreaming(false);
     awaitingStudyPasteRef.current = false;
   }, []);
 
@@ -287,27 +296,91 @@ export function useStructuredLyricsClipboardCard({
     void layoutFromRaw(stream, onRenderLayout, showToast);
   }, [onRenderLayout, showToast]);
 
-  const handleConfirmStudy = useCallback(() => {
+  const handleConfirmStudy = useCallback(async () => {
     const stream = confirmedStreamRef.current;
     if (!stream) return;
+
+    // 优先走内部 AI 生成学习材料；失败时留在弹窗内显示错误，不自动跳到外部粘贴
+    setStudyError(null);
+    setIsGeneratingStudy(true);
+    try {
+      const result = await studyAi.generateStudy({
+        title: homeFormMetaRef.current.title.trim() || confirmTitle.trim() || '未知歌曲',
+        artist: homeFormMetaRef.current.artist.trim() || confirmArtist.trim(),
+        confirmedLyrics: stream,
+        matrix,
+        pedagogicalLevel,
+      });
+      if (result.status === 'ok') {
+        try {
+          const { merged, vocabCount, grammarCount } = mergeConfirmedLyricsWithStudy(
+            stream,
+            result.rawText,
+          );
+          awaitingStudyPasteRef.current = false;
+          setConfirmVisible(false);
+          await layoutFromRaw(merged, onRenderLayout, showToast);
+          showToast(
+            vocabCount + grammarCount > 0
+              ? `${L('已生成并合并词解（V', 'Generated & merged vocab (V')}${vocabCount}/G${grammarCount})${L('并排版', ' and layout')}`
+              : L('已按确认歌词排版', 'Laid out as confirmed lyrics'),
+          );
+          hapticSuccess();
+          return;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : L('合并失败', 'Merge failed');
+          setStudyError(`${L('合并失败：', 'Merge failed: ')}${msg}`);
+          showToast(`${L('合并失败：', 'Merge failed: ')}${msg}${L('，可重试或改用外部口令', ', retry or use external token')}`);
+        }
+      } else {
+        setStudyError(result.message || L('学习材料生成失败', 'Study material generation failed'));
+        showToast(`${L('学习材料生成失败：', 'Study material failed: ')}${result.message || L('未知错误', 'unknown error')}`);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : L('网络错误', 'Network error');
+      setStudyError(`${L('生成失败：', 'Generation failed: ')}${msg}`);
+      showToast(`${L('生成失败：', 'Generation failed: ')}${msg}`);
+    } finally {
+      setIsGeneratingStudy(false);
+    }
+  }, [
+    confirmTitle,
+    confirmArtist,
+    confirmLang,
+    matrix,
+    pedagogicalLevel,
+    studyAi,
+    onRenderLayout,
+    showToast,
+  ]);
+
+  // 用户显式选择改用外部 AI 口令时，再回退到剪贴板口令
+  const handleConfirmStudyFallback = useCallback(async () => {
+    const stream = confirmedStreamRef.current;
+    if (!stream) return;
+
     const prompt = buildStudyPrompt(stream);
     awaitingStudyPasteRef.current = true;
     setConfirmVisible(false);
+    setStudyError(null);
     const write = postClipboardWrite
       ? postClipboardWrite(prompt).catch(() => navigator.clipboard.writeText(prompt))
       : navigator.clipboard.writeText(prompt);
-    void write
+    await write
       .then(() => {
         pushExternalPrompt(prompt);
-        showToast('✓ 学习材料口令已复制，粘贴 AI 结果后点「粘贴并排版」');
+        showToast(L('✓ 学习材料口令已复制，粘贴 AI 结果后点「粘贴剪贴板歌词」', '✓ Study token copied. Paste AI result, then tap "Paste clipboard lyrics"'));
       })
       .catch(() => {
-        showToast('复制学习材料口令失败');
+        showToast(L('复制学习材料口令失败', 'Failed to copy study token'));
         awaitingStudyPasteRef.current = false;
       });
   }, [buildStudyPrompt, pushExternalPrompt, showToast]);
 
   const handleConfirmRetry = useCallback(() => {
+    // 关闭确认页，避免底部 ActionSheet / Toast 被歌词确认浮层（z-index 更高）盖住
+    setClipboardCardVisible(false);
+    setStudyError(null);
     const prompt = buildLyricsPrompt(true);
     const write = postClipboardWrite
       ? postClipboardWrite(prompt).catch(() => navigator.clipboard.writeText(prompt))
@@ -315,12 +388,12 @@ export function useStructuredLyricsClipboardCard({
     void write
       .then(() => {
         pushExternalPrompt(prompt);
-        showToast('✓ 已复制加强完整口令，请重试后再粘贴');
+        showToast(L('✓ 已复制加强完整口令，请重试后再粘贴', '✓ Enhanced token copied. Retry, then paste'));
       })
       .catch(() => {
-        showToast('复制口令失败');
+        showToast(L('复制口令失败', 'Failed to copy token'));
       });
-  }, [buildLyricsPrompt, pushExternalPrompt, showToast]);
+  }, [buildLyricsPrompt, pushExternalPrompt, showToast, setClipboardCardVisible, setStudyError]);
 
   return {
     clipboardCardVisible,
@@ -335,6 +408,9 @@ export function useStructuredLyricsClipboardCard({
     handleClipboardRenderLayout,
     handleClipboardDismiss,
     confirmVisible,
+    confirmStreaming,
+    isGeneratingStudy,
+    studyError,
     confirmTitle,
     confirmArtist,
     confirmLang,
@@ -342,6 +418,7 @@ export function useStructuredLyricsClipboardCard({
     confirmPreviewLines,
     handleConfirmLayout,
     handleConfirmStudy,
+    handleConfirmStudyFallback,
     handleConfirmRetry,
     handleConfirmDismiss,
     externalPrompt,

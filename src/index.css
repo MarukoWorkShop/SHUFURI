@@ -65,6 +65,19 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* 笔记本引导文案、设置说明等可复制 */
+.edit-notebook,
+.edit-notebook * {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.edit-notebook button,
+.edit-notebook [role='button'] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* 如果你的歌词列表需要滚动，不要滚动整个网页，只允许内部特定的盒子滚动 */
 .lyrics-scroll-container {
   overflow-y: auto;
