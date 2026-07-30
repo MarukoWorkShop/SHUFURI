@@ -298,7 +298,7 @@ export default function HtmlPasteInput({
               id="title-input"
               value={songTitle}
               onChange={(e) => setSongTitle(e.target.value)}
-              placeholder={L('歌曲名称', 'Enter the song title you want to search for')}
+              placeholder={L('歌曲名称', 'Song Title')}
               required
               aria-required="true"
             />
@@ -340,9 +340,9 @@ export default function HtmlPasteInput({
                       className="ext-pipeline__share-fill-submit"
                       onClick={submitPaste}
                       onPointerDown={(e) => e.preventDefault()}
-                      title={L('解析歌名与歌手', 'Parse title and artist')}
+                      title={L('解析歌名与歌手', 'Auto-fill Title & Artist')}
                     >
-                      {L('解析', 'Parse')}
+                      {L('解析', 'Analyze')}
                     </button>
                   ) : null}
                 </div>
@@ -352,7 +352,7 @@ export default function HtmlPasteInput({
                   className="ext-pipeline__share-fill-btn"
                   onClick={handlePasteAreaClick}
                   disabled={parseMusicShareBusy}
-                  title={L('点击后粘贴 QQ / 网易云分享链接，自动解析歌名与歌手', 'Tap to paste a QQ / NetEase share link — title and artist will be parsed automatically.')}
+                  title={L('点击后粘贴 QQ / 网易云分享链接，自动解析歌名与歌手', 'Tap to paste a QQ/NetEase share link — title and artist will be parsed automatically.')}
                 >
                   {parseMusicShareBusy
                     ? L('识别中…', 'Recognizing…')
@@ -386,7 +386,7 @@ export default function HtmlPasteInput({
                   pastePrimary ? 'btn-filled' : 'btn-tonal is-dormant'
                 }`}
                 disabled={!pasteLayoutReady}
-                title={L('读取剪贴板中的结构化歌词并排版（不是分享链接）', 'Read structured lyrics from clipboard and layout (not share links).')}
+                title={L('读取剪贴板中的结构化歌词并排版（不是分享链接）', 'Read structured lyrics from the clipboard and format them (not share links).')}
                 onClick={() =>
                   onActivatePasteLayout({
                     title: songTitle.trim(),
@@ -394,7 +394,7 @@ export default function HtmlPasteInput({
                   })
                 }
               >
-                {L('粘贴剪贴板歌词', 'Paste clipboard lyrics')}
+                {L('粘贴剪贴板歌词', 'Paste Lyrics from Clipboard')}
               </button>
             )}
             <button
@@ -405,7 +405,7 @@ export default function HtmlPasteInput({
               onClick={handleCopyPrompt}
               disabled={!canGenerate}
             >
-              <span>{L('一键生成口令', 'Generate share code')}</span>
+              <span>{L('一键生成口令', 'Generate AI Prompt')}</span>
             </button>
           </div>
 
@@ -413,7 +413,7 @@ export default function HtmlPasteInput({
           {canGenerate && (
             <p className="ext-pipeline__mode-hint">
               <span className="ext-pipeline__hint-line">
-                <strong>{L('一键生成口令', 'Generate share code')}</strong>
+                <strong>{L('一键生成口令', 'Generate AI Prompt')}</strong>
                 {L(
                   '：复制详细 Prompt，粘贴到任意 AI（Doubao / ChatGPT / DeepSeek 等）后把结果粘贴回此页排版',
                   ': copies a detailed prompt — paste it into any AI (Doubao / ChatGPT / DeepSeek, etc.), then paste the response back here to layout.',

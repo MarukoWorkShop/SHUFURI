@@ -1,6 +1,6 @@
 /** 小塚明朝 Pro Light / R（public/assets/KozMinPro-Light.otf）— 日文主文 + ruby 注音 */
 export const KOZMIN_PRO_REGULAR_FAMILY =
-  '"Kozuka Mincho Pro R", "Kozuka Mincho Pro", "Hiragino Mincho ProN", serif';
+  '"Kozuka Mincho Pro R", "Kozuka Mincho Pro", "Hiragino Mincho ProN", "Source Han Serif SC", "Songti SC", serif';
 
 /** @deprecated 已统一为 KozMin Pro R；保留别名避免旧引用断裂 */
 export const KOZUKA_MINCHO_EL_FAMILY = KOZMIN_PRO_REGULAR_FAMILY;

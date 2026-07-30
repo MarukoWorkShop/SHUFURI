@@ -44,6 +44,22 @@ export type ArkProxyRequest = {
   interfaceLanguage: 'zh' | 'en';
   /** CloudBase 匿名用户 UID，用于后端硬配额校验 */
   userId?: string;
+
+  // ===== 歌词语法词解缓存字段（仅 lyrics.step2 时有效） =====
+  /** 6 维结构哈希（SHA-256），前端计算；用于匹配已有缓存 */
+  contentHash?: string;
+  /** 歌名（缓存记录 / 调试用） */
+  title?: string;
+  /** 歌手（缓存记录 / 调试用） */
+  artist?: string;
+  /**
+   * 强制重新生成并**覆盖**已有缓存。
+   * - false/不传：正常走缓存流程
+   * - true：跳过缓存查询 → 调 API → 用新结果全量覆盖旧缓存
+   *
+   * 触发场景：用户发现缓存结果有误，点击「重新进行 AI 分析」。
+   */
+  forceRefresh?: boolean;
 };
 
 /** 云函数返回的响应 */
@@ -55,6 +71,12 @@ export type ArkProxyResponse = {
   content?: string;
   usage?: ArkProxyUsage;
   error?: ArkProxyError;
+
+  // ===== 歌词语法词解缓存字段 =====
+  /** 是否命中已有缓存（未调用火山引擎） */
+  fromCache?: boolean;
+  /** 本次缓存命中节省的费用（元） */
+  costSaved?: number;
 };
 
 // ===== AI Gateway 抽象层 =====
@@ -68,6 +90,11 @@ export type AiGatewayRequest = {
   interfaceLanguage: 'zh' | 'en';
   /** CloudBase 匿名用户 UID，用于后端硬配额校验 */
   userId?: string;
+  // ===== 歌词语法词解缓存字段 =====
+  contentHash?: string;
+  title?: string;
+  artist?: string;
+  forceRefresh?: boolean;
 };
 
 /** 网关响应（与 ArkProxyResponse 结构一致） */

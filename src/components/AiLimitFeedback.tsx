@@ -104,7 +104,7 @@ export default function AiLimitFeedback({ usage, blockedAction, onClose }: Props
               </svg>
             </div>
             <p className="ai-limit-done__text">
-              {L('感谢支持，正式版本正在筹备中', 'Thanks — the official version is coming soon')}
+              {L('感谢支持，正式版本正在筹备中', 'Thank you for your support. The official version is coming soon.')}
             </p>
             <p className="ai-limit-done__sub">
               {L(
@@ -120,7 +120,7 @@ export default function AiLimitFeedback({ usage, blockedAction, onClose }: Props
           /* ---------------- 反馈表单 ---------------- */
           <>
             <h2 className="ai-limit-card__title">
-              {L('内测反馈墙', 'Beta Feedback Wall')}
+              {L('内测反馈墙', 'Beta Feedback')}
             </h2>
 
             <p className="ai-limit-card__desc">
@@ -145,13 +145,13 @@ export default function AiLimitFeedback({ usage, blockedAction, onClose }: Props
             {/* 限额概览条 */}
             <div className="ai-limit-summary">
               <div className="ai-limit-summary__row">
-                <span>{L('划词讲解', 'Word Explain')}</span>
+                <span>{L('划词讲解', 'Highlight Explanation')}</span>
                 <span className={usage.explainReached ? 'is-exhausted' : ''}>
                   {usage.explainCount}/{usage.explainLimit}
                 </span>
               </div>
               <div className="ai-limit-summary__row">
-                <span>{L('词解与语法', 'Lyrics Analysis')}</span>
+                <span>{L('词解与语法', 'Vocab & Grammar')}</span>
                 <span className={usage.lyricsReached ? 'is-exhausted' : ''}>
                   {usage.lyricsCount}/{usage.lyricsLimit}
                 </span>
@@ -161,7 +161,7 @@ export default function AiLimitFeedback({ usage, blockedAction, onClose }: Props
             {/* 评分 */}
             <div className="ai-limit-rating">
               <div className="ai-limit-rating__label">
-                {L('请给当前功能打个分（1-100）', 'Rate the current features (1-100)')}
+                {L('请给当前功能打个分（1-100）', 'Rate the current feature (1-100).')}
               </div>
               <div className="ai-limit-rating__presets">
                 {SCORE_PRESETS.map((preset) => (

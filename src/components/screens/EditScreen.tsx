@@ -138,7 +138,7 @@ export default function EditScreen() {
       if (!noteId) {
         // 旧笔记无 id：先补齐后请用户再点一次（避免 DOM 与 bodyHtml 脱节）
         ensureExplainNoteIds();
-        showToast(L('笔记已刷新，请再点一次编辑', 'Notes refreshed, please click edit again'));
+        showToast(L('笔记已刷新，请再点一次编辑', 'Notes refreshed, tap edit again.'));
         return;
       }
 
@@ -170,7 +170,7 @@ export default function EditScreen() {
       const note = listExplainNotesFromBodyHtml(bodyHtml).find((n) => n.id === noteId);
       if (!note || note.id.startsWith('orphan-')) {
         ensureExplainNoteIds();
-        showToast(L('笔记已刷新，请再点一次编辑', 'Notes refreshed, please click edit again'));
+        showToast(L('笔记已刷新，请再点一次编辑', 'Notes refreshed, tap edit again.'));
         return;
       }
       if (explain.panelOpen) explain.closePanel();
@@ -190,7 +190,7 @@ export default function EditScreen() {
       const item = listStudyEntriesFromBodyHtml(bodyHtml).vocab.find((n) => n.id === itemId);
       if (!item || item.id.startsWith('orphan-')) {
         ensureStudyItemIds();
-        showToast(L('条目已刷新，请再点一次编辑', 'Entries refreshed, please click edit again'));
+        showToast(L('条目已刷新，请再点一次编辑', 'Entries refreshed, tap edit again.'));
         return;
       }
       if (explain.panelOpen) explain.closePanel();
@@ -212,7 +212,7 @@ export default function EditScreen() {
       const item = listStudyEntriesFromBodyHtml(bodyHtml).grammar.find((n) => n.id === itemId);
       if (!item || item.id.startsWith('orphan-')) {
         ensureStudyItemIds();
-        showToast(L('条目已刷新，请再点一次编辑', 'Entries refreshed, please click edit again'));
+        showToast(L('条目已刷新，请再点一次编辑', 'Entries refreshed, tap edit again.'));
         return;
       }
       if (explain.panelOpen) explain.closePanel();
@@ -240,7 +240,7 @@ export default function EditScreen() {
           : 'vocab';
       if (!itemId) {
         ensureStudyItemIds();
-        showToast(L('条目已刷新，请再点一次编辑', 'Entries refreshed, please click edit again'));
+        showToast(L('条目已刷新，请再点一次编辑', 'Entries refreshed, tap edit again.'));
         return;
       }
 
@@ -351,14 +351,14 @@ export default function EditScreen() {
 
   const enableExplainFromNotebook = useCallback(() => {
     if (explain.explainMode) {
-      showToast(L('划词已开启：在左侧选中词语', 'Selection mode on: select text on the left'));
+      showToast(L('划词已开启：在左侧选中词语', 'Selection mode on: select text on the left.'));
       return;
     }
     ink.closeInkPopover();
     ink.setInkEditMode(false);
     explain.arm();
     collapseToolbox();
-    showToast(L('划词已开启：选中后先出本地释义，需要时再点 AI讲解', 'Selection mode on: local dictionary first, tap AI Explain for more'));
+    showToast(L('划词已开启：选中后先出本地释义，需要时再点 AI讲解', 'Selection mode on: shows local definition first, tap "AI Explain" for more.'));
   }, [collapseToolbox, explain, ink, showToast]);
 
   const toggleInkToolbox = useCallback(() => {
@@ -375,27 +375,27 @@ export default function EditScreen() {
       ink.setInkEditMode(false);
       ink.closeInkPopover();
       collapseToolbox();
-      showToast(L('已退出铅笔编辑', 'Pencil edit exited'));
+      showToast(L('已退出铅笔编辑', 'Exited quick edit.'));
       return;
     }
     if (explain.explainMode) explain.disarm();
     ink.setInkEditMode(true);
     collapseToolbox();
-    showToast(L('铅笔编辑已开启：点选注音或译文', 'Pencil edit on: tap to edit readings or translations'));
+    showToast(L('铅笔编辑已开启：点选注音或译文', 'Quick edit on: tap to edit readings or translations.'));
   }, [collapseToolbox, explain, ink, showToast]);
 
   const handleToggleExplain = useCallback(() => {
     if (explain.explainMode) {
       explain.disarm();
       collapseToolbox();
-      showToast(L('已退出划词解释', 'Selection explain exited'));
+      showToast(L('已退出划词解释', 'Exited highlight explanation.'));
       return;
     }
     ink.closeInkPopover();
     ink.setInkEditMode(false);
     explain.arm();
     collapseToolbox();
-    showToast(L('划词已开启：选中后先出本地释义，需要时再点 AI讲解', 'Selection mode on: local dictionary first, tap AI Explain for more'));
+    showToast(L('划词已开启：选中后先出本地释义，需要时再点 AI讲解', 'Selection mode on: shows local definition first, tap "AI Explain" for more.'));
   }, [collapseToolbox, explain, ink, showToast]);
 
   const handleRubyChangeAndCollapse = useCallback(
@@ -444,8 +444,8 @@ export default function EditScreen() {
       onSelect: (sel) => {
         explain.analyzeSelection(sel.text, sel.context);
       },
-      onOverflow: () => showToast(L('已超出讲解范围，请缩小选区', 'Selection too large, please narrow it down')),
-      onTranslationOnly: () => showToast(L('请涂抹原文行，不要选中翻译部分', 'Please select original text, not translations')),
+      onOverflow: () => showToast(L('已超出讲解范围，请缩小选区', 'Selection too large, please narrow it down.')),
+      onTranslationOnly: () => showToast(L('请涂抹原文行，不要选中翻译部分', 'Please select the original text, not the translation.')),
     });
 
     return () => {
@@ -473,7 +473,7 @@ export default function EditScreen() {
         </button>
         <div className="toolbar-actions">
           {explain.explainMode && (
-            <span className="preview-explain-hint">{L('划词解释中', 'Selection explaining')}</span>
+            <span className="preview-explain-hint">{L('划词解释中', 'Explaining Selection…')}</span>
           )}
           <button
             type="button"
@@ -622,7 +622,7 @@ export default function EditScreen() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('词条', 'Term')}
+                  {L('词条', 'Entry')}
                   <input
                     className="shufuri-explain-note-editor__input"
                     value={draftTerm}
@@ -632,7 +632,7 @@ export default function EditScreen() {
                 </label>
 
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('语境释义', 'Context sense')}
+                  {L('语境释义', 'Contextual Meaning')}
                   <textarea
                     value={draftContextSense}
                     rows={2}
@@ -733,7 +733,7 @@ export default function EditScreen() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('词条', 'Term')}
+                  {L('词条', 'Entry')}
                   <input
                     value={vocabDraft.term}
                     onChange={(ev) =>
@@ -765,7 +765,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('例句译文', 'Example translation')}
+                  {L('例句译文', 'Example Translation')}
                   <textarea
                     value={vocabDraft.translation}
                     rows={2}
@@ -847,7 +847,7 @@ export default function EditScreen() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('语法点', 'Grammar point')}
+                  {L('语法点', 'Grammar Point')}
                   <input
                     value={grammarDraft.titlePrimary}
                     onChange={(ev) =>
@@ -857,7 +857,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('旁注释义', 'Gloss')}
+                  {L('旁注释义', 'Definition')}
                   <input
                     value={grammarDraft.titleSecondary}
                     onChange={(ev) =>
@@ -867,7 +867,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('详细解析', 'Detail')}
+                  {L('详细解析', 'Detailed Analysis')}
                   <textarea
                     value={grammarDraft.detail}
                     rows={3}
@@ -889,7 +889,7 @@ export default function EditScreen() {
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('例句译文', 'Example translation')}
+                  {L('例句译文', 'Example Translation')}
                   <textarea
                     value={grammarDraft.translation}
                     rows={2}

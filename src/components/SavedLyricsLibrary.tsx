@@ -205,8 +205,8 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
     const count = selectedIds.size;
     const msg =
       count === items.length
-        ? `${L('确定删除全部', 'Delete all')} ${count} ${L('篇歌词？', 'lyrics?')}`
-        : `${L('确定删除已选的', 'Delete selected')} ${count} ${L('篇歌词？', 'lyrics?')}`;
+        ? `${L('确定删除全部', 'Delete All')} ${count} ${L('篇歌词？', 'lyrics?')}`
+        : `${L('确定删除已选的', 'Delete Selected')} ${count} ${L('篇歌词？', 'lyrics?')}`;
     if (!window.confirm(msg)) return;
     setDeleting(true);
     setError('');
@@ -248,7 +248,7 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
         className={`saved-library-drawer${drawerActive ? ' is-open' : ''}${closing ? ' is-closing' : ''}${dismissDragging ? ' is-dismiss-dragging' : ''}${drawerDragOffsetActive ? ' is-drag-offset' : ''}`}
         role="dialog"
         aria-modal="true"
-        aria-label="我的歌词本"
+        aria-label={L('我的歌词本', 'My Lyrics')}
       >
         <div
           className="saved-library-drawer__dismiss-handle"
@@ -256,12 +256,12 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
           onPointerMove={onDismissHandlePointerMove}
           onPointerUp={onDismissHandlePointerUp}
           onPointerCancel={onDismissHandlePointerCancel}
-          aria-label="下拉收起"
+          aria-label={L('下拉收起', 'Pull to Collapse')}
         >
           <div className="saved-library-drawer__binding" aria-hidden />
         </div>
         <header className="saved-library-drawer__header">
-          <span className="saved-library-title">我的歌词本</span>
+          <span className="saved-library-title">{L('我的歌词本', 'My Lyrics')}</span>
           <div className="saved-library-drawer__header-aside">
             {selectedIds.size > 0 && (
               <button
@@ -279,7 +279,7 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
                 className="saved-library-drawer__select-all"
                 onClick={toggleSelectAll}
               >
-                {allSelected ? '取消全选' : '全选'}
+                {allSelected ? L('取消全选', 'Deselect All') : L('全选', 'Select All')}
               </button>
             )}
             {items.length > 0 && (
@@ -288,12 +288,11 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
                 className="saved-library-drawer__batch-export"
                 onClick={() => setShowBatchExport(true)}
               >
-                批量导出 PDF
-                <span className="pro-badge" aria-label="Pro 功能">PRO</span>
+                {L('批量导出 PDF', 'Batch Export as PDF')}
               </button>
             )}
             <button type="button" className="saved-library-drawer__close" onClick={closeDrawer}>
-              帰 / 收起
+              {L('收起', 'Collapse')}
             </button>
           </div>
         </header>

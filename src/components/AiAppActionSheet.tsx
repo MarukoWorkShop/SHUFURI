@@ -77,7 +77,7 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
               <circle className="ai-action-sheet__check-ring" cx="26" cy="26" r="24" fill="none" />
               <path className="ai-action-sheet__check-path" fill="none" d="M14 27l8 8 16-16" />
             </svg>
-            <p className="ai-action-sheet__success-title">{L('复制口令成功', 'Share code copied')}</p>
+            <p className="ai-action-sheet__success-title">{L('复制口令成功', 'Prompt copied.')}</p>
 
             <div className="ai-action-sheet__footer">
               <button
@@ -85,13 +85,13 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
                 className="ai-action-sheet__self-service"
                 onClick={handleSelfService}
               >
-                {L('去AI智能体对话窗口直接粘贴', 'Open an AI chat app and paste there')}
+                {L('去AI智能体对话窗口直接粘贴', 'Paste directly into your AI chat app.')}
               </button>
             </div>
             <p className="ai-action-sheet__success-note">
               {L(
-                '不同AI表现有差异，可能出现幻觉，可切换不同AI尝试',
-                'Different AIs perform differently — hallucinations may occur. Try switching AIs if needed.',
+                '消费级AI常有幻觉，可能编造或错漏歌词。可强调「输出原版歌词」「去掉幻觉」，尝试不同AI Agent，生成后也可手动修正错误歌词或翻译。',
+                'Consumer AI often hallucinates — it may fabricate or miss lyrics. Try prompting "output original lyrics — no hallucinations", switch AI agents, and manually fix any errors in lyrics or translation.',
               )}
             </p>
             <button
@@ -99,7 +99,7 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
               className="ai-action-sheet__cancel"
               onClick={onClose}
             >
-              {L('取消', 'Cancel')}
+              {L('好的，去粘贴口令', 'OK, Go Paste')}
             </button>
           </div>
         ) : (
@@ -109,7 +109,7 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
               {copiedText ? (
                 <p className="ai-action-sheet__title">{L('✓ 指令已复制', '✓ Prompt copied')}</p>
               ) : (
-                <p className="ai-action-sheet__title">{L('选择 AI 应用打开', 'Choose an AI app to open')}</p>
+                <p className="ai-action-sheet__title">{L('选择 AI 应用打开', 'Choose an AI app to open.')}</p>
               )}
             </div>
 
@@ -117,9 +117,9 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
               <div className="ai-action-sheet__loading">{L('检测中…', 'Detecting…')}</div>
             ) : apps.length === 0 ? (
               <div className="ai-action-sheet__empty">
-                <p>{L('未检测到 AI 应用', 'No AI app detected')}</p>
+                <p>{L('未检测到 AI 应用', 'No AI app detected.')}</p>
                 <p className="ai-action-sheet__empty-hint">
-                  {L('请先安装 ChatGPT、Kimi 或豆包等应用', 'Please install ChatGPT, Kimi, Doubao, etc. first.')}
+                  {L('请先安装 ChatGPT、Kimi 或豆包等应用', 'Please install ChatGPT, Kimi, Doubao, or similar apps first.')}
                 </p>
               </div>
             ) : (
@@ -143,6 +143,13 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
               </div>
             )}
 
+            <p className="ai-action-sheet__success-note">
+              {L(
+                '消费级AI常有幻觉，可能编造或错漏歌词。可强调「输出原版歌词」「去掉幻觉」，尝试不同AI Agent，生成后也可手动修正错误歌词或翻译。',
+                'Consumer AI often hallucinates — it may fabricate or miss lyrics. Try prompting "output original lyrics — no hallucinations", switch AI agents, and manually fix any errors in lyrics or translation.',
+              )}
+            </p>
+
             {/* 兜底：复制好了自己打开 */}
             <div className="ai-action-sheet__footer">
               <button
@@ -154,13 +161,13 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
               </button>
             </div>
 
-            {/* 取消按钮 */}
+            {/* 好的，去粘贴口令 */}
             <button
               type="button"
               className="ai-action-sheet__cancel"
               onClick={onClose}
             >
-              {L('取消', 'Cancel')}
+              {L('好的，去粘贴口令', 'OK, Go Paste')}
             </button>
           </>
         )}

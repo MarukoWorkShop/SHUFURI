@@ -30,6 +30,8 @@ export type AppSettings = {
   defaultPedagogicalLevel: PedagogicalLevel;
   /** 使用语言：Prompt 释义/解析输出语言 */
   interfaceLanguage: InterfaceLanguage;
+  /** 是否跟随系统语言（为 true 时忽略 interfaceLanguage 存储值，启动时从 navigator.language 推断） */
+  followSystemLanguage: boolean;
   /** 学习目标语言多选 */
   learningTargetLanguages: LearningTargetLanguage[];
   /** 拨轮当前目标：jp / ko / en / zh */
@@ -46,6 +48,7 @@ function buildDefaults(): AppSettings {
     defaultIncludeVocabAndGrammar: true,
     defaultPedagogicalLevel: DEFAULT_PEDAGOGICAL_LEVEL,
     interfaceLanguage: resolveSystemInterfaceLanguage(),
+    followSystemLanguage: true,
     learningTargetLanguages: ['jp', 'ko', 'en'],
     lyricsLanguage: 'jp',
     interactionSoundsEnabled: true,
@@ -101,9 +104,16 @@ export function getAppSettings(): AppSettings {
     defaultPedagogicalLevel: isPedagogicalLevel(stored.defaultPedagogicalLevel)
       ? stored.defaultPedagogicalLevel
       : DEFAULTS.defaultPedagogicalLevel,
-    interfaceLanguage: isInterfaceLanguage(stored.interfaceLanguage)
-      ? stored.interfaceLanguage
-      : DEFAULTS.interfaceLanguage,
+    interfaceLanguage:
+      stored.followSystemLanguage === true || stored.followSystemLanguage === undefined
+        ? resolveSystemInterfaceLanguage()
+        : isInterfaceLanguage(stored.interfaceLanguage)
+          ? stored.interfaceLanguage
+          : DEFAULTS.interfaceLanguage,
+    followSystemLanguage:
+      typeof stored.followSystemLanguage === 'boolean'
+        ? stored.followSystemLanguage
+        : DEFAULTS.followSystemLanguage,
     learningTargetLanguages,
     lyricsLanguage: normalizeActiveTarget(rawLyricsLanguage, learningTargetLanguages),
     /* 设置页已移除开关；忽略历史 localStorage 中的 false */
@@ -113,7 +123,15 @@ export function getAppSettings(): AppSettings {
 
 export function saveAppSettings(partial: Partial<AppSettings>): AppSettings {
   const current = getAppSettings();
-  const merged = { ...current, ...partial, colorTheme: 'mono' as const };
+  const merged = {
+    ...current,
+    ...partial,
+    colorTheme: 'mono' as const,
+    // 当关闭跟随系统时，保持当前系统推断的语言作为手动选择值
+    ...(partial.followSystemLanguage === false && current.followSystemLanguage !== false
+      ? { interfaceLanguage: resolveSystemInterfaceLanguage() }
+      : {}),
+  };
 
   if (partial.learningTargetLanguages || partial.lyricsLanguage !== undefined) {
     const targets = partial.learningTargetLanguages ?? merged.learningTargetLanguages;

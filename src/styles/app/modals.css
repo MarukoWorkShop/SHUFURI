@@ -91,7 +91,8 @@
   font-family: var(--ui-font-sans);
   font-size: 12px;
   line-height: 1.5;
-  color: var(--color-fg-faint, #94a3b8);
+  font-weight: 500;
+  color: var(--color-fg-muted, #64748b);
 }
 
 .ai-action-sheet__title {
@@ -643,7 +644,8 @@
   margin: -2px 0 10px;
   font-size: 11px;
   line-height: 1.45;
-  color: var(--color-fg-faint, #94a3b8);
+  color: var(--color-fg-muted, #64748b);
+  font-weight: 500;
   flex-shrink: 0;
 }
 
@@ -660,6 +662,54 @@
   background: rgba(211, 47, 47, 0.08);
   padding: 10px 12px;
   border-radius: 10px;
+}
+
+/* ---- 缓存在身标识 + 重新 AI 分析 ---- */
+.lyric-confirm-sheet__cache-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin: 0 0 14px;
+  flex-shrink: 0;
+}
+
+.lyric-confirm-sheet__cache-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-success, #16a34a);
+  background: rgba(22, 163, 74, 0.08);
+  border-radius: 6px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.lyric-confirm-sheet__cache-reanalyze-btn {
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-fg-faint, #94a3b8);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+
+.lyric-confirm-sheet__cache-reanalyze-btn:hover {
+  color: var(--color-fg-muted, #64748b);
+}
+
+.lyric-confirm-sheet__cache-reanalyze-btn:active {
+  color: var(--color-fg, #1e293b);
 }
 
 .lyric-confirm-sheet__spinner {

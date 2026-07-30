@@ -37,6 +37,8 @@ export type HomeSessionContextValue = {
   confirmStreaming: boolean;
   isGeneratingStudy: boolean;
   studyError: string | null;
+  /** 最近一次词解与语法是否来自缓存（命中时不消耗配额） */
+  studyFromCache: boolean;
   confirmTitle: string;
   confirmArtist: string;
   confirmLang: LangCode | undefined;
@@ -44,6 +46,7 @@ export type HomeSessionContextValue = {
   confirmPreviewLines: LyricPreviewLine[];
   handleConfirmLayout: () => void;
   handleConfirmStudy: () => void;
+  handleConfirmReanalyze: () => void;
   handleConfirmStudyFallback: () => void;
   handleConfirmRetry: () => void;
   handleConfirmDismiss: () => void;

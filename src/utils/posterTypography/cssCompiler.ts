@@ -308,25 +308,21 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     text-align: center;
     margin: 0 0 ${fs(L.titleMbPx)} 0;
     line-height: ${L.titleLineHeight};
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 0.35em;
     ${unit === 'mm' ? 'flex: 0 0 auto;' : ''}
   }
   ${root}.fv-title-name {
     max-width: 100%;
-    min-width: 0;
+    display: inline;
+    word-break: keep-all;
+    line-break: strict;
+    overflow-wrap: break-word;
   }
   ${root}.fv-title-artist {
+    display: block;
     font-size: 0.58em;
     font-weight: ${artistWght};
     color: #64748b;
     letter-spacing: 0.02em;
-    flex: 0 1 100%;
-    max-width: 100%;
-    min-width: 0;
     text-align: center;
     white-space: normal;
     overflow-wrap: break-word;
@@ -435,6 +431,8 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${ZH_FONT_FAMILY} !important;
     margin: ${unit === 'px' ? L.lyricsJpZhGap : emSize(L.lyricsJpZhGap, L.mainPx, unit, spec)} 0 0 0 !important;
     letter-spacing: ${r.cjkLetterSpacing};
+    text-indent: 0;
+    padding-inline-start: 0;
   }
   ${bodySel} .lyrics-group .gloss-line,
   ${bodySel} .lyrics-group .gloss-line * {

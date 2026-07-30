@@ -36,7 +36,7 @@ const MAX_TOKENS = 360;
 
 /* ===== 安全防护 ===== */
 
-const MAX_PROMPT_LENGTH = 500;
+const MAX_PROMPT_LENGTH = 8000;
 const RATE_WINDOW_MS = 3000;
 const RATE_MAX_PER_WINDOW = 3;
 

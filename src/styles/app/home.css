@@ -956,6 +956,12 @@
   color: var(--ui-fg-secondary);
 }
 
+/* 跟随系统时锁定语言切换 */
+.app-settings__lang-toggle.is-locked {
+  opacity: 0.42;
+  pointer-events: none;
+}
+
 .app-settings__lang-toggle-status {
   margin: var(--ui-space-1) 0 0;
   font-size: 11px;

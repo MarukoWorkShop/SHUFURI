@@ -19,7 +19,7 @@ type LangFilter = 'all' | LangCode;
 const LANG_FILTER_ORDER: LangFilter[] = ['all', 'jp', 'ko', 'en', 'zh'];
 
 function kindLabel(kind: StudyCard['kind']): string {
-  return kind === 'vocab' ? L('词汇', 'Vocab') : L('语法', 'Grammar');
+  return kind === 'vocab' ? L('词汇', 'Vocabulary') : L('语法', 'Grammar');
 }
 
 function langTagLabel(lang: LangCode): string {
@@ -61,7 +61,7 @@ export default function StudyCardsLibrary(_props: Props) {
     try {
       setItems(await listStudyCards());
     } catch (e) {
-      setError(e instanceof Error ? e.message : L('加载失败', 'Load failed'));
+      setError(e instanceof Error ? e.message : L('加载失败', 'Failed to load.'));
     } finally {
       setLoading(false);
     }
@@ -237,7 +237,7 @@ export default function StudyCardsLibrary(_props: Props) {
     try {
       await shareAnkiDeckTsv(cardsToExport);
     } catch (e) {
-      setError(e instanceof Error ? e.message : L('导出失败', 'Export failed'));
+      setError(e instanceof Error ? e.message : L('导出失败', 'Failed to export.'));
     } finally {
       setExporting(false);
     }
@@ -248,8 +248,8 @@ export default function StudyCardsLibrary(_props: Props) {
     const count = selectedIds.size;
     const msg =
       count === items.length
-        ? `${L('确定删除全部', 'Delete all')} ${count} ${L('张学习卡？', ' study cards?')}`
-        : `${L('确定删除已选的', 'Delete selected')} ${count} ${L('张学习卡？', ' study cards?')}`;
+        ? `${L('确定删除全部', 'Delete All')} ${count} ${L('张学习卡？', 'study cards?')}`
+        : `${L('确定删除已选的', 'Delete Selected')} ${count} ${L('张学习卡？', 'study cards?')}`;
     if (!window.confirm(msg)) return;
     setDeleting(true);
     setError('');
@@ -260,7 +260,7 @@ export default function StudyCardsLibrary(_props: Props) {
       const nextItems = await listStudyCards();
       setItems(nextItems);
     } catch (e) {
-      setError(e instanceof Error ? e.message : L('删除失败', 'Delete failed'));
+      setError(e instanceof Error ? e.message : L('删除失败', 'Failed to delete.'));
     } finally {
       setDeleting(false);
     }
@@ -317,7 +317,7 @@ export default function StudyCardsLibrary(_props: Props) {
           onPointerMove={onDismissHandlePointerMove}
           onPointerUp={onDismissHandlePointerUp}
           onPointerCancel={onDismissHandlePointerCancel}
-          aria-label={L('下拉收起', 'Collapse')}
+          aria-label={L('下拉收起', 'Pull to Collapse')}
         >
           <div className="study-cards-drawer__binding" aria-hidden />
         </div>
@@ -329,7 +329,7 @@ export default function StudyCardsLibrary(_props: Props) {
                 type="button"
                 className="study-cards-drawer__lang-filter"
                 onClick={cycleLangFilter}
-                aria-label={`${L('语言筛选：', 'Lang filter: ')}${langFilterLabel(langFilter)}`}
+                aria-label={`${L('语言筛选：', 'Filter by Language:')}${langFilterLabel(langFilter)}`}
               >
                 {langFilterLabel(langFilter)}
               </button>
@@ -343,12 +343,12 @@ export default function StudyCardsLibrary(_props: Props) {
                 disabled={deleting}
                 onClick={() => void handleDeleteSelected()}
               >
-                {deleting ? L('删除中…', 'Deleting…') : L('删除所选', 'Delete selected')}
+                {deleting ? L('删除中…', 'Deleting…') : L('删除所选', 'Delete Selected')}
               </button>
             )}
             {items.length > 0 && (
               <button type="button" className="study-cards-drawer__select-all" onClick={toggleSelectAll}>
-                {allSelected ? L('取消全选', 'Deselect all') : L('全选', 'Select all')}
+                {allSelected ? L('取消全选', 'Deselect All') : L('全选', 'Select All')}
               </button>
             )}
             <button type="button" className="study-cards-drawer__close" onClick={closeDrawer}>
@@ -363,13 +363,13 @@ export default function StudyCardsLibrary(_props: Props) {
 
           {!loading && items.length === 0 && (
             <p className="saved-library-hint saved-library-hint--drawer">
-              {L('暂无学习卡。粘贴含「重点词汇 / 重点语法」的 AI 歌词并排版后，卡片会自动收录于此。', 'No study cards. Paste AI lyrics with vocab/grammar and layout to auto-populate.')}
+              {L('暂无学习卡。粘贴含「重点词汇 / 重点语法」的 AI 歌词并排版后，卡片会自动收录于此。', 'No study cards yet. Paste AI lyrics containing vocab/grammar and format them to auto-populate cards.')}
             </p>
           )}
 
           {!loading && items.length > 0 && visibleItems.length === 0 && (
             <p className="saved-library-hint saved-library-hint--drawer">
-              {L('暂无', 'No')} {langFilterLabel(langFilter)} {L('卡片，点击标题旁标签切换语言。', 'cards. Tap tags near title to switch language.')}
+              {L('暂无', 'None')} {langFilterLabel(langFilter)} {L('卡片，点击标题旁标签切换语言。', 'cards. Tap the tags next to the title to switch languages.')}
             </p>
           )}
 
@@ -434,7 +434,7 @@ export default function StudyCardsLibrary(_props: Props) {
             {exporting ? L('导出中…', 'Exporting…') : ` ${L('导出至 Anki', 'Export to Anki')} `}
           </button>
           {selectedIds.size > 0 && (
-            <p className="study-cards-drawer__export-hint">{`${L('已选', 'Selected')} ${selectedIds.size} ${L('张；未选时导出全部', 'cards; export all if none selected')}`}</p>
+            <p className="study-cards-drawer__export-hint">{`${L('已选', 'Selected.')} ${selectedIds.size} ${L('张；未选时导出全部', 'cards; export all if none selected')}`}</p>
           )}
         </footer>
       </div>,

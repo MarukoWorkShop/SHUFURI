@@ -35,7 +35,7 @@ export default function ExportPreviewPanel() {
           <button
             type="button"
             className="preview-back-btn"
-            aria-label={L('返回编辑', 'Back to editor')}
+            aria-label={L('返回编辑', 'Back to Editor')}
             onClick={handleBackToEdit}
           >
             <ArrowLeftIcon className="preview-back-btn__icon" />
@@ -51,10 +51,10 @@ export default function ExportPreviewPanel() {
             {L(`共 ${pages.length} 页`, `${pages.length} pages in total`)}
           </span>
           {repaginating && (
-            <span className="preview-repaginate-hint">{L('排版中…', 'Repaginating…')}</span>
+            <span className="preview-repaginate-hint">{L('排版中…', 'Formatting layout…')}</span>
           )}
           <span className="export-gallery-hint">
-            {L('长按页面保存到图库', 'Long-press a page to save to gallery')}
+            {L('长按页面保存到图库', 'Long-press a page to save to Photo Library.')}
           </span>
           <div className="export-buttons">
             <button
@@ -71,7 +71,7 @@ export default function ExportPreviewPanel() {
               onClick={() => void handleExportPdf()}
               disabled={exporting}
             >
-              {exporting ? L('导出中…', 'Exporting…') : L('导出 PDF', 'Export PDF')}
+              {exporting ? L('导出中…', 'Exporting…') : L('导出 PDF', 'Export as PDF')}
             </button>
           </div>
         </div>
