@@ -70,13 +70,13 @@ function resolveLayoutLabels(profile: PosterLayoutProfile): {
   if (profile === 'clipPosterPrint') {
     return {
       caption: L('(A5、A6、B5、B6)', '(A5, A6, B5, B6)'),
-      ariaLabel: L('B5 打印 (A5、A6、B5、B6)', 'B5 print (A5, A6, B5, B6)'),
+      ariaLabel: L('B5 打印 (A5、A6、B5、B6)', 'B5 Print (A5, A6, B5, B6)'),
     };
   }
   if (profile === 'squarePoster') {
     return {
-      caption: L('1:1 方形', '1:1 square'),
-      ariaLabel: L('1:1 方形', '1:1 square'),
+      caption: L('1:1 方形', '1:1 Square'),
+      ariaLabel: L('1:1 方形', '1:1 Square'),
     };
   }
   return {
@@ -227,7 +227,7 @@ export default function PosterLayoutWheel({ value, onChange, soundEnabled }: Pro
           className="paper-wheel__scroller"
           tabIndex={0}
           role="listbox"
-          aria-label={L('导出纸张规格', 'Export paper size')}
+          aria-label={L('导出纸张规格', 'Export Paper Size')}
         >
           <div className="paper-wheel__list">
             {LAYOUT_OPTIONS.map((item, i) => {

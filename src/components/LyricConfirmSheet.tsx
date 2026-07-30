@@ -120,7 +120,7 @@ export default function LyricConfirmSheet({
         <div className="lyric-confirm-sheet__handle" aria-hidden />
 
         <header className="lyric-confirm-sheet__header">
-          <p className="lyric-confirm-sheet__eyebrow">{L('确认歌词', 'Confirm lyrics')}</p>
+          <p className="lyric-confirm-sheet__eyebrow">{L('确认歌词', 'Confirm Lyrics')}</p>
           <h2 id={titleId} className="lyric-confirm-sheet__title">
             《{songTitle}》
           </h2>
@@ -145,42 +145,42 @@ export default function LyricConfirmSheet({
             checked={wantStudy}
             onChange={(e) => setWantStudy(e.target.checked)}
           />
-          <span>{L('AI自动补充词语与语法讲解', 'AI auto vocab & grammar')}</span>
-          <span className="lyric-confirm-sheet__pro-badge" title={L('PRO 功能', 'PRO feature')}>PRO</span>
+          <span>{L('AI自动补充词语与语法讲解', 'AI Vocab & Grammar Generation')}</span>
+          <span className="lyric-confirm-sheet__pro-badge" title={L('PRO 功能', 'PRO Feature')}>PRO</span>
         </label>
         <p className="lyric-confirm-sheet__subhint">
-          {L('语法级别可在首页「系统设置」中设置', 'Grammar level can be set in Home › Settings')}
+          {L('语法级别可在首页「系统设置」中设置', 'Grammar level can be adjusted in Home > Settings.')}
         </p>
 
         {studyError ? (
           <p className="lyric-confirm-sheet__hint lyric-confirm-sheet__hint--error">
-            <strong>{L('内部生成失败：', 'Internal generation failed: ')}</strong>
+            <strong>{L('内部生成失败：', 'Internal generation failed:')}</strong>
             {studyError}
             <br />
-            {L('可点击下方按钮重试，或改用外部 AI 口令继续。', 'Retry below, or use external AI prompt.')}
+            {L('可点击下方按钮重试，或改用外部 AI 口令继续。', 'Tap below to retry, or use an external AI prompt.')}
           </p>
         ) : (
           <p className="lyric-confirm-sheet__hint">
             {isGeneratingStudy
               ? L('AI 正在生成词解与语法讲解，请稍候…', 'AI generating vocab & grammar, please wait…')
               : wantStudy
-                ? L('确认后由 AI 自动补充词语与语法讲解，并合并排版。', 'After confirm, AI will auto-fill vocab & grammar and merge layout.')
-                : L('不需要词解时，确认后直接排版预览。', 'Without vocab, confirm to layout preview directly.')}
+                ? L('确认后由 AI 自动补充词语与语法讲解，并合并排版。', 'After confirming, AI will auto-fill vocab & grammar and format the layout.')
+                : L('不需要词解时，确认后直接排版预览。', 'If no vocabulary is needed, confirm to view the layout preview.')}
           </p>
         )}
 
         {/* 缓存命中标识 + 重新 AI 分析按钮 */}
         {studyFromCache && !studyError && !isGeneratingStudy && (
           <div className="lyric-confirm-sheet__cache-bar">
-            <span className="lyric-confirm-sheet__cache-tag" title={L('此语法词解来自已有缓存，未消耗 AI 配额', 'Result from cache, no AI quota consumed')}>
-              ⚡ {L('缓存 · ', 'Cached · ')}{'<'}1s
+            <span className="lyric-confirm-sheet__cache-tag" title={L('此语法词解来自已有缓存，未消耗 AI 配额', 'Retrieved from cache. No AI quota consumed.')}>
+              ⚡ {L('缓存 · ', 'Cached ·')}{'<'}1s
             </span>
             {onReanalyze && (
               <button
                 type="button"
                 className="lyric-confirm-sheet__cache-reanalyze-btn"
                 onClick={onReanalyze}
-                title={L('发现缓存数据有误？重新调用 AI 生成并覆盖旧缓存', 'Cached data wrong? Re-generate with AI and overwrite cache')}
+                title={L('发现缓存数据有误？重新调用 AI 生成并覆盖旧缓存', 'Found an error in cached data? Regenerate with AI to overwrite.')}
               >
                 {L('重新进行 AI 分析', 'Re-analyze with AI')}
               </button>
@@ -197,7 +197,7 @@ export default function LyricConfirmSheet({
                 onClick={onFallbackExternal}
                 disabled={isGeneratingStudy}
               >
-                {L('改用外部 AI 口令', 'Use external AI prompt')}
+                {L('改用外部 AI 口令', 'Use External AI Prompt')}
               </button>
               <button
                 type="button"
@@ -211,7 +211,7 @@ export default function LyricConfirmSheet({
                     <span>{L('生成中…', 'Generating…')}</span>
                   </>
                 ) : (
-                  L('重试内部生成', 'Retry internal generation')
+                  L('重试内部生成', 'Retry Internal Generation')
                 )}
               </button>
             </>
@@ -222,9 +222,9 @@ export default function LyricConfirmSheet({
                 className="btn-tonal lyric-confirm-sheet__btn"
                 onClick={onDismiss}
                 disabled={isGeneratingStudy}
-                title={L('歌词不对，返回首页重新粘贴', 'Wrong lyrics, go back to home and re-paste')}
+                title={L('歌词不对，返回首页重新粘贴', 'Incorrect lyrics? Go back to Home and re-paste.')}
               >
-                {L('歌词不对，返回重试', 'Wrong lyrics, go back')}
+                {L('歌词不对，返回重试', 'Incorrect lyrics? Go back and retry.')}
               </button>
               <button
                 type="button"
@@ -240,10 +240,10 @@ export default function LyricConfirmSheet({
                 ) : wantStudy ? (
                   <>
                     <ArrowRightIcon size={16} />
-                    <span>{L('去生成学习材料', 'Generate study materials')}</span>
+                    <span>{L('去生成学习材料', 'Generate Study Materials')}</span>
                   </>
                 ) : (
-                  L('确认并排版', 'Confirm & layout')
+                  L('确认并排版', 'Confirm & Format')
                 )}
               </button>
             </>

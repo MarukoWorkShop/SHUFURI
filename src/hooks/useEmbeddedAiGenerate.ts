@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import type { PedagogicalLevel } from '../services/appSettings';
 import type { LanguageMatrixContext } from '../services/languageMatrix/types';
 import { buildEncoderPrompt } from '../codec/prompt/buildEncoderPrompt';
+import { detectLyricsLanguage, shouldOverrideActiveTarget } from '../codec/detectLyricsLanguage';
 import { cleanDoubaoPaste } from '../utils/cleanDoubaoPaste';
 import { normalizeStreamInput } from '../codec/repairStreamEnvelope';
 import { compileDocument } from '../codec/compileDocument';
@@ -9,7 +10,14 @@ import type { ParsedStreamLyrics } from '../codec/types';
 import { cloudbaseGateway } from '../services/ai/cloudbaseGateway';
 import type { AiGatewayResponse, ArkProxyUsage } from '../services/ai/types';
 import { useAiLimit } from '../components/AiLimitContext';
+import { refundAiUsage } from '../services/aiUsageLimit';
 import { computeLyricsHash } from '../services/ai/lyricsHash';
+
+/** 中文歌词流校验失败的兜底消息（与历史文案兼容） */
+const COMPILE_FAILED_MESSAGE_JP = '歌词流校验失败：缺少 jp 段落或结构不完整';
+const COMPILE_FAILED_MESSAGE_ZH = '歌词流校验失败：缺少 zh 段落或结构不完整';
+const COMPILE_FAILED_MESSAGE_KO = '歌词流校验失败：缺少 ko 段落或结构不完整';
+const COMPILE_FAILED_MESSAGE_EN = '歌词流校验失败：缺少 en 段落或结构不完整';
 
 type LastApiInfo = {
   model?: string;
@@ -65,7 +73,7 @@ export function useEmbeddedAiGenerate() {
 
   // 保存最近一次 generateStudy 的参数和哈希，供「重新进行 AI 分析」复用
   const lastParamsRef = useRef<GenerateStudyParams | null>(null);
-  const lastContentHashRef = useRef<string | undefined>();
+  const lastContentHashRef = useRef<string | undefined>(undefined);
 
   const { tryUse } = useAiLimit();
 
@@ -92,8 +100,10 @@ export function useEmbeddedAiGenerate() {
       setProgressMessage('AI 正在产出词解与语法（联网多源检索）…');
 
       // AI 限额检查（词解与语法生成）
-      if (!params.forceRefresh && !tryUse('lyrics')) {
-        setStatus('error');
+      // 本地开发 (npm run dev) 不限制 AI 调用次数
+      const isDev = (import.meta as any).env?.DEV ?? false;
+      if (!params.forceRefresh && !isDev && !tryUse('lyrics')) {
+        setStatus('idle');
         return {
           status: 'error',
           code: 'limit_reached',
@@ -102,14 +112,33 @@ export function useEmbeddedAiGenerate() {
         } as const;
       }
 
+      // ====== 关键：歌词语种自动检测 ======
+      // 用户在「学习目标语言」拨轮上可能停留在 JP（默认），但粘贴进来的是中文 / 韩文
+      // / 英文歌曲。如果直接把 `matrix.activeTarget=jp` 喂给 Encoder prompt，
+      // AI 会被迫输出 `{漢字:かな}` 这种无意义的日语注音，并在中文歌词上伪造日语单词。
+      // 这里按歌词文本字符脚本识别真实来源语种，必要时覆盖 activeTarget，
+      // 让 prompt / 缓存键 / 网关 targetLanguage 都用真实语种。
+      const detectedLang = detectLyricsLanguage(params.confirmedLyrics);
+      const shouldOverride = shouldOverrideActiveTarget(detectedLang, params.matrix.activeTarget);
+      const effectiveMatrix: LanguageMatrixContext = shouldOverride
+        ? {
+            ...params.matrix,
+            activeTarget: detectedLang,
+            // 把检测到的语种加入学习目标列表，避免 Allowed_Langs 与 Active 不一致
+            learningTargetLanguages: params.matrix.learningTargetLanguages.includes(detectedLang)
+              ? params.matrix.learningTargetLanguages
+              : ([...params.matrix.learningTargetLanguages, detectedLang] as typeof params.matrix.learningTargetLanguages),
+          }
+        : params.matrix;
+
       // 计算 6 维结构哈希（非 forceRefresh 场景，为缓存匹配做准备）
       let contentHash: string | undefined;
       if (params.includeVocabAndGrammar !== false) {
         try {
           contentHash = await computeLyricsHash({
             confirmedLyrics: params.confirmedLyrics,
-            sourceLanguage: params.matrix.activeTarget,
-            targetLanguage: params.matrix.interfaceLanguage,
+            sourceLanguage: effectiveMatrix.activeTarget,
+            targetLanguage: effectiveMatrix.interfaceLanguage,
             pedagogicalLevel: params.pedagogicalLevel,
           });
           lastContentHashRef.current = contentHash;
@@ -120,7 +149,7 @@ export function useEmbeddedAiGenerate() {
       }
 
       const prompt = buildEncoderPrompt(params.artist ?? '', params.title ?? '', {
-        matrix: params.matrix,
+        matrix: effectiveMatrix,
         pedagogicalLevel: params.pedagogicalLevel,
         includeVocabAndGrammar: params.includeVocabAndGrammar ?? true,
         confirmedLyrics: params.confirmedLyrics,
@@ -135,8 +164,8 @@ export function useEmbeddedAiGenerate() {
             action: 'lyrics.step2',
             requestId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
             prompt,
-            targetLanguage: params.matrix.activeTarget,
-            interfaceLanguage: params.matrix.interfaceLanguage,
+            targetLanguage: effectiveMatrix.activeTarget,
+            interfaceLanguage: effectiveMatrix.interfaceLanguage,
             contentHash,
             title: params.title,
             artist: params.artist,
@@ -168,6 +197,12 @@ export function useEmbeddedAiGenerate() {
 
       const fromCache = !!resp.fromCache;
       const costSaved = resp.costSaved;
+
+      // 缓存命中时不消耗配额（生产环境退还已扣次数，dev 模式从未扣过）
+      if (fromCache && !isDev) {
+        refundAiUsage('lyrics');
+      }
+
       const rawContent = resp.content ?? '';
 
       // 缓存命中的结果同样需要 parse / compile
@@ -186,10 +221,19 @@ export function useEmbeddedAiGenerate() {
       try {
         parsed = compileDocument(normalized);
       } catch {
+        // 按检测到的语种给出更准确的错误提示
+        const compileFailedMessage =
+          effectiveMatrix.activeTarget === 'zh'
+            ? COMPILE_FAILED_MESSAGE_ZH
+            : effectiveMatrix.activeTarget === 'ko'
+              ? COMPILE_FAILED_MESSAGE_KO
+              : effectiveMatrix.activeTarget === 'en'
+                ? COMPILE_FAILED_MESSAGE_EN
+                : COMPILE_FAILED_MESSAGE_JP;
         return {
           status: 'error',
           code: 'compile_failed',
-          message: '歌词流校验失败：缺少 jp 段落或结构不完整',
+          message: compileFailedMessage,
           apiInfo,
         };
       }

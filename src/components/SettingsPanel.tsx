@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   getAppSettings,
   saveAppSettings,
+  resolveSystemInterfaceLanguage,
   type AppSettings,
   type InterfaceLanguage,
   type LearningTargetLanguage,
@@ -108,10 +109,10 @@ export default function SettingsPanel({
     try {
       const result = await exportLibraryBackupJson();
       showToast(
-        `${L('已导出', 'Exported')} ${result.lyricsCount} ${L('首歌词、', ' lyrics, ')}${result.studyCardsCount} ${L('张学习卡', ' study cards')}`,
+        `${L('已导出', 'Exported.')} ${result.lyricsCount} ${L('首歌词、', 'lyrics,')}${result.studyCardsCount} ${L('张学习卡', 'study cards')}`,
       );
     } catch (e) {
-      showToast(e instanceof Error ? e.message : L('导出失败', 'Export failed'));
+      showToast(e instanceof Error ? e.message : L('导出失败', 'Failed to export.'));
     } finally {
       setBackupBusy(false);
     }
@@ -125,11 +126,11 @@ export default function SettingsPanel({
       const result = await importLibraryBackupJson(text);
       onLibraryImported?.();
       showToast(
-        `${L('已导入', 'Imported')} ${result.lyricsUpserted} ${L('首歌词、', ' lyrics, ')}${result.studyCardsWritten} ${L('张学习卡', ' study cards')}` +
-          (result.studyCardsSkipped ? `${L('（跳过', ' (skipped ')}${result.studyCardsSkipped})` : ''),
+        `${L('已导入', 'Imported.')} ${result.lyricsUpserted} ${L('首歌词、', 'lyrics,')}${result.studyCardsWritten} ${L('张学习卡', 'study cards')}` +
+          (result.studyCardsSkipped ? `${L('（跳过', '(skipped')}${result.studyCardsSkipped})` : ''),
       );
     } catch (e) {
-      showToast(e instanceof Error ? e.message : L('导入失败', 'Import failed'));
+      showToast(e instanceof Error ? e.message : L('导入失败', 'Failed to import.'));
     } finally {
       setBackupBusy(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -162,7 +163,7 @@ export default function SettingsPanel({
             <p className="app-settings__label">{L('语言矩阵', 'Language Matrix')}</p>
             <p className="app-settings__sublabel">{L('使用语言', 'Interface Language')}</p>
             <div
-              className={`app-settings__lang-toggle${settings.interfaceLanguage === 'en' ? ' is-en' : ''}`}
+              className={`app-settings__lang-toggle${settings.interfaceLanguage === 'en' ? ' is-en' : ''}${settings.followSystemLanguage ? ' is-locked' : ''}`}
               role="group"
               aria-label={L('使用语言', 'Interface Language')}
             >
@@ -170,6 +171,7 @@ export default function SettingsPanel({
               <PressedButton
                 className={`app-settings__lang-toggle__option${settings.interfaceLanguage === 'zh' ? ' is-active' : ''}`}
                 pressed={settings.interfaceLanguage === 'zh'}
+                disabled={settings.followSystemLanguage}
                 onClick={() => patch({ interfaceLanguage: 'zh' as InterfaceLanguage })}
               >
                 中文
@@ -177,20 +179,45 @@ export default function SettingsPanel({
               <PressedButton
                 className={`app-settings__lang-toggle__option${settings.interfaceLanguage === 'en' ? ' is-active' : ''}`}
                 pressed={settings.interfaceLanguage === 'en'}
+                disabled={settings.followSystemLanguage}
                 onClick={() => patch({ interfaceLanguage: 'en' as InterfaceLanguage })}
               >
                 English
               </PressedButton>
             </div>
+            <label
+              className="app-settings__row app-settings__row--nested"
+              onClick={() => patch({ followSystemLanguage: !settings.followSystemLanguage })}
+            >
+              <div>
+                <span className="app-settings__row-text">
+                  {L('跟随系统语言', 'Match System Language')}
+                </span>
+                {settings.followSystemLanguage && (
+                  <p className="app-settings__hint">
+                    {L(
+                      `检测到：${resolveSystemInterfaceLanguage() === 'zh' ? '中文' : 'English'}`,
+                      `Detected: ${resolveSystemInterfaceLanguage() === 'zh' ? '中文' : 'English'}`,
+                    )}
+                  </p>
+                )}
+              </div>
+              <input
+                type="checkbox"
+                className="app-settings__checkbox"
+                checked={settings.followSystemLanguage}
+                readOnly
+              />
+            </label>
             <p className="app-settings__lang-toggle-status" aria-live="polite">
-              {L('当前释义语言：', 'Gloss language: ')}
+              {L('当前释义语言：', 'Definition Language:')}
               <strong>
                 {settings.interfaceLanguage === 'zh' ? '中文' : 'English'}
               </strong>
             </p>
-            <p className="app-settings__hint">{L('词解、翻译、语法解析在 Prompt 中的输出语言', 'Output language for vocab, translation, grammar in prompts')}</p>
+            <p className="app-settings__hint">{L('词解、翻译、语法解析在 Prompt 中的输出语言', 'Output language for vocab, translation, and grammar in AI prompts.')}</p>
 
-            <p className="app-settings__sublabel app-settings__sublabel--targets">{L('学习目标语言', 'Learning target languages')}</p>
+            <p className="app-settings__sublabel app-settings__sublabel--targets">{L('学习目标语言', 'Target Language')}</p>
             <div className="app-settings__lang-chips">
               {LEARNING_TARGET_OPTIONS.map(({ id, label }) => {
                 const chipActive = settings.learningTargetLanguages.includes(id);
@@ -206,19 +233,19 @@ export default function SettingsPanel({
                 );
               })}
             </div>
-            <p className="app-settings__hint">{L('首页拨轮显示 AUTO + 已选语言；至少保留一项', 'Homepage wheel shows AUTO + selected; keep at least one')}</p>
+            <p className="app-settings__hint">{L('首页拨轮显示 AUTO + 已选语言；至少保留一项', 'Homepage wheel shows AUTO + selected languages; keep at least one.')}</p>
           </section>
 
           <section className="app-settings__section">
-            <p className="app-settings__row-text">{L('附词解与语法品读', 'Vocab & grammar annotation')}</p>
+            <p className="app-settings__row-text">{L('附词解与语法品读', 'Include Vocab & Grammar')}</p>
             <p className="app-settings__hint">
-              {L('在歌词确认页勾选后，会按下方难度生成词解与语法讲解', 'When enabled on the confirm page, vocab & grammar will be generated at the level below')}
+              {L('在歌词确认页勾选后，会按下方难度生成词解与语法讲解', 'When enabled on the confirmation page, vocab & grammar will be generated at the selected difficulty level.')}
             </p>
-            <p className="app-settings__sublabel app-settings__sublabel--targets">{L('词解难度', 'Pedagogical level')}</p>
+            <p className="app-settings__sublabel app-settings__sublabel--targets">{L('词解难度', 'Difficulty Level')}</p>
             <div
               className="app-settings__segmented app-settings__segmented--triple"
               role="group"
-              aria-label={L('词解难度', 'Pedagogical level')}
+              aria-label={L('词解难度', 'Difficulty Level')}
             >
               {PEDAGOGICAL_LEVEL_ORDER.map((level) => (
                 <PressedButton
@@ -249,7 +276,7 @@ export default function SettingsPanel({
                 disabled={backupBusy}
                 onClick={() => void handleExportBackup()}
               >
-                {backupBusy ? '…' : L('导出歌词与单词（JSON）', 'Export lyrics & vocab (JSON)')}
+                {backupBusy ? '…' : L('导出歌词与单词（JSON）', 'Export Lyrics & Vocab (JSON)')}
               </button>
               <button
                 type="button"
@@ -257,7 +284,7 @@ export default function SettingsPanel({
                 disabled={backupBusy}
                 onClick={() => fileInputRef.current?.click()}
               >
-                {backupBusy ? '…' : L('全量导入', 'Full import')}
+                {backupBusy ? '…' : L('全量导入', 'Import All')}
               </button>
               <input
                 ref={fileInputRef}

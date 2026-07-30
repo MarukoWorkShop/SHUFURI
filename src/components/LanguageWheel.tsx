@@ -22,7 +22,7 @@ function langLabel(code: LyricsLanguage): string {
     jp: 'JAP',
     ko: 'KOR',
     en: 'ENG',
-    zh: L('中文', 'CHI'),
+    zh: L('中文', 'Chinese'),
   };
   return base[code];
 }

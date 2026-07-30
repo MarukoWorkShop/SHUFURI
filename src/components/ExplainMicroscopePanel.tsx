@@ -171,7 +171,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
               </svg>
             </span>
             <h2 id={titleId} className="microscope-panel__title">
-              {L('划词', 'Selection')}
+              {L('划词', 'Text Selection')}
             </h2>
             <button
               type="button"
@@ -197,7 +197,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                 className="microscope-panel__badge microscope-panel__badge--local"
                 title={dictMetaLabel ?? undefined}
               >
-                {L('本地词典', 'Local dict')}
+                {L('本地词典', 'Local Dictionary')}
               </span>
             ) : null}
             {aiExplain && lastModel ? (
@@ -225,7 +225,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
               <p>{error}</p>
               <div className="microscope-panel__error-actions">
                 <button type="button" className="btn-tonal" onClick={retryAnalyze}>
-                  {L('重试本地', 'Retry local')}
+                  {L('重试本地', 'Retry Local')}
                 </button>
                 <button
                   type="button"
@@ -241,10 +241,10 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
 
           {result && micro && (
             <section className="microscope-section microscope-section--micro">
-              <h3 className="microscope-section__label">{L('词典释义', 'Dictionary')}</h3>
+              <h3 className="microscope-section__label">{L('词典释义', 'Dictionary Definition')}</h3>
               <dl className="microscope-dict">
                 <div className="microscope-dict__row">
-                  <dt>{L('词典形', 'Dict form')}</dt>
+                  <dt>{L('词典形', 'Dictionary Form')}</dt>
                   <dd>{micro.dictionary_form}</dd>
                 </div>
                 <div className="microscope-dict__row">
@@ -255,8 +255,8 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                   <dt>
                     {micro.direct_meaning.includes('本地无整词') ||
                     micro.direct_meaning.startsWith('局部参考')
-                      ? L('释义', 'Gloss')
-                      : L('英译', 'English')}
+                      ? L('释义', 'Meaning')
+                      : L('英译', 'English Translation')}
                   </dt>
                   <dd>{micro.direct_meaning}</dd>
                 </div>
@@ -281,7 +281,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
               <div className="microscope-ai-card">
                 {aiParts.sentenceBreakdown.length > 0 ? (
                   <div className="microscope-ai-card__row">
-                    <p className="microscope-ai-card__label">{L('逐句解析', 'Sentence breakdown')}</p>
+                    <p className="microscope-ai-card__label">{L('逐句解析', 'Line-by-Line Analysis')}</p>
                     <ol className="microscope-sentences">
                       {aiParts.sentenceBreakdown.map((s, i) => (
                         <li key={i} className="microscope-sentences__item">
@@ -300,13 +300,13 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                 ) : null}
                 {aiParts.contextSense ? (
                   <div className="microscope-ai-card__row">
-                    <p className="microscope-ai-card__label">{L('语境释义', 'Context sense')}</p>
+                    <p className="microscope-ai-card__label">{L('语境释义', 'Contextual Meaning')}</p>
                     <p className="microscope-ai-card__body">{aiParts.contextSense}</p>
                   </div>
                 ) : null}
                 {aiParts.loanwords.length > 0 || aiParts.loanwordsRaw ? (
                   <div className="microscope-ai-card__row">
-                    <p className="microscope-ai-card__label">{L('外来语原词', 'Loanword etymology')}</p>
+                    <p className="microscope-ai-card__label">{L('外来语原词', 'Etymology')}</p>
                     {aiParts.loanwords.length > 0 ? (
                       <ul className="microscope-loanwords">
                         {aiParts.loanwords.map((lw) => (
@@ -332,19 +332,19 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                 ) : null}
                 {aiParts.formula.length > 0 || aiParts.formulaRaw ? (
                   <div className="microscope-ai-card__row">
-                    <p className="microscope-ai-card__label">{L('语法分子式', 'Grammar formula')}</p>
+                    <p className="microscope-ai-card__label">{L('语法分子式', 'Grammar Formula')}</p>
                     <GrammarFormulaView tokens={aiParts.formula} fallback={aiParts.formulaRaw} />
                   </div>
                 ) : null}
                 {aiParts.grammar ? (
                   <div className="microscope-ai-card__row">
-                    <p className="microscope-ai-card__label">{L('语法拆解', 'Grammar breakdown')}</p>
+                    <p className="microscope-ai-card__label">{L('语法拆解', 'Grammar Breakdown')}</p>
                     <p className="microscope-ai-card__body">{aiParts.grammar}</p>
                   </div>
                 ) : null}
                 {aiParts.capsules.length > 0 ? (
                   <div className="microscope-ai-card__row microscope-ai-card__row--capsules">
-                    <p className="microscope-ai-card__label">{L('核心语法点', 'Key grammar')}</p>
+                    <p className="microscope-ai-card__label">{L('核心语法点', 'Core Grammar')}</p>
                     <div className="microscope-capsules">
                       {aiParts.capsules.map((cap) => {
                         const active =
@@ -364,7 +364,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                           >
                             <span className="microscope-capsule__exam">{cap.exam}</span>
                             <span className="microscope-capsule__text">
-                              {L('点击查看：', 'Click to view: ')}
+                              {L('点击查看：', 'Click to view:')}
                               <span
                                 dangerouslySetInnerHTML={{ __html: applyRubyMarkup(cap.title) }}
                               />
@@ -377,7 +377,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                 ) : null}
                 {aiParts.mood ? (
                   <div className="microscope-ai-card__row">
-                    <p className="microscope-ai-card__label">{L('歌词意境', 'Mood')}</p>
+                    <p className="microscope-ai-card__label">{L('歌词意境', 'Lyrical Mood')}</p>
                     <p className="microscope-ai-card__body">{aiParts.mood}</p>
                   </div>
                 ) : null}
@@ -415,7 +415,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                   <div className="microscope-lesson">
                     {grammarLesson.meaning ? (
                       <div className="microscope-lesson__row">
-                        <p className="microscope-lesson__label">{L('通常含义', 'Usual meaning')}</p>
+                        <p className="microscope-lesson__label">{L('通常含义', 'Common Meaning')}</p>
                         <p
                           className="microscope-lesson__body"
                           dangerouslySetInnerHTML={{ __html: applyRubyMarkup(grammarLesson.meaning) }}
@@ -424,7 +424,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                     ) : null}
                     {grammarLesson.usage ? (
                       <div className="microscope-lesson__row">
-                        <p className="microscope-lesson__label">{L('如何使用', 'How to use')}</p>
+                        <p className="microscope-lesson__label">{L('如何使用', 'How to Use')}</p>
                         <p
                           className="microscope-lesson__body"
                           dangerouslySetInnerHTML={{ __html: applyRubyMarkup(grammarLesson.usage) }}
@@ -433,7 +433,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                     ) : null}
                     {grammarLesson.emotion ? (
                       <div className="microscope-lesson__row">
-                        <p className="microscope-lesson__label">{L('情感语气', 'Emotion / tone')}</p>
+                        <p className="microscope-lesson__label">{L('情感语气', 'Emotion & Tone')}</p>
                         <p
                           className="microscope-lesson__body"
                           dangerouslySetInnerHTML={{ __html: applyRubyMarkup(grammarLesson.emotion) }}
@@ -449,7 +449,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                             {grammarLesson.example.via === 'local'
                               ? L('学习卡', 'Study card')
                               : grammarLesson.example.via === 'crafted'
-                                ? L('造句', 'Coined')
+                                ? L('造句', 'Example Sentence')
                                 : 'AI'}
                           </span>
                         </p>
@@ -476,7 +476,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                 disabled={!canAi}
                 onClick={requestAiDeepDive}
               >
-                {L('结合上下文 AI讲解', 'AI Explain with context')}
+                {L('结合上下文 AI讲解', 'AI Explain with Context')}
               </button>
             )}
             {!deepDiveLoading && aiExplain ? (
@@ -487,7 +487,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                   disabled={!canAi}
                   onClick={requestAiDeepDive}
                 >
-                  {L('重新讲解', 'Re-explain')}
+                  {L('重新讲解', 'Regenerate Explanation')}
                 </button>
                 <button
                   type="button"

@@ -49,8 +49,8 @@ const TEMPERATURE_LYRICS = 0.1;
 
 /* ===== 安全防护 ===== */
 
-const MAX_PROMPT_LENGTH_EXPLAIN = 500;
-const MAX_PROMPT_LENGTH_LYRICS = 8000;
+const MAX_PROMPT_LENGTH_EXPLAIN = 8000;
+const MAX_PROMPT_LENGTH_LYRICS = 16000;
 
 // ===== IP 限流（内存，冷启动重置） =====
 
@@ -485,7 +485,44 @@ exports.main = async function (event, context) {
     };
   }
 
+  // ===== 歌词语法词解缓存查询（仅 lyrics.step2）=====
+  // 必须在配额检查之前，确保缓存命中不消耗用户配额
+  if (isLyricsStep && contentHash && !forceRefresh) {
+    const cacheDoc = await queryLyricsCache(contentHash);
+    if (cacheDoc) {
+      void incrementCacheHit(contentHash);
+
+      // 估算本次命中节省的费用
+      const savedInputCost = (cacheDoc.input_tokens || 0) / 1000 * PRICING_LYRICS.inputPerK;
+      const savedOutputCost = (cacheDoc.output_tokens || 0) / 1000 * PRICING_LYRICS.outputPerK;
+      const savedSearchCost = PRICING_LYRICS.searchCost;
+      const costSaved = Math.round((savedInputCost + savedOutputCost + savedSearchCost) * 1e6) / 1e6;
+
+      console.log('[arkProxy][cache] HIT', `hash=${contentHash.slice(0, 12)}...`, `saved=¥${costSaved}`);
+      return {
+        ok: true,
+        requestId,
+        action,
+        model: cacheDoc.model_used || MODEL_ID_LYRICS,
+        content: cacheDoc.raw_response,
+        usage: {
+          inputTokens: cacheDoc.input_tokens || 0,
+          outputTokens: cacheDoc.output_tokens || 0,
+          totalTokens: (cacheDoc.input_tokens || 0) + (cacheDoc.output_tokens || 0),
+        },
+        fromCache: true,
+        costSaved,
+      };
+    }
+    console.log('[arkProxy][cache] MISS', `hash=${contentHash.slice(0, 12)}...`);
+  }
+
+  if (isLyricsStep && forceRefresh && contentHash) {
+    console.log('[arkProxy][cache] forceRefresh — skip cache, will OVERWRITE');
+  }
+
   // 2. 用户级硬配额（第二道防线，NoSQL 持久化）
+  // 只有缓存 MISS 或 forceRefresh 时才检查/消耗配额
   const uid = validateUserId(userId);
   const actionType = isLyricsStep ? 'lyrics' : 'explain';
 
@@ -518,43 +555,6 @@ exports.main = async function (event, context) {
   } else {
     // 无有效 UID：IP 限流已过，放行但日志告警
     console.warn('[arkProxy] no-valid-uid', `ip=${clientIp}`, `action=${action}`);
-  }
-
-  // ===== 歌词语法词解缓存查询（仅 lyrics.step2） =====
-  let cacheDoc = null;
-
-  if (isLyricsStep && contentHash && !forceRefresh) {
-    cacheDoc = await queryLyricsCache(contentHash);
-    if (cacheDoc) {
-      void incrementCacheHit(contentHash);
-
-      // 估算本次命中节省的费用
-      const savedInputCost = (cacheDoc.input_tokens || 0) / 1000 * PRICING_LYRICS.inputPerK;
-      const savedOutputCost = (cacheDoc.output_tokens || 0) / 1000 * PRICING_LYRICS.outputPerK;
-      const savedSearchCost = PRICING_LYRICS.searchCost;
-      const costSaved = Math.round((savedInputCost + savedOutputCost + savedSearchCost) * 1e6) / 1e6;
-
-      console.log('[arkProxy][cache] HIT', `hash=${contentHash.slice(0, 12)}...`, `saved=¥${costSaved}`);
-      return {
-        ok: true,
-        requestId,
-        action,
-        model: cacheDoc.model_used || MODEL_ID_LYRICS,
-        content: cacheDoc.raw_response,
-        usage: {
-          inputTokens: cacheDoc.input_tokens || 0,
-          outputTokens: cacheDoc.output_tokens || 0,
-          totalTokens: (cacheDoc.input_tokens || 0) + (cacheDoc.output_tokens || 0),
-        },
-        fromCache: true,
-        costSaved,
-      };
-    }
-    console.log('[arkProxy][cache] MISS', `hash=${contentHash.slice(0, 12)}...`);
-  }
-
-  if (isLyricsStep && forceRefresh && contentHash) {
-    console.log('[arkProxy][cache] forceRefresh — skip cache, will OVERWRITE');
   }
 
   const model = isLyricsStep ? MODEL_ID_LYRICS : MODEL_ID_EXPLAIN;

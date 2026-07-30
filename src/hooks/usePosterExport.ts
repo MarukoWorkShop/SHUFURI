@@ -75,7 +75,7 @@ export function usePosterExport({
     const currentProfile = layoutProfileRef.current;
 
     if (!currentBodyHtml.trim()) {
-      postToNative({ event: 'error', data: { message: L('没有可导出的内容', 'No content to export') } });
+      postToNative({ event: 'error', data: { message: L('没有可导出的内容', 'No content to export.') } });
       nativeExportingRef.current = false;
       setExporting(false);
       return;
@@ -97,7 +97,7 @@ export function usePosterExport({
       setPages(currentPages);
 
       if (currentPages.length === 0) {
-        postToNative({ event: 'error', data: { message: L('分页结果为空', 'Pagination result is empty') } });
+        postToNative({ event: 'error', data: { message: L('分页结果为空', 'No pages to display.') } });
         return;
       }
 
@@ -140,7 +140,7 @@ export function usePosterExport({
       console.error('[native-export]', e);
       postToNative({
         event: 'error',
-        data: { message: e instanceof Error ? e.message : L('导出失败', 'Export failed') },
+        data: { message: e instanceof Error ? e.message : L('导出失败', 'Failed to export.') },
       });
     } finally {
       nativeExportingRef.current = false;
@@ -163,7 +163,7 @@ export function usePosterExport({
 
   const handleExportPdf = useCallback(async () => {
     if (!pages.length) {
-      alert(L('没有可导出的页面', 'No pages to export'));
+      alert(L('没有可导出的页面', 'No pages to export.'));
       return;
     }
     if (exportingRef.current) return;
@@ -189,7 +189,7 @@ export function usePosterExport({
       ]);
     } catch (e) {
       console.error('[export-pdf]', e);
-      alert(e instanceof Error ? e.message : L('导出失败', 'Export failed'));
+      alert(e instanceof Error ? e.message : L('导出失败', 'Failed to export.'));
     } finally {
       exportingRef.current = false;
       setExporting(false);

@@ -106,12 +106,12 @@ export default function HomeScreen({
       <div className="home-hero">
         <h1 className="home-hero__headline">
           {appSettings.interfaceLanguage === 'en'
-            ? 'Pause the melody, let the words linger.'
+            ? 'Pause the melody, dive into the words.'
             : '让旋律暂停，让文字驻足。'}
         </h1>
         <p className="home-hero__subtitle">
           {appSettings.interfaceLanguage === 'en'
-            ? 'Free one-tap AI search for foreign lyrics — with pronunciation guides and explanations. Read them like literature, learn in quiet reflection.'
+            ? 'The smart way to learn and sing foreign songs. Use AI to instantly decode lyrics into structured study materials—complete with pronunciation, vocab, and deep grammar analysis.'
             : '一键免费AI检索获取外语歌词文本，生成注音与解释，像阅读文学作品，在静谧中慢慢学习和体会'}
         </p>
       </div>
@@ -148,9 +148,9 @@ export default function HomeScreen({
           </span>
         </div>
         <div className="home-footer__right">
-          <a className="home-footer__link" href="/terms">{L('服务协议', 'Terms')}</a>
+          <a className="home-footer__link" href="/terms">{L('服务协议', 'Terms of Service')}</a>
           <span className="home-footer__sep" aria-hidden="true">|</span>
-          <a className="home-footer__link" href="/privacy">{L('隐私政策', 'Privacy')}</a>
+          <a className="home-footer__link" href="/privacy">{L('隐私政策', 'Privacy Policy')}</a>
           <span className="home-footer__sep" aria-hidden="true">|</span>
           <span className="home-footer__meta">粤B2-XXXXXXXX</span>
           <span className="home-footer__sep" aria-hidden="true">|</span>

@@ -17,8 +17,8 @@ interface SizeOption {
 const SIZE_OPTIONS: SizeOption[] = [
   {
     profile: 'clipPosterPrint',
-    label: L('打印尺寸', 'Print'),
-    activeLabel: L('打印尺寸 (A5/B5)', 'Print (A5/B5)'),
+    label: L('打印尺寸', 'Print Size'),
+    activeLabel: L('打印尺寸 (A5/B5)', 'Print Size (A5/B5)'),
     desc: L('600×852 像素，适合 A5/B5/B6 纸张打印', '600×852 px, fits A5/B5/B6 paper'),
     dimLabel: '600 × 852 px',
   },
@@ -26,14 +26,14 @@ const SIZE_OPTIONS: SizeOption[] = [
     profile: 'squarePoster',
     label: L('1:1 方形', '1:1 Square'),
     activeLabel: L('1:1 方形', '1:1 Square'),
-    desc: L('1080×1080 像素，适合社交媒体分享', '1080×1080 px, social media'),
+    desc: L('1080×1080 像素，适合社交媒体分享', '1080×1080 px, for social media'),
     dimLabel: '1080 × 1080 px',
   },
   {
     profile: 'mobilePoster',
-    label: L('手机预览', 'Mobile'),
-    activeLabel: L('手机预览 (9:16)', 'Mobile (9:16)'),
-    desc: L('1080×1920 像素，适合手机竖屏查看', '1080×1920 px, mobile portrait'),
+    label: L('手机预览', 'Mobile Preview'),
+    activeLabel: L('手机预览 (9:16)', 'Mobile Preview (9:16)'),
+    desc: L('1080×1920 像素，适合手机竖屏查看', '1080×1920 px, for mobile screens'),
     dimLabel: '1080 × 1920 px',
   },
 ];
@@ -84,14 +84,14 @@ export default function BatchExportPanel({ open, onClose }: BatchExportPanelProp
       >
         {/* 标题 */}
         <h3 className="batch-export-card__title">
-          {L('批量导出 PDF', 'Batch Export PDF')}
+          {L('批量导出 PDF', 'Batch Export as PDF')}
         </h3>
 
         {/* 选择阶段 */}
         {phase === 'select' && (
           <>
             <p className="batch-export-card__hint">
-              {L('将歌词本中全部歌词合并为一份 PDF，每首歌独立起页', 'Export all lyrics as one PDF — each song starts a new page')}
+              {L('将歌词本中全部歌词合并为一份 PDF，每首歌独立起页', 'Merge all lyrics into one PDF (each song starts on a new page).')}
             </p>
 
             {/* 尺寸选项 */}
@@ -143,7 +143,7 @@ export default function BatchExportPanel({ open, onClose }: BatchExportPanelProp
         {phase === 'exporting' && progress && (
           <div className="batch-export-progress">
             <p className="batch-export-progress__text">
-              {L('正在导出', 'Exporting')} {progress.current}/{progress.total}…
+              {L('正在导出', 'Exporting…')} {progress.current}/{progress.total}…
             </p>
             <p className="batch-export-progress__song">{progress.projectTitle}</p>
             <div className="batch-export-progress__bar">

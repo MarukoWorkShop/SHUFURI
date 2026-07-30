@@ -56,19 +56,19 @@ export default function EditNotebookPane({
         {showRuledEmpty ? (
           <div className="edit-notebook__empty">
             <p className="edit-notebook__empty-kicker">Notebook</p>
-            <h3 className="edit-notebook__empty-title">{L('在这里留下笔记', 'Leave your notes here')}</h3>
+            <h3 className="edit-notebook__empty-title">{L('在这里留下笔记', 'Leave your notes here.')}</h3>
             <ul className="edit-notebook__empty-list">
-              <li>{L('在上一步勾选重点词汇和语法点解释，将直接在这里生成笔记', 'Check vocab & grammar on the previous step to generate notes here')}</li>
-              <li>{L('点击下方的「开启划词」，对字词和句子展开解析', 'Tap "Enable Selection" below to analyze words & sentences')}</li>
-              <li>{L('点条目可编辑，右上角 × 可删除', 'Tap items to edit, tap × to delete')}</li>
-              <li>{L('导出时笔记将与歌词原文一并生成文档', 'Notes will be included in exported document')}</li>
+              <li>{L('在上一步勾选重点词汇和语法点解释，将直接在这里生成笔记', 'Select key vocab & grammar in the previous step to auto-generate notes here.')}</li>
+              <li>{L('点击下方的「开启划词」，对字词和句子展开解析', 'Tap "Enable Selection" below to analyze words & sentences.')}</li>
+              <li>{L('点条目可编辑，右上角 × 可删除', 'Tap an item to edit, tap × to delete.')}</li>
+              <li>{L('导出时笔记将与歌词原文一并生成文档', 'Notes will be included with the lyrics in the exported document.')}</li>
             </ul>
             <button
               type="button"
               className={`edit-notebook__cta${explainMode ? ' is-active' : ''}`}
               onClick={onEnableExplain}
             >
-              {explainMode ? L('划词已开启 · 去左侧选词', 'Selection on · select text on left') : L('开启划词', 'Enable selection')}
+              {explainMode ? L('划词已开启 · 去左侧选词', 'Selection on · Select text on the left') : L('开启划词', 'Enable Selection')}
             </button>
           </div>
         ) : null}
@@ -84,7 +84,7 @@ export default function EditNotebookPane({
                       <button
                         type="button"
                         className="edit-notebook__delete"
-                        aria-label={L('删除词汇', 'Delete vocab')}
+                        aria-label={L('删除词汇', 'Delete Vocabulary')}
                         onClick={(e) => {
                           e.stopPropagation();
                           onDeleteStudy(item.id);
@@ -128,7 +128,7 @@ export default function EditNotebookPane({
                       <button
                         type="button"
                         className="edit-notebook__delete"
-                        aria-label={L('删除语法点', 'Delete grammar')}
+                        aria-label={L('删除语法点', 'Delete Grammar')}
                         onClick={(e) => {
                           e.stopPropagation();
                           onDeleteStudy(item.id);
@@ -179,7 +179,7 @@ export default function EditNotebookPane({
                       <button
                         type="button"
                         className="edit-notebook__delete"
-                        aria-label={L('删除划词笔记', 'Delete note')}
+                        aria-label={L('删除划词笔记', 'Delete Note')}
                         onClick={(e) => {
                           e.stopPropagation();
                           onDeleteExplainNote(note.id);
@@ -194,7 +194,7 @@ export default function EditNotebookPane({
                       >
                         <p className="edit-notebook__card-line1">
                           <span className="edit-notebook__card-term">
-                            {note.term || L('（无词条）', '(No term)')}
+                            {note.term || L('（无词条）', '(No entry)')}
                           </span>
                           {note.contextSense ? (
                             <span className="edit-notebook__card-meaning">

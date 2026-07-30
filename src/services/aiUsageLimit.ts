@@ -12,7 +12,7 @@
  *
  * 后端防小人（已在云函数中实现）：
  *   - 每 IP 每 3 秒最多 3 次
- *   - prompt 长度上限 500/8000 字符
+ *   - prompt 长度上限 8000/16000 字符
  *
  * 存储 key: shufuri_ai_usage
  */
@@ -176,5 +176,19 @@ export function resetAiUsage(): void {
     localStorage.removeItem(FEEDBACK_REWARDED_KEY);
   } catch {
     // 静默
+  }
+}
+
+/**
+ * 退还一次 AI 调用额度（用于缓存命中时撤销前端计数）。
+ * 仅在减到 0 为止，不会变成负数。
+ */
+export function refundAiUsage(action: AiActionType): void {
+  const raw = readRaw();
+  if (action === 'explain' && raw.explainCount > 0) {
+    writeRaw({ ...raw, explainCount: raw.explainCount - 1 });
+  }
+  if (action === 'lyrics' && raw.lyricsCount > 0) {
+    writeRaw({ ...raw, lyricsCount: raw.lyricsCount - 1 });
   }
 }

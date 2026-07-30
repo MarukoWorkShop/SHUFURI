@@ -109,8 +109,8 @@ export function buildCjkWrapCss(): string {
     word-break: keep-all;
     overflow-wrap: break-word;
     white-space: normal;
-    text-wrap: pretty;
-    hanging-punctuation: allow-end;
+    text-wrap: wrap;
+    hanging-punctuation: none;
   `;
 }
 

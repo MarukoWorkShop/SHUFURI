@@ -447,6 +447,8 @@ export function isNetEaseMusicShare(text: string): boolean {
  * 格式:
  *   分享EXO的单曲《약속 (EXO 2014)》https://163cn.tv/825wHix (@网易云音乐)
  *   分享RADWIMPS的单曲《スパークル》https://music.163.com/song?id=xxx (@网易云音乐)
+ *   夜色 (Night) - 玉置浩二       ← 网易云 App 实际分享格式（"标题 - 歌手"）
+ *   https://music.163.com/song?id=xxx (@网易云音乐)
  *
  * @returns { artist?: string; title?: string }
  */
@@ -458,14 +460,21 @@ export function parseNetEaseMusicShare(text: string): { artist?: string; title?:
     .replace(/分享\s*/g, '')
     .trim();
 
-  // 匹配: 歌手名的单曲《歌名》 或 歌手名的专辑《歌名》 等
+  // 1. 标准格式：歌手名的单曲《歌名》（如"玉置浩二的单曲《夜色 (Night)》"）
   // 歌名中可能包含英文/数字（如 "약속 (EXO 2014)"）
-  const match = cleanText.match(/^(.+?)的(?:单曲|专辑|歌单|歌曲)\s*《([^》]+)》/);
-  if (match) {
-    return { artist: match[1].trim(), title: match[2].trim() };
+  const stdMatch = cleanText.match(/^(.+?)的(?:单曲|专辑|歌单|歌曲)\s*《([^》]+)》/);
+  if (stdMatch) {
+    return { artist: stdMatch[1].trim(), title: stdMatch[2].trim() };
   }
 
-  // 兜底: 匹配任意 歌手名《歌名》 格式
+  // 2. 网易云 App 实际格式："标题 - 歌手"（如"夜色 (Night) - 玉置浩二"）
+  //    标题在前，歌手在后，分隔符为 " - "（前后可能有空格）
+  const dashMatch = cleanText.match(/^(.+?)\s*[-—–]\s*(.+)$/);
+  if (dashMatch) {
+    return { title: dashMatch[1].trim(), artist: dashMatch[2].trim() };
+  }
+
+  // 3. 兜底：匹配任意 "X《Y》" 格式
   const fallback = cleanText.match(/^(.+?)《([^》]+)》/);
   if (fallback) {
     return { artist: fallback[1].trim(), title: fallback[2].trim() };

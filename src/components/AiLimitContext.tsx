@@ -11,7 +11,7 @@
  *   if (!tryUse('explain')) return; // 划词限额到，弹反馈墙
  *   if (!tryUse('lyrics')) return;  // 词解限额到，弹反馈墙
  */
-import React, {
+import {
   createContext,
   useContext,
   useState,
