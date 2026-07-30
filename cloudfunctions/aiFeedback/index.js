@@ -24,7 +24,7 @@ const MIN_SCORE = 1;
 const MAX_SCORE = 100;
 const RATE_WINDOW_MS = 5_000;
 const RATE_MAX_PER_WINDOW = 10;
-const ALLOWED_KINDS = new Set(['feedback', 'event']);
+const ALLOWED_KINDS = new Set(['feedback', 'event', 'error_report']);
 
 const _rateBuckets = new Map();
 let _rateCleanup = 0;
@@ -191,5 +191,37 @@ exports.main = async function (event, context) {
     // 静默失败：埋点失败不影响业务
     await tryAdd('app_events', doc);
     return { ok: true };
+  }
+
+  // ====== error_report：前端全局异常批量上报 ======
+  if (kind === 'error_report') {
+    const { items } = event;
+    if (!Array.isArray(items) || items.length === 0 || items.length > 20) {
+      return { ok: false, code: 'INVALID_REQUEST', message: 'items must be a non-empty array ≤20' };
+    }
+
+    const now = Date.now();
+    let saved = 0;
+
+    for (const item of items) {
+      if (!item || typeof item.message !== 'string' || item.message.length > 2000) continue;
+      if (!['onerror', 'unhandledrejection', 'handled'].includes(item.type)) continue;
+
+      await tryAdd('error_reports', {
+        type: item.type,
+        message: item.message.slice(0, 2000),
+        stack: typeof item.stack === 'string' ? item.stack.slice(0, 4000) : undefined,
+        filename: typeof item.filename === 'string' ? item.filename.slice(0, 1024) : undefined,
+        lineno: typeof item.lineno === 'number' ? item.lineno : undefined,
+        colno: typeof item.colno === 'number' ? item.colno : undefined,
+        clientTs: item.timestamp || now,
+        sessionId: typeof item.sessionId === 'string' ? item.sessionId.slice(0, 128) : undefined,
+        userAgent: typeof item.userAgent === 'string' ? item.userAgent.slice(0, 512) : undefined,
+      });
+
+      saved++;
+    }
+
+    return { ok: true, saved };
   }
 };

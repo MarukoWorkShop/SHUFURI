@@ -12,6 +12,7 @@ import { useClipboardStructuredLyrics } from './hooks/useClipboardHasContent';
 import { useTimedMessage } from './hooks/useTimedMessage';
 import { AppToastContext } from './context/AppToastContext';
 import AiLimitProvider from './components/AiLimitContext';
+import { initErrorReporting } from './services/errorReport';
 import PosterWorkspaceProvider from './context/PosterWorkspaceProvider';
 import { trackPageView } from './services/analytics';
 import HomeSessionProvider from './context/HomeSessionProvider';
@@ -117,9 +118,10 @@ function AppShell({
 export default function App() {
   useGlobalButtonFeedback();
 
-  // UV 埋点：每次进入 App 记录一次（sessionStorage 去重）
+  // UV 埋点 + 全局错误监听：每次进入 App 记录一次
   useEffect(() => {
     trackPageView();
+    initErrorReporting();
   }, []);
 
   const settings = useAppSettings();
