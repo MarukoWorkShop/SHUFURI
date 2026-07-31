@@ -17,10 +17,10 @@ type Props = {
 };
 
 const LANGUAGE_LABELS: Record<LangCode, string> = {
-  jp: 'JAP',
-  ko: 'KOR',
+  jp: '日本語',
+  ko: '한국어',
   en: 'ENG',
-  zh: 'ZH',
+  zh: '中文',
 };
 
 function formatLanguageLabel(language?: LangCode): string {

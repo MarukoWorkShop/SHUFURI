@@ -19,8 +19,8 @@ const LANG_CODES: LyricsLanguage[] = ['jp', 'ko', 'en', 'zh'];
 
 function langLabel(code: LyricsLanguage): string {
   const base: Record<LyricsLanguage, string> = {
-    jp: 'JAP',
-    ko: 'KOR',
+    jp: '日本語',
+    ko: '한국어',
     en: 'ENG',
     zh: L('中文', 'Chinese'),
   };

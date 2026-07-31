@@ -35,15 +35,15 @@ type Props = {
 const APP_VERSION = '1.0.0';
 
 const LEARNING_TARGET_OPTIONS: { id: LearningTargetLanguage; label: string }[] = [
-  { id: 'jp', label: 'JAP' },
-  { id: 'ko', label: 'KOR' },
+  { id: 'jp', label: '日本語' },
+  { id: 'ko', label: '한국어' },
   { id: 'en', label: 'ENG' },
   { id: 'zh', label: '中文' },
 ];
 
 const LEARNING_TARGET_EN_LABELS: Record<LearningTargetLanguage, string> = {
-  jp: 'JAP',
-  ko: 'KOR',
+  jp: 'Japanese',
+  ko: 'Korean',
   en: 'ENG',
   zh: 'Chinese',
 };
@@ -233,7 +233,7 @@ export default function SettingsPanel({
                 );
               })}
             </div>
-            <p className="app-settings__hint">{L('首页拨轮显示 AUTO + 已选语言；至少保留一项', 'Homepage wheel shows AUTO + selected languages; keep at least one.')}</p>
+            <p className="app-settings__hint">{L('首页拨轮显示已选语言；至少保留一项', 'Homepage wheel shows the selected languages; keep at least one.')}</p>
           </section>
 
           <section className="app-settings__section">

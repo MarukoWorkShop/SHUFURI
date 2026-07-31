@@ -370,11 +370,22 @@ export default function HtmlPasteInput({
         </div>
 
         {onLanguageChange && (
-          <LanguageWheel
-            value={language ?? matrix.activeTarget}
-            languages={wheelLanguages}
-            onChange={onLanguageChange}
-          />
+          <div className="lang-wheel-with-hint">
+            <span className="lang-wheel-with-hint__label">
+              {L('选择歌曲的主要语言', 'Choose the main language of the song')}
+            </span>
+            <LanguageWheel
+              value={language ?? matrix.activeTarget}
+              languages={wheelLanguages}
+              onChange={onLanguageChange}
+            />
+            <span className="lang-wheel-with-hint__hint">
+              {L(
+                '选择正确的语言类型增加 AI 搜索的准确性',
+                'Choosing the correct language improves the accuracy of AI lookup.',
+              )}
+            </span>
+          </div>
         )}
 
         <div className="ext-pipeline__prompt-row">

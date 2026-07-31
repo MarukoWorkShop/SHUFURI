@@ -23,10 +23,10 @@ function kindLabel(kind: StudyCard['kind']): string {
 }
 
 function langTagLabel(lang: LangCode): string {
-  if (lang === 'jp') return 'JAP';
-  if (lang === 'ko') return 'KOR';
+  if (lang === 'jp') return '日本語';
+  if (lang === 'ko') return '한국어';
   if (lang === 'en') return 'ENG';
-  return 'ZH';
+  return '中文';
 }
 
 function langFilterLabel(filter: LangFilter): string {
