@@ -520,6 +520,7 @@ export default function EditScreen() {
               draftZh={ink.inkDraftZh}
               draftTitle={ink.inkDraftTitle}
               draftArtist={ink.inkDraftArtist}
+              draftJp={ink.inkDraftJp}
               interaction="click"
               interactionEnabled={inkEditArmed}
               onOpenTarget={ink.handleInkOpenTarget}
@@ -529,7 +530,9 @@ export default function EditScreen() {
               onZhChange={ink.setInkDraftZh}
               onTitleChange={ink.setInkDraftTitle}
               onArtistChange={ink.setInkDraftArtist}
+              onJpChange={ink.setInkDraftJp}
               onConfirm={() => void ink.handleInkConfirm()}
+              onRemoveRuby={() => ink.handleInkRemoveRuby()}
             >
               <ShufuriPosterEditCanvas
                 title={title}

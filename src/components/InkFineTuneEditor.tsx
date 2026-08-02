@@ -5,7 +5,7 @@ import { readPosterTitleFromElement } from '../utils/shufuriPoster/posterTitle';
 
 const DOUBLE_TAP_MS = 320;
 
-function resolveEditTarget(el: Element): InkEditTarget | null {
+export function resolveEditTarget(el: Element): InkEditTarget | null {
   const titleEl = el.closest('h1.fv-title-h[data-ink-title], h1.fv-title-h');
   if (titleEl) {
     const { title, artist } = readPosterTitleFromElement(titleEl as HTMLElement);
@@ -54,8 +54,15 @@ function resolveEditTarget(el: Element): InkEditTarget | null {
 
   const jpLine = el.closest('.jp-line');
   if (jpLine) {
-    const innerRuby = jpLine.querySelector('ruby[data-ink-r]');
-    if (innerRuby) return resolveEditTarget(innerRuby);
+    const group = jpLine.closest('[data-ink-g]');
+    const groupIndex = group?.getAttribute('data-ink-g');
+    if (groupIndex == null) return null;
+    return {
+      kind: 'jp',
+      groupIndex: Number(groupIndex),
+      text: jpLine.textContent?.trim() ?? '',
+      anchorRect: jpLine.getBoundingClientRect(),
+    };
   }
 
   return null;
@@ -71,6 +78,7 @@ type Props = {
   draftZh: string;
   draftTitle: string;
   draftArtist: string;
+  draftJp: string;
   interaction: 'click' | 'doubleTap';
   /** 为 false 时不挂载点选编辑（浏览/滑动模式，需先展开右侧文具盒） */
   interactionEnabled?: boolean;
@@ -81,7 +89,9 @@ type Props = {
   onZhChange: (v: string) => void;
   onTitleChange: (v: string) => void;
   onArtistChange: (v: string) => void;
+  onJpChange: (v: string) => void;
   onConfirm: () => void;
+  onRemoveRuby?: () => void;
   children: ReactNode;
 };
 
@@ -95,6 +105,7 @@ export default function InkFineTuneEditor({
   draftZh,
   draftTitle,
   draftArtist,
+  draftJp,
   interaction,
   interactionEnabled = true,
   onOpenTarget,
@@ -104,7 +115,9 @@ export default function InkFineTuneEditor({
   onZhChange,
   onTitleChange,
   onArtistChange,
+  onJpChange,
   onConfirm,
+  onRemoveRuby,
   children,
 }: Props) {
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
@@ -201,13 +214,16 @@ export default function InkFineTuneEditor({
           zhText={draftZh}
           titleText={draftTitle}
           artistText={draftArtist}
+          jpText={draftJp}
           onKanjiChange={onKanjiChange}
           onKanaChange={onKanaChange}
           onZhChange={onZhChange}
           onTitleChange={onTitleChange}
           onArtistChange={onArtistChange}
+          onJpChange={onJpChange}
           onConfirm={onConfirm}
           onCancel={onClose}
+          onRemoveRuby={onRemoveRuby}
           closing={popoverClosing}
         />
       </>,

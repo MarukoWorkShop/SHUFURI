@@ -20,6 +20,12 @@ export type InkEditTarget =
       kanji: string;
       kana: string;
       anchorRect: DOMRect;
+    }
+  | {
+      kind: 'jp';
+      groupIndex: number;
+      text: string;
+      anchorRect: DOMRect;
     };
 
 type Props = {
@@ -29,13 +35,16 @@ type Props = {
   zhText: string;
   titleText: string;
   artistText: string;
+  jpText: string;
   onKanjiChange: (v: string) => void;
   onKanaChange: (v: string) => void;
   onZhChange: (v: string) => void;
   onTitleChange: (v: string) => void;
   onArtistChange: (v: string) => void;
+  onJpChange: (v: string) => void;
   onConfirm: () => void;
   onCancel: () => void;
+  onRemoveRuby?: () => void;
   closing?: boolean;
 };
 
@@ -46,13 +55,16 @@ export default function InkFineTunePopover({
   zhText,
   titleText,
   artistText,
+  jpText,
   onKanjiChange,
   onKanaChange,
   onZhChange,
   onTitleChange,
   onArtistChange,
+  onJpChange,
   onConfirm,
   onCancel,
+  onRemoveRuby,
   closing = false,
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -125,6 +137,16 @@ export default function InkFineTunePopover({
             />
           </label>
         </>
+      ) : target.kind === 'jp' ? (
+        <label className="ink-fine-tune-popover__field ink-fine-tune-popover__field--wide">
+          <span className="ink-fine-tune-popover__label">日文歌词</span>
+          <input
+            className="ink-fine-tune-popover__input"
+            value={jpText}
+            onChange={(e) => onJpChange(e.target.value)}
+            autoFocus
+          />
+        </label>
       ) : (
         <label className="ink-fine-tune-popover__field ink-fine-tune-popover__field--wide">
           <span className="ink-fine-tune-popover__label">译文</span>
@@ -140,6 +162,11 @@ export default function InkFineTunePopover({
         <button type="button" className="ink-fine-tune-popover__link" onClick={onConfirm}>
           修改
         </button>
+        {target.kind === 'ruby' && onRemoveRuby && (
+          <button type="button" className="ink-fine-tune-popover__link" onClick={onRemoveRuby}>
+            不注音
+          </button>
+        )}
         <button type="button" className="ink-fine-tune-popover__link" onClick={onCancel}>
           取消
         </button>

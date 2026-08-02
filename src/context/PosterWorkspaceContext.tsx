@@ -25,15 +25,18 @@ export type PosterWorkspaceInkSession = {
   inkDraftZh: string;
   inkDraftTitle: string;
   inkDraftArtist: string;
+  inkDraftJp: string;
   setInkDraftKanji: (v: string) => void;
   setInkDraftKana: (v: string) => void;
   setInkDraftZh: (v: string) => void;
   setInkDraftTitle: (v: string) => void;
   setInkDraftArtist: (v: string) => void;
+  setInkDraftJp: (v: string) => void;
   handleInkUndo: () => void;
   handleInkOpenTarget: (target: InkEditTarget) => void;
   closeInkPopover: () => void;
   handleInkConfirm: () => void;
+  handleInkRemoveRuby: () => void;
 };
 
 export type PosterDocumentContextValue = {

@@ -52,3 +52,41 @@ export function applyRubyEdit(
   }
   return parsed.root.innerHTML;
 }
+
+/** 取消注音：将 ruby 元素替换为纯文本节点（不含 rt），方案 A 可逆。 */
+export function applyRemoveRuby(
+  bodyHtml: string,
+  groupIndex: number,
+  rubyIndex: number,
+): string {
+  const parsed = parseBodyDoc(bodyHtml);
+  if (!parsed) return bodyHtml;
+
+  const group = parsed.root.querySelector(`[data-ink-g="${groupIndex}"]`);
+  const ruby = group?.querySelector(
+    `.jp-line ruby[data-ink-r="${rubyIndex}"], .cn-line ruby[data-ink-r="${rubyIndex}"]`,
+  );
+  if (!ruby) return bodyHtml;
+
+  // 提取 ruby 内部文本（不含 rt 内容）
+  const text = Array.from(ruby.childNodes)
+    .filter((n) => n.nodeType === Node.TEXT_NODE || (n.nodeName !== 'RT' && n.nodeName !== 'RP'))
+    .map((n) => n.textContent ?? '')
+    .join('');
+  const textNode = parsed.doc.createTextNode(text);
+  ruby.replaceWith(textNode);
+  return parsed.root.innerHTML;
+}
+
+/** 整行日文编辑：替换整行 .jp-line 内容，由调用方重跑 sanitize+wrap 重建注音。 */
+export function applyJpLineEdit(bodyHtml: string, groupIndex: number, newJp: string): string {
+  const parsed = parseBodyDoc(bodyHtml);
+  if (!parsed) return bodyHtml;
+
+  const group = parsed.root.querySelector(`[data-ink-g="${groupIndex}"]`);
+  const jpLine = group?.querySelector('.jp-line');
+  if (!jpLine) return bodyHtml;
+
+  jpLine.innerHTML = newJp.trim();
+  return parsed.root.innerHTML;
+}

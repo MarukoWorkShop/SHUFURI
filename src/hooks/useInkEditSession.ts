@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { InkEditTarget } from '../components/InkFineTunePopover';
-import { applyRubyEdit, applyZhLineEdit } from '../utils/inkFineTune/applyInkEdit';
+import { applyRubyEdit, applyZhLineEdit, applyRemoveRuby, applyJpLineEdit } from '../utils/inkFineTune/applyInkEdit';
 import { saveInkFineTuneDraft } from '../utils/inkFineTune/inkFineTuneDraft';
 import { playPencilScratchSound } from '../utils/inkFineTune/pencilScratchSound';
 import {
@@ -55,6 +55,7 @@ export function useInkEditSession({
   const [inkDraftZh, setInkDraftZh] = useState('');
   const [inkDraftTitle, setInkDraftTitle] = useState('');
   const [inkDraftArtist, setInkDraftArtist] = useState('');
+  const [inkDraftJp, setInkDraftJp] = useState('');
   const undoStackRef = useRef<InkEditSnapshot[]>([]);
 
   const inkFocusGroupIndex =
@@ -104,6 +105,8 @@ export function useInkEditSession({
       setInkDraftArtist(target.artist);
     } else if (target.kind === 'zh') {
       setInkDraftZh(target.text);
+    } else if (target.kind === 'jp') {
+      setInkDraftJp(target.text);
     } else {
       setInkDraftKanji(target.kanji);
       setInkDraftKana(target.kana);
@@ -127,6 +130,8 @@ export function useInkEditSession({
     let nextBody = bodyHtml;
     if (inkEditTarget.kind === 'zh') {
       nextBody = applyZhLineEdit(bodyHtml, inkEditTarget.groupIndex, inkDraftZh);
+    } else if (inkEditTarget.kind === 'jp') {
+      nextBody = applyJpLineEdit(bodyHtml, inkEditTarget.groupIndex, inkDraftJp);
     } else {
       nextBody = applyRubyEdit(
         bodyHtml,
@@ -148,6 +153,7 @@ export function useInkEditSession({
     inkDraftZh,
     inkDraftKanji,
     inkDraftKana,
+    inkDraftJp,
     inkDraftTitle,
     inkDraftArtist,
     savedProjectId,
@@ -172,6 +178,30 @@ export function useInkEditSession({
     setInkPopoverClosing(false);
   }, []);
 
+  const handleInkRemoveRuby = useCallback(() => {
+    if (!inkEditTarget || inkEditTarget.kind !== 'ruby') return;
+
+    pushUndoSnapshot();
+
+    const nextBody = applyRemoveRuby(
+      bodyHtml,
+      inkEditTarget.groupIndex,
+      inkEditTarget.rubyIndex,
+    );
+    const normalized = prepareBodyHtmlForPreview(nextBody);
+    setBodyHtml(normalized);
+    saveInkFineTuneDraft(savedProjectId ?? 'session', normalized);
+    playPencilScratchSound();
+    closeInkPopover();
+  }, [
+    inkEditTarget,
+    bodyHtml,
+    savedProjectId,
+    closeInkPopover,
+    pushUndoSnapshot,
+    setBodyHtml,
+  ]);
+
   return {
     inkEditTarget,
     inkPopoverClosing,
@@ -185,16 +215,19 @@ export function useInkEditSession({
     inkDraftZh,
     inkDraftTitle,
     inkDraftArtist,
+    inkDraftJp,
     setInkDraftKanji,
     setInkDraftKana,
     setInkDraftZh,
     setInkDraftTitle,
     setInkDraftArtist,
+    setInkDraftJp,
     inkFocusGroupIndex,
     closeInkPopover,
     handleInkUndo,
     handleInkOpenTarget,
     handleInkConfirm,
+    handleInkRemoveRuby,
     resetInkSession,
     setInkPopoverClosing,
     clearInkTarget,
