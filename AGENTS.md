@@ -2,6 +2,8 @@
 
 Vite + React web app. Run `npm run dev` to start the dev server.
 
+> 新成员首次对接请从 [`HANDOFF.md`](./HANDOFF.md) 开始 — 包含快速上手、架构地图、雷区清单和最近变更。
+
 **划词 AI讲解**（编辑页工具箱 `?`）：本地 JMdict + Kuromoji，可选 CloudBase → 火山引擎。设计与部署见 [`docs/AI_MODE_VOLCENGINE_DESIGN.md`](docs/AI_MODE_VOLCENGINE_DESIGN.md)。
 
 ---
