@@ -8,7 +8,6 @@ import type { PosterLayoutProfile, PosterRenderOptions } from './shufuriPoster/t
 import {
   buildShufuriPosterInnerCss,
   buildShufuriPosterRootStyle,
-  getShufuriCanvasInsets,
   getShufuriPosterCanvasDimensions,
 } from './shufuriPoster/shufuriPosterShared';
 import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
@@ -16,12 +15,15 @@ import {
   getPosterJapaneseFontsFaceCss,
   getPosterKoreanFontFaceCss,
   getPosterSourceHanSerifScFontFaceCss,
-  ZH_FONT_FAMILY,
+  getPosterSansationFontFaceCss,
 } from './shufuriPoster/fonts';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
 import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
-import { PAGE_NUMBER_TEXT_COLOR } from './posterTypography/typographyConstants';
+import {
+  buildPosterWatermarkCss,
+  buildPosterWatermarkHtml,
+} from './shufuriPoster/posterWatermark';
 
 /** 将 JS 样式对象转为内联 style 属性字符串 */
 function styleObjToAttr(style: Record<string, string | number>): string {
@@ -66,18 +68,18 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
     showTitle,
     bodyFragmentHtml,
     pageIndex,
-    pageCount,
+    pageCount: _pageCount,
     layoutProfile,
     spacingScale = 1,
     language = 'jp',
     lang,
     renderOptions,
   } = opts;
+  void _pageCount;
 
   const showRuby = renderOptions?.showRuby ?? true;
 
   const { width: w, height: h } = getShufuriPosterCanvasDimensions(layoutProfile);
-  const pad = getShufuriCanvasInsets(layoutProfile);
   const rootStyle = buildShufuriPosterRootStyle(layoutProfile);
   const pipelineLang = resolvePosterPipelineLang(lang, bodyFragmentHtml, language);
   const innerCss = buildShufuriPosterInnerCss(layoutProfile, {
@@ -93,13 +95,9 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
   const jpFontCss = getPosterJapaneseFontsFaceCss();
   const koFontCss = getPosterKoreanFontFaceCss();
   const zhSerifFontCss = getPosterSourceHanSerifScFontFaceCss();
-
-  const pageNoText = `— ${String(pageIndex + 1).padStart(2, '0')} / ${String(pageCount).padStart(2, '0')} —`;
-  const pageNoBottom = layoutProfile === 'mobilePoster'
-    ? Math.round(pad.bottom * 0.42)
-    : layoutProfile === 'squarePoster'
-      ? Math.round(pad.bottom * 0.38)
-      : Math.round(pad.bottom * 0.28);
+  const sansationFontCss = getPosterSansationFontFaceCss();
+  const watermarkCss = buildPosterWatermarkCss({ profile: layoutProfile });
+  const watermarkHtml = buildPosterWatermarkHtml(pageIndex + 1);
 
   let titleHtml = '';
   if (showTitle) {
@@ -125,17 +123,9 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
       ${xmlEscape(jpFontCss)}
       ${xmlEscape(koFontCss)}
       ${xmlEscape(zhSerifFontCss)}
+      ${xmlEscape(sansationFontCss)}
       ${xmlEscape(innerCss)}
-      .fv-poster-page-no {
-        position: absolute;
-        right: ${pad.right}px;
-        bottom: ${pageNoBottom}px;
-        font-size: 13px;
-        color: ${PAGE_NUMBER_TEXT_COLOR};
-        font-family: ${ZH_FONT_FAMILY};
-        font-weight: 400;
-        letter-spacing: 0.04em;
-      }
+      ${xmlEscape(watermarkCss)}
     </style>
   </defs>
   <foreignObject width="100%" height="100%">
@@ -146,7 +136,7 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
       <div class="fv-body-h" style="flex:1 1 auto;min-height:0;overflow:hidden;box-sizing:border-box;text-align:left;">
         ${cleanBody}
       </div>
-      <div class="fv-poster-page-no">${xmlEscape(pageNoText)}</div>
+      ${watermarkHtml}
     </div>
   </foreignObject>
 </svg>`;

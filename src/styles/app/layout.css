@@ -361,9 +361,10 @@ html:has(.app--export) {
   transform-origin: top left;
 }
 
-.fv-poster-page-no {
+.fv-poster-watermark {
   position: absolute;
   pointer-events: none;
+  z-index: 2;
 }
 
 .app--home .app-header {

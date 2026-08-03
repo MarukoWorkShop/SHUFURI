@@ -2,21 +2,14 @@ import {
   applyPosterBodyMaxHeight,
   buildShufuriPosterInnerCss,
   buildShufuriPosterRootStyle,
-  getShufuriCanvasInsets,
   getShufuriPosterCanvasDimensions,
 } from './shufuriPoster/shufuriPosterShared';
-import {
-  PAGE_NUMBER_TEXT_COLOR,
-} from './posterTypography/typographyConstants';
-import { ZH_FONT_FAMILY } from './shufuriPoster/fonts';
 import type { PosterLayoutProfile, PosterRenderOptions } from './shufuriPoster/types';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
 import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
 import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
-
-const PAGE_NUMBER_FONT_PX = 13;
-const PAGE_NUMBER_FONT_FAMILY = ZH_FONT_FAMILY;
+import { appendPosterWatermark } from './shufuriPoster/posterWatermark';
 
 /**
  * 导出 html2canvas 渲染补偿因子。
@@ -41,12 +34,6 @@ function sanitizeFragmentHtml(html: string): string {
   s = s.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
   s = s.replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
   return s;
-}
-
-function formatPosterPageNo(current: number, total: number): string {
-  const a = String(current).padStart(2, '0');
-  const b = String(total).padStart(2, '0');
-  return `— ${a} / ${b} —`;
 }
 
 export type PosterExportPageMount = {
@@ -79,15 +66,15 @@ export function mountPosterExportPage(
     showTitle,
     bodyFragmentHtml,
     pageIndex,
-    pageCount,
+    pageCount: _pageCount,
     layoutProfile,
     spacingScale = 1,
     language = 'jp',
     lang,
     renderOptions,
   } = opts;
+  void _pageCount;
   const { width: canvasW, height: canvasH } = getShufuriPosterCanvasDimensions(layoutProfile);
-  const pad = getShufuriCanvasInsets(layoutProfile);
   const rootStyle = buildShufuriPosterRootStyle(layoutProfile);
 
   // 离屏 backdrop：为 html2canvas 提供白底，尺寸与画布一致，永不移入视口。
@@ -155,26 +142,7 @@ export function mountPosterExportPage(
   body.innerHTML = sanitizeFragmentHtml(bodyFragmentHtml);
   shell.appendChild(body);
 
-  const pageNo = doc.createElement('div');
-  pageNo.className = 'fv-poster-page-no';
-  pageNo.setAttribute('aria-hidden', 'true');
-  pageNo.textContent = formatPosterPageNo(pageIndex + 1, pageCount);
-  Object.assign(pageNo.style, {
-    position: 'absolute',
-    right: `${pad.right}px`,
-    bottom: `${
-      layoutProfile === 'mobilePoster'
-        ? Math.round(pad.bottom * 0.42)
-        : Math.round(pad.bottom * 0.28)
-    }px`,
-    fontSize: `${PAGE_NUMBER_FONT_PX}px`,
-    color: PAGE_NUMBER_TEXT_COLOR,
-    fontFamily: PAGE_NUMBER_FONT_FAMILY,
-    fontWeight: '400',
-    letterSpacing: '0.04em',
-    zIndex: '2',
-  });
-  shell.appendChild(pageNo);
+  appendPosterWatermark(shell, pageIndex + 1, doc);
 
   const titleElForMeasure = showTitle ? shell.querySelector('h1.fv-title-h') : null;
   applyPosterBodyMaxHeight(body, layoutProfile, {

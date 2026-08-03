@@ -8,8 +8,8 @@ import {
   getPosterJapaneseFontsFaceCss,
   getPosterKoreanFontFaceCss,
   getPosterSourceHanSerifScFontFaceCss,
+  getPosterSansationFontFaceCss,
 } from '../shufuriPoster/fonts.ts';
-import { dimForProfile } from '../shufuriPoster/dimensions.ts';
 import {
   buildCjkNoBreakClassCss,
   buildCjkWrapCss,
@@ -28,9 +28,9 @@ import {
   SECTION_TITLE_COLOR,
   PLACEHOLDER_COLOR,
   SEPARATOR_COLOR,
-  PAGE_NUMBER_TEXT_COLOR,
   POSTER_BG_COLOR,
 } from './typographyConstants.ts';
+import { buildPosterWatermarkCss } from '../shufuriPoster/posterWatermark.ts';
 import type { ResolvedTypography } from './tokenRegistry.ts';
 import { mm, pxToMm, type PrintPageSpec } from '../vectorPrint/printPageSpec.ts';
 
@@ -727,30 +727,15 @@ function compilePrintPageShell(spec: PrintPageSpec): string {
   }`;
 }
 
-function compilePageNumberCss(
+function compileWatermarkCss(
   r: ResolvedTypography,
   unit: 'px' | 'mm',
   spec?: PrintPageSpec,
 ): string {
-  if (unit === 'px') return '';
-  const d = dimForProfile(r.profile);
-  const pageNoBottomPx =
-    r.profile === 'mobilePoster'
-      ? Math.round(d.pageBottomDefault * 0.42)
-      : r.profile === 'squarePoster'
-        ? Math.round(d.pageBottomDefault * 0.38)
-        : Math.round(d.pageBottomDefault * 0.28);
-  return `
-  .fv-poster-page-no {
-    position: absolute;
-    right: ${size(d.padH, unit, spec)};
-    bottom: ${size(pageNoBottomPx, unit, spec)};
-    font-size: ${size(13, unit, spec)};
-    color: ${PAGE_NUMBER_TEXT_COLOR};
-    font-family: ${r.roles.posterTitle.fontFamily};
-    font-weight: 400;
-    letter-spacing: 0.04em;
-  }`;
+  return buildPosterWatermarkCss({
+    profile: r.profile,
+    sizeFn: (px) => size(px, unit, spec),
+  });
 }
 
 export function compilePosterCss(
@@ -762,7 +747,7 @@ export function compilePosterCss(
   const includeFontFaces = options.includeFontFaces ?? unit === 'px';
 
   const fontFaces = includeFontFaces
-    ? `${getPosterJapaneseFontsFaceCss()}${getPosterKoreanFontFaceCss()}${getPosterSourceHanSerifScFontFaceCss()}${getPosterEnglishFontFaceCss()}`
+    ? `${getPosterJapaneseFontsFaceCss()}${getPosterKoreanFontFaceCss()}${getPosterSourceHanSerifScFontFaceCss()}${getPosterEnglishFontFaceCss()}${getPosterSansationFontFaceCss()}`
     : '';
 
   const printShell = unit === 'mm' && spec ? compilePrintPageShell(spec) : '';
@@ -770,12 +755,12 @@ export function compilePosterCss(
   const zhRules = resolved.flags.isZhPipeline
     ? compileZhLayoutCss(resolved, unit, spec)
     : '';
-  const pageNo = compilePageNumberCss(resolved, unit, spec);
+  const watermark = compileWatermarkCss(resolved, unit, spec);
   const cjkNoBreak = buildCjkNoBreakClassCss();
   const showRuby = options.showRuby ?? resolved.flags.showRuby;
   const rubyVisibility = compileRubyVisibilityCss(showRuby);
 
-  return `${fontFaces}${printShell}${bodyRules}${zhRules}${pageNo}${cjkNoBreak}${rubyVisibility}`;
+  return `${fontFaces}${printShell}${bodyRules}${zhRules}${watermark}${cjkNoBreak}${rubyVisibility}`;
 }
 
 /** 编辑页：主题令牌 / 布局（行距已并入 mobilePoster Kami 基准，勿再 !important 覆盖） */

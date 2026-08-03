@@ -65,7 +65,7 @@ export const PLACEHOLDER_COLOR = '#cbd5e1';
 export const SEPARATOR_COLOR = '#e0e0e0';
 /** 海报 / 打印页白色背景 */
 export const POSTER_BG_COLOR = '#ffffff';
-/** 页码颜色 */
+/** 页码 / 水印颜色（旧右下角页码用；水印见 posterWatermark） */
 export const PAGE_NUMBER_TEXT_COLOR = '#94a3b8';
 
 /** 中文词汇条目间距 em */

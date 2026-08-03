@@ -103,6 +103,24 @@ export async function getPrintEnglishFontFaceCss(): Promise<string> {
   return cachedEnFontFaceCss;
 }
 
+let cachedSansationRegularFontFaceCss: string | null = null;
+
+/** 海报水印页码 / 品牌名 — Sansation Regular */
+export async function getPrintSansationRegularFontFaceCss(): Promise<string> {
+  if (cachedSansationRegularFontFaceCss) {
+    return cachedSansationRegularFontFaceCss;
+  }
+  const base64 = await fetchAssetFontBase64('Sansation-Regular.ttf');
+  cachedSansationRegularFontFaceCss = `
+@font-face {
+  font-family: "Sansation";
+  src: url(data:font/truetype;base64,${base64}) format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}`;
+  return cachedSansationRegularFontFaceCss;
+}
+
 /** 思源宋体约 23MB，不打进 printFontBase64.generated，导出时按需 fetch */
 export async function getPrintSourceHanSerifScFontFaceCss(): Promise<string> {
   if (cachedZhSerifFontFaceCss) {
@@ -119,15 +137,16 @@ export async function getPrintSourceHanSerifScFontFaceCss(): Promise<string> {
   return cachedZhSerifFontFaceCss;
 }
 
-/** 日文+韩文+英文+思源宋体 @font-face，PDF 打印时内嵌 */
+/** 日文+韩文+英文+思源宋体+Sansation Regular @font-face，PDF 打印时内嵌 */
 export async function getPrintFontFaceCss(): Promise<string> {
-  const [jpRegular, koCss, enCss, zhSerifCss] = await Promise.all([
+  const [jpRegular, koCss, enCss, zhSerifCss, sansationCss] = await Promise.all([
     getPrintJapaneseRegularFontFaceCss(),
     getPrintKoreanFontFaceCss(),
     getPrintEnglishFontFaceCss(),
     getPrintSourceHanSerifScFontFaceCss(),
+    getPrintSansationRegularFontFaceCss(),
   ]);
-  return `${jpRegular}\n${koCss}\n${enCss}\n${zhSerifCss}`;
+  return `${jpRegular}\n${koCss}\n${enCss}\n${zhSerifCss}\n${sansationCss}`;
 }
 
 export {

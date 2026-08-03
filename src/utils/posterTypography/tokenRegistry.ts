@@ -112,7 +112,7 @@ export const ROLE_SELECTOR_MAP: Record<PosterTextRole, Partial<Record<LangCode |
   studyAux: { default: '.vocab-meaning, .grammar-detail, .vocab-formula, .grammar-title-gloss, .grammar-ex-gloss' },
   studyExample: { default: '.vocab-ex-ja, .vocab-ex-ko, .vocab-ex-zh, .vocab-ex-cn, .grammar-ex-ja, .grammar-ex-ko, .grammar-ex-zh, .grammar-ex-cn' },
   grammarPointShell: { default: 'h3.grammar-point-title' },
-  pageNumber: { default: '.fv-poster-page-no' },
+  pageNumber: { default: '.fv-poster-watermark' },
 };
 
 export function roleSelector(role: PosterTextRole, lang: LangCode): string {

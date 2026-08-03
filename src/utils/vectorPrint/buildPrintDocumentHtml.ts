@@ -6,15 +6,10 @@ import { getPrintFontFaceCss } from './printFonts';
 import { printPageSpec } from './printPageSpec';
 import type { LyricsLanguage, LangCode } from '../../services/appSettings';
 import { getAppSettings } from '../../services/appSettings';
+import { buildPosterWatermarkHtml } from '../shufuriPoster/posterWatermark';
 
 /** html2canvas 渲染补偿因子（与 posterExportMount.ts 保持同步） */
 const EXPORT_HTML2CANVAS_SCALE_FUDGE = 0.98;
-
-function formatPosterPageNo(current: number, total: number): string {
-  const a = String(current).padStart(2, '0');
-  const b = String(total).padStart(2, '0');
-  return `— ${a} / ${b} —`;
-}
 
 function scopePrintCss(css: string, scope: string): string {
   return css
@@ -29,18 +24,19 @@ function scopePrintCss(css: string, scope: string): string {
 function buildSinglePrintPageHtml(
   slice: PosterPageSlice,
   pageIndex: number,
-  pageCount: number,
+  _pageCount: number,
   title: string,
   artist: string | undefined,
   showTitle: boolean,
   showRuby: boolean,
   lang: LangCode = 'jp',
 ): string {
+  void _pageCount;
   const safeBody = sanitizeShufuriPosterHtml(slice.html);
   const titleBlock = showTitle
     ? `<h1 class="fv-title-h">${buildPosterTitleInnerHtml(title, artist, lang)}</h1>`
     : '';
-  const pageNo = formatPosterPageNo(pageIndex + 1, pageCount);
+  const watermark = buildPosterWatermarkHtml(pageIndex + 1);
   const exportScale = slice.spacingScale * EXPORT_HTML2CANVAS_SCALE_FUDGE;
   const scaleAttr =
     slice.spacingScale !== 1 ? ` data-spacing-scale="${exportScale}"` : '';
@@ -50,7 +46,7 @@ function buildSinglePrintPageHtml(
   <div class="fv-html-poster-root"${rubyAttr}>
     ${titleBlock}
     <div class="fv-body-h">${safeBody}</div>
-    <div class="fv-poster-page-no" aria-hidden="true">${pageNo}</div>
+    ${watermark}
   </div>
 </section>`;
 }

@@ -4,7 +4,6 @@ import {
   applyPosterBodyMaxHeight,
   buildShufuriPosterInnerCss,
   buildShufuriPosterRootStyle,
-  getShufuriCanvasInsets,
   getShufuriPosterCanvasDimensions,
 } from '../utils/shufuriPoster/shufuriPosterShared';
 import { rasterizePageHtmlToBlob } from '../utils/pdfExport';
@@ -16,7 +15,6 @@ import {
   resolveDisplayArtist,
   resolveDisplayTitle,
 } from '../utils/shufuriPoster/posterTitle';
-import { ZH_FONT_FAMILY } from '../utils/shufuriPoster/fonts';
 import { resolvePosterPipelineLang } from '../utils/shufuriPoster/inferPosterLang';
 import { PAGE_GAP_PX } from '../hooks/usePosterPreviewFitScale';
 import type { PosterLayoutProfile, PosterPageSlice, PosterRenderOptions } from '../utils/shufuriPoster/types';
@@ -25,12 +23,7 @@ import { getAppSettings } from '../services/appSettings';
 import { useTimedMessage } from '../hooks/useTimedMessage';
 import { L } from '../utils/i18n';
 import AppToast from './AppToast';
-
-import { PAGE_NUMBER_TEXT_COLOR } from '../utils/posterTypography/typographyConstants';
-
-/** 页码字体常量 */
-const PAGE_NUMBER_FONT_PX = 13;
-const PAGE_NUMBER_FONT_FAMILY = ZH_FONT_FAMILY;
+import { formatWatermarkPageLabel, WATERMARK_BRAND } from '../utils/shufuriPoster/posterWatermark';
 
 /** 最小净化：防脚本注入 */
 export function sanitizeShufuriPosterHtml(html: string): string {
@@ -38,12 +31,6 @@ export function sanitizeShufuriPosterHtml(html: string): string {
   s = s.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
   s = s.replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
   return s;
-}
-
-function formatPosterPageNo(current: number, total: number): string {
-  const a = String(current).padStart(2, '0');
-  const b = String(total).padStart(2, '0');
-  return `— ${a} / ${b} —`;
 }
 
 function pageImageFilename(title: string, pageIndex: number): string {
@@ -100,7 +87,6 @@ function ShufuriPosterSinglePage({
     [lang, safeFragment, language],
   );
   const { width: w, height: h } = getShufuriPosterCanvasDimensions(layoutProfile);
-  const pad = getShufuriCanvasInsets(layoutProfile);
   const frameRef = useRef<HTMLDivElement>(null);
   const [renderScale, setRenderScale] = useState(displayScale);
   const innerCss = useMemo(
@@ -431,26 +417,11 @@ function ShufuriPosterSinglePage({
             className="fv-body-h"
             dangerouslySetInnerHTML={{ __html: safeFragment }}
           />
-          <div
-            className="fv-poster-page-no"
-            style={{
-              right: pad.right,
-              bottom:
-                layoutProfile === 'mobilePoster'
-                  ? Math.round(pad.bottom * 0.42)
-                  : layoutProfile === 'squarePoster'
-                    ? Math.round(pad.bottom * 0.38)
-                    : Math.round(pad.bottom * 0.28),
-              fontSize: PAGE_NUMBER_FONT_PX,
-              color: PAGE_NUMBER_TEXT_COLOR,
-              fontFamily: PAGE_NUMBER_FONT_FAMILY,
-              fontWeight: 400,
-              letterSpacing: '0.04em',
-              zIndex: 2,
-            }}
-            aria-hidden
-          >
-            {formatPosterPageNo(pageIndex + 1, pageCount)}
+          <div className="fv-poster-watermark" aria-hidden>
+            <div className="fv-poster-watermark__page">
+              {formatWatermarkPageLabel(pageIndex + 1)}
+            </div>
+            <div className="fv-poster-watermark__brand">{WATERMARK_BRAND}</div>
           </div>
         </div>
       </div>

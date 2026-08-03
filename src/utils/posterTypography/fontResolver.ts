@@ -41,7 +41,6 @@ import {
   TITLE_TEXT_COLOR,
   ARTIST_TEXT_COLOR,
   SECTION_TITLE_COLOR,
-  PAGE_NUMBER_TEXT_COLOR,
 } from './typographyConstants.ts';
 import type {
   LayoutSpacingTokens,
@@ -338,11 +337,11 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   });
 
   roles.pageNumber = baseToken({
-    fontFamily: ZH_FONT_FAMILY,
-    fontSize: 13,
+    fontFamily: '"Sansation", sans-serif',
+    fontSize: 14,
     fontWeight: AUX_WEIGHT,
-    lineHeight: 1.2,
-    color: PAGE_NUMBER_TEXT_COLOR,
+    lineHeight: 1,
+    color: 'rgba(0, 0, 0, 0.3)',
     wrap: 'inherit',
   });
 

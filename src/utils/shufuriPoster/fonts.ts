@@ -66,6 +66,28 @@ export function getPosterSourceHanSerifScFontUrl(): string {
   return './assets/SourceHanSerifSC-Regular.otf';
 }
 
+/** 海报水印品牌字 — Sansation Regular */
+export const SANSATION_FAMILY = '"Sansation", sans-serif';
+
+export function getPosterSansationRegularFontUrl(): string {
+  if (typeof window !== 'undefined' && window.location?.href) {
+    return new URL('assets/Sansation-Regular.ttf', window.location.href).href;
+  }
+  return './assets/Sansation-Regular.ttf';
+}
+
+export function getPosterSansationFontFaceCss(): string {
+  const fontUrl = getPosterSansationRegularFontUrl();
+  return `
+@font-face {
+  font-family: "Sansation";
+  src: url("${fontUrl}") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}`;
+}
+
 /** 英文字体为系统 PingFang，无需 @font-face 注入 */
 export function getPosterEnglishFontFaceCss(): string {
   return '';
