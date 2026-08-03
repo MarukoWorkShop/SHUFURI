@@ -76,8 +76,8 @@ export function useClipboardStructuredLyrics(): ClipboardStructuredLyricsState {
     window.addEventListener('focus', check);
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', check);
-    // 初次加载时检查一次（此时文档通常已 focused，readClipboardText 可成功）
-    check();
+    // 不在挂载时立即 check：此时无 user activation（用户未与页面交互），
+    // navigator.clipboard.readText() 会抛 NotAllowedError，导致误报"权限被阻止"。
 
     return () => {
       cancelled = true;

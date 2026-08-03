@@ -114,8 +114,8 @@ export function useDesktopMusicShareDetection({
     window.addEventListener('focus', check);
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', check);
-    // 初次加载时检查一次
-    check();
+    // 不在挂载时立即 check：此时无 user activation，readClipboardText 会被
+    // 浏览器静默拒绝（抛 NotAllowedError），不应误报为权限被阻止。
 
     return () => {
       cancelled = true;

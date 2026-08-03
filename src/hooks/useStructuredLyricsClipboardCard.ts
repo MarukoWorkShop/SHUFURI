@@ -4,7 +4,7 @@ import { mergeConfirmedLyricsWithStudy } from '../codec/mergeStream';
 import { hapticSuccess } from './useHaptics';
 import type { LangCode, PedagogicalLevel } from '../services/appSettings';
 import type { LanguageMatrixContext } from '../services/languageMatrix/types';
-import { readClipboardText } from '../utils/clipboard';
+import { dispatchClipboardBlockedEvent, readClipboardText } from '../utils/clipboard';
 import {
   clipboardContentHash,
   getStructuredLyricsCardMeta,
@@ -256,11 +256,17 @@ export function useStructuredLyricsClipboardCard({
             ? L('未检测到学习材料记录流（需含 V/G）', 'No study material stream detected (V/G required)')
             : L('未检测到结构化歌词', 'No structured lyrics detected.'),
         );
-      } catch {
-        // 自动读剪贴板失败（iOS WKWebView 非 focused、Capacitor 插件不可用等），
-        // 弹手动粘贴 modal，让用户用系统粘贴手势（Cmd+V / 长按粘贴）写入 textarea
-        setManualPasteText('');
-        setManualPasteOpen(true);
+      } catch (err: any) {
+        // 用户点击按钮（user gesture）触发的读剪贴板失败：
+        //  - NotAllowedError：权限未授予/被浏览器拦截 → 派发 blocked 事件，App 层弹 toast 引导去地址栏授权
+        //  - 其他错误（如 iOS WKWebView 非 focused、Capacitor 插件不可用）：弹手动粘贴 modal，
+        //    让用户用系统粘贴手势（Cmd+V / 长按粘贴）写入 textarea
+        if (err?.name === 'NotAllowedError') {
+          dispatchClipboardBlockedEvent();
+        } else {
+          setManualPasteText('');
+          setManualPasteOpen(true);
+        }
       }
     },
     [activateClipboardDetectCardFromText, showToast],
