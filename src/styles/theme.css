@@ -217,6 +217,26 @@
   --color-fg-faint: #cbd5e1;
   --color-fg-disabled: #b0b8c4;
 
+  /* 品牌色 — 墨蓝 Sumi-Blue（logo / 水印 / CTA 主按钮）
+     设计规范 D1 §3.1：--color-brand 为品牌主色。
+     当前实现：Logo 保持黑色（--color-accent），Filled 按钮保持黑色。
+     Brand 色预留供水印、品牌页面等场景使用。修改需设计师确认。 */
+  --color-brand: #1B3A5C;
+  --color-brand-hover: #2A4F7A;
+  --color-brand-soft: rgba(27, 58, 92, 0.08);
+  --color-brand-on: #ffffff;
+
+  /* 品牌暖色 — 莹黄 Kinari（工具箱三角 / 选中高亮 / 动效点缀，≤5% 面积） */
+  --color-kinari: #EAE370;
+  --color-kinari-hover: #D0CE5F;
+  --color-kinari-text: #2B2B1A;
+
+  /* 品牌纸色 — 品牌页 / 社交卡片底 */
+  --color-paper: #FAFAF8;
+
+  /* 划词选中高亮（§3.6 kinari 半透明） */
+  --color-selection-highlight: rgba(234, 227, 112, 0.6);
+
   --color-border: #e0e0e0;
   --color-border-subtle: #f1f5f9;
   --color-border-faint: #f8fafc;
@@ -288,7 +308,7 @@
   --chip-padding-x: 10px;
   --chip-font-size: 11px;
 
-  /* 按钮 — Filled（主操作） */
+  /* 按钮 — Filled（主操作，黑色） */
   --btn-filled-bg: var(--color-accent);
   --btn-filled-bg-hover: var(--color-accent-hover);
   --btn-filled-bg-disabled: var(--color-fg-muted);
@@ -362,6 +382,17 @@
 /* ------------------------------------------------------------------ */
 
 [data-theme="dark"] {
+  /* 暗色品牌色 Sumi-Blue 反转为浅蓝 */
+  --color-brand: #5B8AB5;
+  --color-brand-hover: #7BA8CF;
+  --color-brand-soft: rgba(91, 138, 181, 0.12);
+  --color-brand-on: #151522;
+  --color-kinari: #EAE370;
+  --color-kinari-hover: #D0CE5F;
+  --color-kinari-text: #2B2B1A;
+  --color-paper: #151522;
+  --color-selection-highlight: rgba(234, 227, 112, 0.45);
+
   --color-bg: #151522;
   --color-bg-elevated: #1e1e30;
   --color-bg-muted: #24243a;
@@ -560,4 +591,16 @@
 ):focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* 6. 划词选中高亮 — 品牌 kinari 半透明（§3.6）                           */
+/* ------------------------------------------------------------------ */
+
+::selection {
+  background: var(--color-selection-highlight);
+}
+
+::-moz-selection {
+  background: var(--color-selection-highlight);
 }

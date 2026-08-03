@@ -901,7 +901,7 @@
 
 .lyric-candidate-card:hover {
   border-color: var(--color-accent, #2563eb);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 6px 20px var(--color-brand-soft);
   transform: translateY(-2px);
 }
 
@@ -923,8 +923,8 @@
 }
 
 .lyric-candidate-card__badge--role {
-  color: #fff;
-  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: var(--color-brand-on);
+  background: var(--color-brand);
 }
 
 .lyric-candidate-card__badge--lang {
@@ -933,8 +933,8 @@
 }
 
 .lyric-candidate-card__badge--src {
-  color: var(--color-accent, #2563eb);
-  background: rgba(37, 99, 235, 0.1);
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
 }
 
 .lyric-candidate-card__lines {
@@ -951,8 +951,8 @@
   padding: 11px 16px;
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
-  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: var(--color-brand-on);
+  background: var(--color-brand);
   cursor: pointer;
   transition: filter 0.15s ease, transform 0.1s ease;
 }
@@ -1134,8 +1134,8 @@
 
 .lyric-candidates-btn--primary {
   border: none;
-  color: #fff;
-  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: var(--color-brand-on);
+  background: var(--color-brand);
 }
 
 .lyric-candidates-btn:hover {

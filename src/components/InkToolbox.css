@@ -30,7 +30,7 @@
   height: 0;
   border-top: 7px solid transparent;
   border-bottom: 7px solid transparent;
-  border-right: 9px solid #eae370;
+  border-right: 9px solid var(--color-kinari);
   opacity: 0.75;
   animation: ink-toolbox-chevron-nudge 2s ease-in-out infinite;
   transition:
@@ -40,7 +40,7 @@
 }
 
 .ink-toolbox__trigger:hover .ink-toolbox__chevron {
-  border-right-color: color-mix(in srgb, #eae370 82%, #000);
+  border-right-color: color-mix(in srgb, var(--color-kinari) 82%, #000);
   opacity: 1;
 }
 
