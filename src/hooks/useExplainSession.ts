@@ -57,6 +57,15 @@ export type UseExplainSessionOptions = {
     formula?: string;
     mood?: string;
   }) => void;
+  /** 将胶囊「进一步讲解」单独写入重点语法条 */
+  appendGrammarStudyItem?: (payload: {
+    id: string;
+    titlePrimary: string;
+    titleSecondary: string;
+    detail: string;
+    example: string;
+    translation: string;
+  }) => void;
 };
 
 export type UseExplainSessionResult = {
@@ -90,6 +99,8 @@ export type UseExplainSessionResult = {
   requestAiDeepDive: () => void;
   /** 将当前 AI 讲解追加为歌词正文笔记条 */
   addToLyricsNote: () => void;
+  /** 将当前展开的语法讲义单独写入重点语法笔记 */
+  addGrammarLessonToNote: () => void;
   /** 点击语法胶囊：短讲义（含义/用法/情感）+ 一条例句 */
   requestGrammarExamples: (capsule: AiGrammarCapsule) => void;
   clearGrammarExamples: () => void;
@@ -127,6 +138,7 @@ export function useExplainSession({
   savedProjectId: _savedProjectId,
   showToast,
   appendExplainNote,
+  appendGrammarStudyItem,
 }: UseExplainSessionOptions): UseExplainSessionResult {
   const [explainMode, setExplainMode] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -616,6 +628,58 @@ export function useExplainSession({
     showToast(L('已添加到笔记', 'Added to Notes.'));
   }, [aiExplain, appendExplainNote, lang, result, showToast, targetPhrase]);
 
+  const addGrammarLessonToNote = useCallback(() => {
+    if (!appendGrammarStudyItem) {
+      showToast(L('当前页面无法添加笔记', 'Cannot add notes on this page.'));
+      return;
+    }
+    if (!grammarLesson || !activeGrammarCapsule) {
+      showToast(L('请先打开语法考点讲解', 'Open a grammar point lesson first.'));
+      return;
+    }
+    const titlePrimary = activeGrammarCapsule.term.replace(/\s+/g, ' ').trim();
+    if (!titlePrimary || titlePrimary === '—' || titlePrimary === '-') {
+      showToast(L('暂无可添加的语法点', 'No grammar point to add.'));
+      return;
+    }
+    const detail = [
+      grammarLesson.meaning.trim()
+        ? `${L('通常含义', 'Common Meaning')}：${grammarLesson.meaning.trim()}`
+        : '',
+      grammarLesson.usage.trim()
+        ? `${L('如何使用', 'How to Use')}：${grammarLesson.usage.trim()}`
+        : '',
+      grammarLesson.emotion.trim()
+        ? `${L('情感语气', 'Emotion & Tone')}：${grammarLesson.emotion.trim()}`
+        : '',
+      grammarLesson.example?.source
+        ? `${L('例句出处', 'Example source')}：${grammarLesson.example.source}`
+        : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+    const example = grammarLesson.example?.text?.trim() || '';
+    const translation = grammarLesson.example?.zh?.trim() || '';
+    if (!detail && !example) {
+      showToast(L('讲解内容为空，请稍后再试', 'Lesson is empty. Try again later.'));
+      return;
+    }
+    appendGrammarStudyItem({
+      id: nanoid(),
+      titlePrimary,
+      titleSecondary: activeGrammarCapsule.title.trim(),
+      detail,
+      example,
+      translation,
+    });
+    showToast(L('已写入语法笔记', 'Saved as grammar note.'));
+  }, [
+    activeGrammarCapsule,
+    appendGrammarStudyItem,
+    grammarLesson,
+    showToast,
+  ]);
+
   return {
     explainMode,
     arm,
@@ -639,6 +703,7 @@ export function useExplainSession({
     retryAnalyze,
     requestAiDeepDive,
     addToLyricsNote,
+    addGrammarLessonToNote,
     requestGrammarExamples,
     clearGrammarExamples,
     activeGrammarCapsule,

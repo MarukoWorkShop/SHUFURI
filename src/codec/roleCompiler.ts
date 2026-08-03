@@ -21,7 +21,8 @@ function splitGrammarLabel(label: string): { orig: string; zh?: string } {
   return { orig: trimmed };
 }
 
-function renderText(
+/** 与流式编译一致：日/中正文角色将 `{汉字|读音}` 转为 `<ruby>`，其余 escape */
+export function renderPosterText(
   text: string,
   role: PosterTextRole,
   lang: StreamDocument['header']['lang'],
@@ -34,6 +35,14 @@ function renderText(
   if (usesPlainHtml(role, lang)) return escapeHtml(text);
   if (usesRubyMarkup(role, lang)) return applyRubyMarkup(text);
   return escapeHtml(text);
+}
+
+function renderText(
+  text: string,
+  role: PosterTextRole,
+  lang: StreamDocument['header']['lang'],
+): string {
+  return renderPosterText(text, role, lang);
 }
 
 function taggedLine(className: string, innerHtml: string): string {
