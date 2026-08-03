@@ -88,6 +88,7 @@ export default function EditScreen() {
     removeStudyItem,
     updateVocabItem,
     updateGrammarItem,
+    appendGrammarStudyItem,
   } = usePosterDocumentContext();
 
   const { showRubyAnnotations, rubyToggleSupported, handleShowRubyChange } =
@@ -121,6 +122,33 @@ export default function EditScreen() {
     },
     [appendExplainNote, editCanvasRef, isDesktopSplit],
   );
+
+  const appendGrammarStudyItemAndScroll = useCallback(
+    (payload: {
+      id: string;
+      titlePrimary: string;
+      titleSecondary: string;
+      detail: string;
+      example: string;
+      translation: string;
+    }) => {
+      appendGrammarStudyItem(payload);
+      window.requestAnimationFrame(() => {
+        if (isDesktopSplit) {
+          const nb = notebookScrollRef.current;
+          if (nb) {
+            nb.scrollTo({ top: nb.scrollHeight, behavior: 'smooth' });
+            return;
+          }
+        }
+        const el = editCanvasRef.current;
+        if (!el) return;
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      });
+    },
+    [appendGrammarStudyItem, editCanvasRef, isDesktopSplit],
+  );
+
   const explain = useExplainSession({
     title,
     artist,
@@ -129,6 +157,7 @@ export default function EditScreen() {
     savedProjectId,
     showToast,
     appendExplainNote: appendExplainNoteAndScroll,
+    appendGrammarStudyItem: appendGrammarStudyItemAndScroll,
   });
 
   // —— 划词笔记 / 重点词汇 / 重点语法：删除与点选编辑（与划词/铅笔模式解耦） ——

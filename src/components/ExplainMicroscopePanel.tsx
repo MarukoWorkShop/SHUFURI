@@ -77,6 +77,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
     retryAnalyze,
     requestAiDeepDive,
     addToLyricsNote,
+    addGrammarLessonToNote,
     requestGrammarExamples,
     clearGrammarExamples,
     activeGrammarCapsule,
@@ -464,6 +465,30 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                         ) : null}
                       </div>
                     ) : null}
+                    <div className="microscope-lesson__actions">
+                      <button
+                        type="button"
+                        className="microscope-lesson__add"
+                        onClick={addGrammarLessonToNote}
+                        title={L(
+                          '将本考点单独写入重点语法笔记，无需「添加到笔记」',
+                          'Save this grammar point as a note (independent of Add to notes)',
+                        )}
+                      >
+                        <span className="microscope-lesson__add-icon" aria-hidden>
+                          +
+                        </span>
+                        <span className="microscope-lesson__add-label">
+                          {L('写入语法笔记', 'Save grammar note')}
+                        </span>
+                      </button>
+                      <p className="microscope-lesson__add-hint">
+                        {L(
+                          '仅保存本考点讲解，与「添加到笔记」互不影响',
+                          'Saves this lesson only — separate from “Add to notes”',
+                        )}
+                      </p>
+                    </div>
                   </div>
                 ) : null}
               </div>

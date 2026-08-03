@@ -242,7 +242,7 @@ export default function SettingsPanel({
           <section className="app-settings__section">
             <label
               className="app-settings__row"
-              onClick={toggleDark}
+              onClick={(e) => { e.preventDefault(); toggleDark(); }}
               style={{ justifyContent: 'space-between', cursor: 'pointer' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -279,6 +279,7 @@ export default function SettingsPanel({
                 className="app-settings__checkbox"
                 checked={isDark}
                 readOnly
+                style={{ pointerEvents: 'none' }}
               />
             </label>
           </section>

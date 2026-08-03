@@ -2,6 +2,11 @@
  * 重点词汇 / 重点语法：条目级删除与编辑（复用划词笔记交互模式）
  */
 import { nanoid } from 'nanoid';
+import { resolvePosterClass } from '../codec/masterHandbook';
+import { renderPosterText } from '../codec/roleCompiler';
+import type { LangCode } from '../services/appSettings';
+import { escapeHtml } from './escapeHtml';
+import { applyRubyMarkup } from './rubyMarkup';
 import { prepareBodyHtmlForPreview } from './inkEditUtils';
 
 export type StudyItemKind = 'vocab' | 'grammar';
@@ -394,4 +399,121 @@ export function listStudyEntriesFromBodyHtml(bodyHtml: string): {
   });
 
   return { vocab, grammar };
+}
+
+const GRAMMAR_SECTION_TITLE = '重点语法';
+
+/** 构建单条语法学习项 HTML（与流式编译产物结构对齐，可编辑/删除） */
+export function buildGrammarStudyItemHtml(
+  payload: GrammarItemPayload & { id: string; lang?: LangCode },
+): string {
+  const id = payload.id.trim();
+  const primary = payload.titlePrimary.replace(/\s+/g, ' ').trim();
+  if (!id || !primary) return '';
+
+  const lang = payload.lang ?? 'jp';
+  const titlePrimaryClass = resolvePosterClass('grammarTitlePrimary', lang);
+  const titleSecondaryClass = resolvePosterClass('grammarTitleSecondary', lang);
+  const detailClass = resolvePosterClass('grammarDetail', lang);
+  const exPrimaryClass = resolvePosterClass('grammarExamplePrimary', lang);
+  const exSecondaryClass = resolvePosterClass('grammarExampleSecondary', lang);
+
+  const secondary = payload.titleSecondary.trim();
+  const detail = payload.detail.trim();
+  const example = payload.example.trim();
+  const translation = payload.translation.trim();
+
+  // 与 roleCompiler.buildGrammarSection 对齐：标题主文 / 例句走 ruby；辅文与译文仅 escape。
+  // 讲义 detail / 胶囊短标题常含 `{汉字|假名}`，需转成 <ruby> 才能在预览与导出中正确显示。
+  const primaryHtml = renderPosterText(primary, 'grammarTitlePrimary', lang);
+  const secondaryHtml = secondary
+    ? ` <span class="${titleSecondaryClass}">${
+        lang === 'jp' || lang === 'zh' ? applyRubyMarkup(secondary) : escapeHtml(secondary)
+      }</span>`
+    : '';
+  const detailInner =
+    lang === 'jp' || lang === 'zh'
+      ? applyRubyMarkup(detail).replace(/\n/g, '<br>')
+      : escapeHtml(detail).replace(/\n/g, '<br>');
+  const detailHtml = detail ? `<p class="${detailClass}">${detailInner}</p>` : '';
+  const exHtml = example
+    ? `<p class="${exPrimaryClass}">${renderPosterText(example, 'grammarExamplePrimary', lang)}</p>`
+    : '';
+  const zhHtml = translation
+    ? `<p class="${exSecondaryClass}">${escapeHtml(translation)}</p>`
+    : '';
+
+  return (
+    `<div class="lyrics-grammar-item shufuri-study-item" ${STUDY_ID_ATTR}="${escapeHtml(id)}" ${STUDY_KIND_ATTR}="grammar">` +
+    `<button type="button" class="${DELETE_CLASS}" ${STUDY_ID_ATTR}="${escapeHtml(id)}" ${STUDY_KIND_ATTR}="grammar" aria-label="删除语法点" style="display:none">×</button>` +
+    `<h3 class="grammar-point-title"><span class="${titlePrimaryClass}">${primaryHtml}</span>${secondaryHtml}</h3>` +
+    detailHtml +
+    exHtml +
+    zhHtml +
+    `</div>`
+  );
+}
+
+/**
+ * 将语法条追加到正文「重点语法」区（无则新建）。
+ * 供胶囊「进一步讲解」单独写入，独立于划词 AI「添加到笔记」。
+ */
+export function appendGrammarStudyItemToBodyHtml(
+  bodyHtml: string,
+  itemHtml: string,
+): string {
+  const item = itemHtml.trim();
+  if (!item) return bodyHtml;
+
+  const root = parseBodyRoot(bodyHtml);
+  if (!root) {
+    if (/class="[^"]*lyrics-grammar/.test(bodyHtml)) {
+      return bodyHtml.replace(
+        /(<div[^>]*class="[^"]*lyrics-grammar[^"]*"[^>]*>)([\s\S]*?)(<\/div>)\s*$/,
+        (_, open, mid, close) => `${open}${mid}${item}${close}`,
+      );
+    }
+    return (
+      `${bodyHtml}` +
+      `<div class="lyrics-grammar" data-lyrics-force-next-page="1">` +
+      `<h2 class="lyrics-section-title">${GRAMMAR_SECTION_TITLE}</h2>${item}</div>`
+    );
+  }
+
+  const clip = Array.from(root.children).find(
+    (n): n is HTMLElement =>
+      n instanceof HTMLElement &&
+      (n.classList.contains('clip-body') || n.classList.contains('lyrics-notes-body')),
+  );
+  const host = clip ?? root;
+
+  let section = host.querySelector('.lyrics-grammar') as HTMLElement | null;
+  if (!section) {
+    section = document.createElement('div');
+    section.className = 'lyrics-grammar';
+    section.setAttribute('data-lyrics-force-next-page', '1');
+    const h2 = document.createElement('h2');
+    h2.className = 'lyrics-section-title';
+    h2.textContent = GRAMMAR_SECTION_TITLE;
+    section.appendChild(h2);
+    host.appendChild(section);
+  }
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = item;
+  const node = wrap.firstElementChild;
+  if (node) section.appendChild(node);
+
+  return serializeBodyRoot(root);
+}
+
+export function commitGrammarStudyItemToBody(
+  bodyHtml: string,
+  payload: GrammarItemPayload & { id: string },
+  lang?: LangCode,
+): string {
+  const item = buildGrammarStudyItemHtml({ ...payload, lang: payload.lang ?? lang });
+  if (!item) return prepareBodyHtmlForPreview(bodyHtml);
+  const next = appendGrammarStudyItemToBodyHtml(bodyHtml, item);
+  return prepareBodyHtmlForPreview(ensureStudyItemIdsInBodyHtml(next));
 }

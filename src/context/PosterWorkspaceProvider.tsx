@@ -35,6 +35,7 @@ import {
   deleteStudyItemFromBodyHtml,
   updateVocabItemInBodyHtml,
   updateGrammarItemInBodyHtml,
+  commitGrammarStudyItemToBody,
 } from '../utils/studySectionItems';
 
 const EDIT_LAYOUT: PosterLayoutProfile = 'mobilePoster';
@@ -440,6 +441,22 @@ export default function PosterWorkspaceProvider({
     [bodyHtmlRef, setBodyHtml],
   );
 
+  const appendGrammarStudyItem = useCallback(
+    (payload: {
+      id: string;
+      titlePrimary: string;
+      titleSecondary: string;
+      detail: string;
+      example: string;
+      translation: string;
+    }) => {
+      const next = commitGrammarStudyItemToBody(bodyHtmlRef.current, payload, lang);
+      bodyHtmlRef.current = next;
+      setBodyHtml(next);
+    },
+    [bodyHtmlRef, lang, setBodyHtml],
+  );
+
   const typographyValue: PosterTypographyContextValue = useMemo(
     () => ({
       showRubyAnnotations,
@@ -496,6 +513,7 @@ export default function PosterWorkspaceProvider({
       removeStudyItem,
       updateVocabItem,
       updateGrammarItem,
+      appendGrammarStudyItem,
     }),
     [
       mode,
@@ -531,6 +549,7 @@ export default function PosterWorkspaceProvider({
       removeStudyItem,
       updateVocabItem,
       updateGrammarItem,
+      appendGrammarStudyItem,
     ],
   );
 

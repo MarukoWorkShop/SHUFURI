@@ -116,6 +116,15 @@ export type PosterDocumentContextValue = {
     example: string;
     translation: string;
   }) => void;
+  /** 将语法考点讲义单独追加为「重点语法」条目（独立于划词 AI 笔记） */
+  appendGrammarStudyItem: (payload: {
+    id: string;
+    titlePrimary: string;
+    titleSecondary: string;
+    detail: string;
+    example: string;
+    translation: string;
+  }) => void;
 };
 
 export type PosterTypographyContextValue = {
