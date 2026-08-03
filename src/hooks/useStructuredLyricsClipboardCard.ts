@@ -108,6 +108,10 @@ export function useStructuredLyricsClipboardCard({
   const promptTokenRef = useRef(0);
   const studyAi = useEmbeddedAiGenerate();
 
+  /** 自动读剪贴板失败时（如 iOS 非 focused 状态）的用户手动粘贴 modal */
+  const [manualPasteOpen, setManualPasteOpen] = useState(false);
+  const [manualPasteText, setManualPasteText] = useState('');
+
   const consumedClipboardRef = useRef<Set<string>>(new Set());
   const prevClipboardHashRef = useRef('');
   const homeFormMetaRef = useRef({ title: '', artist: '' });
@@ -253,11 +257,44 @@ export function useStructuredLyricsClipboardCard({
             : L('未检测到结构化歌词', 'No structured lyrics detected.'),
         );
       } catch {
-        showToast(L('无法读取剪贴板', 'Cannot read clipboard.'));
+        // 自动读剪贴板失败（iOS WKWebView 非 focused、Capacitor 插件不可用等），
+        // 弹手动粘贴 modal，让用户用系统粘贴手势（Cmd+V / 长按粘贴）写入 textarea
+        setManualPasteText('');
+        setManualPasteOpen(true);
       }
     },
     [activateClipboardDetectCardFromText, showToast],
   );
+
+  /**
+   * 用户在手动粘贴 modal 中点确认：用 textarea 内容走同一套检测流程
+   */
+  const handleManualPasteSubmit = useCallback(
+    (formMeta?: StructuredLyricsCardFallbacks) => {
+      const trimmed = manualPasteText.trim();
+      if (!trimmed) {
+        showToast(L('请先粘贴歌词内容', 'Paste lyrics first.'));
+        return;
+      }
+      if (activateClipboardDetectCardFromText(trimmed, formMeta)) {
+        prevClipboardHashRef.current = clipboardContentHash(trimmed);
+        setManualPasteOpen(false);
+        setManualPasteText('');
+        return;
+      }
+      showToast(
+        awaitingStudyPasteRef.current
+          ? L('未检测到学习材料记录流（需含 V/G）', 'No study material stream detected (V/G required)')
+          : L('未检测到结构化歌词', 'No structured lyrics detected.'),
+      );
+    },
+    [activateClipboardDetectCardFromText, manualPasteText, showToast],
+  );
+
+  const handleManualPasteCancel = useCallback(() => {
+    setManualPasteOpen(false);
+    setManualPasteText('');
+  }, []);
 
   const handleClipboardRenderLayout = useCallback(() => {
     setClipboardCardVisible(false);
@@ -487,5 +524,10 @@ export function useStructuredLyricsClipboardCard({
     handleConfirmDismiss,
     externalPrompt,
     clearExternalPrompt,
+    manualPasteOpen,
+    manualPasteText,
+    setManualPasteText,
+    handleManualPasteSubmit,
+    handleManualPasteCancel,
   };
 }

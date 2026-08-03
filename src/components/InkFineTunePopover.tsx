@@ -14,6 +14,12 @@ export type InkEditTarget =
       anchorRect: DOMRect;
     }
   | {
+      kind: 'ko';
+      groupIndex: number;
+      text: string;
+      anchorRect: DOMRect;
+    }
+  | {
       kind: 'ruby';
       groupIndex: number;
       rubyIndex: number;
@@ -33,12 +39,14 @@ type Props = {
   kanji: string;
   kana: string;
   zhText: string;
+  koText: string;
   titleText: string;
   artistText: string;
   jpText: string;
   onKanjiChange: (v: string) => void;
   onKanaChange: (v: string) => void;
   onZhChange: (v: string) => void;
+  onKoChange: (v: string) => void;
   onTitleChange: (v: string) => void;
   onArtistChange: (v: string) => void;
   onJpChange: (v: string) => void;
@@ -53,12 +61,14 @@ export default function InkFineTunePopover({
   kanji,
   kana,
   zhText,
+  koText,
   titleText,
   artistText,
   jpText,
   onKanjiChange,
   onKanaChange,
   onZhChange,
+  onKoChange,
   onTitleChange,
   onArtistChange,
   onJpChange,
@@ -105,6 +115,11 @@ export default function InkFineTunePopover({
               className="ink-fine-tune-popover__input"
               value={kana}
               onChange={(e) => onKanaChange(e.target.value)}
+              style={{
+                fontFamily:
+                  '"Kozuka Mincho Pro R", "KozMinPro", "Noto Sans CJK SC", "PingFang SC", "Hiragino Mincho ProN", serif',
+                color: 'var(--ui-fg, #1a1a1a)',
+              }}
               autoFocus
             />
           </label>
@@ -114,6 +129,11 @@ export default function InkFineTunePopover({
               className="ink-fine-tune-popover__input"
               value={kanji}
               onChange={(e) => onKanjiChange(e.target.value)}
+              style={{
+                fontFamily:
+                  '"Kozuka Mincho Pro R", "KozMinPro", "Noto Sans CJK SC", "PingFang SC", "Hiragino Mincho ProN", serif',
+                color: 'var(--ui-fg, #1a1a1a)',
+              }}
             />
           </label>
         </>
@@ -125,6 +145,11 @@ export default function InkFineTunePopover({
               className="ink-fine-tune-popover__input"
               value={titleText}
               onChange={(e) => onTitleChange(e.target.value)}
+              style={{
+                fontFamily:
+                  '"Kozuka Mincho Pro R", "KozMinPro", "Noto Sans CJK SC", "PingFang SC", "Hiragino Mincho ProN", serif',
+                color: 'var(--ui-fg, #1a1a1a)',
+              }}
               autoFocus
             />
           </label>
@@ -134,6 +159,11 @@ export default function InkFineTunePopover({
               className="ink-fine-tune-popover__input"
               value={artistText}
               onChange={(e) => onArtistChange(e.target.value)}
+              style={{
+                fontFamily:
+                  '"Kozuka Mincho Pro R", "KozMinPro", "Noto Sans CJK SC", "PingFang SC", "Hiragino Mincho ProN", serif',
+                color: 'var(--ui-fg, #1a1a1a)',
+              }}
             />
           </label>
         </>
@@ -147,6 +177,22 @@ export default function InkFineTunePopover({
             autoFocus
           />
         </label>
+      ) : target.kind === 'ko' ? (
+        <label className="ink-fine-tune-popover__field ink-fine-tune-popover__field--wide">
+          <span className="ink-fine-tune-popover__label">韩文</span>
+          <input
+            className="ink-fine-tune-popover__input"
+            value={koText}
+            onChange={(e) => onKoChange(e.target.value)}
+            placeholder={koText ? undefined : '韩文歌词'}
+            style={{
+              fontFamily:
+                '"HCR Batang", "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans CJK SC", "PingFang SC", "Malgun Gothic", sans-serif',
+              color: 'var(--ui-fg, #1a1a1a)',
+            }}
+            autoFocus
+          />
+        </label>
       ) : (
         <label className="ink-fine-tune-popover__field ink-fine-tune-popover__field--wide">
           <span className="ink-fine-tune-popover__label">译文</span>
@@ -154,6 +200,12 @@ export default function InkFineTunePopover({
             className="ink-fine-tune-popover__input"
             value={zhText}
             onChange={(e) => onZhChange(e.target.value)}
+            placeholder={zhText ? undefined : '中文翻译'}
+            style={{
+              fontFamily:
+                '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif',
+              color: 'var(--ui-fg, #1a1a1a)',
+            }}
             autoFocus
           />
         </label>

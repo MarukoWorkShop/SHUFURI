@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { L } from '../utils/i18n';
 
 export interface CropRect {
   /** 归一化坐标 (0-1)，相对于图片原始尺寸 */
@@ -207,15 +208,15 @@ export default function ImageCropper({ imageDataUrl, onCrop, onCancel }: Props) 
     <div className="image-cropper-overlay">
       <div className="image-cropper-toolbar">
         <button type="button" className="btn-tonal" onClick={onCancel}>
-          取消
+          {L('取消', 'Cancel')}
         </button>
-        <span className="image-cropper-hint">拖拽选区框选文章区域</span>
+        <span className="image-cropper-hint">{L('拖拽选区框选文章区域', 'Drag the selection to crop the article area')}</span>
         <button
           type="button"
           className="btn-filled"
           onClick={() => onCrop(crop)}
         >
-          确认裁剪
+          {L('确认裁剪', 'Confirm Crop')}
         </button>
       </div>
 
@@ -233,7 +234,7 @@ export default function ImageCropper({ imageDataUrl, onCrop, onCancel }: Props) 
         <img
           ref={imgRef}
           src={imageDataUrl}
-          alt="裁剪图片"
+          alt={L('裁剪图片', 'Cropping image')}
           className="image-cropper-img"
           onLoad={updateImgRect}
           draggable={false}

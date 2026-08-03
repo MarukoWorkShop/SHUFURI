@@ -52,6 +52,12 @@ export type HomeSessionContextValue = {
   handleConfirmDismiss: () => void;
   externalPrompt: ExternalPromptRequest | null;
   clearExternalPrompt: () => void;
+  /** 自动读剪贴板失败后的手动粘贴 modal（如 iOS WKWebView 非 focused） */
+  manualPasteOpen: boolean;
+  manualPasteText: string;
+  setManualPasteText: Dispatch<SetStateAction<string>>;
+  handleManualPasteSubmit: (formMeta?: { title?: string; artist?: string }) => void;
+  handleManualPasteCancel: () => void;
 };
 
 export const HomeSessionContext = createContext<HomeSessionContextValue | null>(null);

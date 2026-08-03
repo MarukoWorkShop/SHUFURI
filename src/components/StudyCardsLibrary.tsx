@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { deleteStudyCard, deleteStudyCards, listStudyCards, subscribeStudyCardsStore } from '../services/studyCardsStore';
 import type { StudyCard } from '../studyCards/types';
@@ -6,13 +6,11 @@ import type { LangCode } from '../services/appSettings';
 import { shareAnkiDeckTsv } from '../studyCards/shareAnkiDeck';
 import StudyCardDetailOverlay from './StudyCardDetailOverlay';
 import { L } from '../utils/i18n';
+import { useDrawer } from '../hooks/useDrawer';
+import SkeletonCard from './SkeletonCard';
 import './StudyCardsLibrary.css';
 
 type Props = Record<string, never>;
-
-const DRAWER_MS = 400;
-const UNLATCH_MS = 100;
-const DISMISS_DRAG_THRESHOLD_PX = 72;
 
 type LangFilter = 'all' | LangCode;
 
@@ -40,20 +38,34 @@ export default function StudyCardsLibrary(_props: Props) {
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerVisible, setDrawerVisible] = useState(false);
-  const [drawerActive, setDrawerActive] = useState(false);
-  const [unlatching, setUnlatching] = useState(false);
-  const [closing, setClosing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [langFilter, setLangFilter] = useState<LangFilter>('all');
   const [detailIndex, setDetailIndex] = useState<number | null>(null);
-  const closeTimerRef = useRef<number | null>(null);
-  const unlatchTimerRef = useRef<number | null>(null);
-  const dismissDragStartYRef = useRef(0);
-  const dismissDragStartOffsetRef = useRef(0);
-  const [dismissDragY, setDismissDragY] = useState(0);
-  const [dismissDragging, setDismissDragging] = useState(false);
+
+  // --- drawer via shared hook ---
+  const {
+    drawerOpen,
+    drawerVisible,
+    drawerActive,
+    unlatching,
+    closing,
+    dismissDragY,
+    dismissDragging,
+    openDrawer,
+    closeDrawer,
+    onDismissHandlePointerDown,
+    onDismissHandlePointerMove,
+    onDismissHandlePointerUp,
+    onDismissHandlePointerCancel,
+  } = useDrawer({
+    cssClass: 'study-cards-drawer-open',
+    onBeforeClose: () => {
+      setDetailIndex(null);
+      setSelectedIds(new Set());
+      setLangFilter('all');
+    },
+    disableDrag: () => detailIndex != null,
+  });
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -76,102 +88,6 @@ export default function StudyCardsLibrary(_props: Props) {
       void reload();
     });
   }, [reload]);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('study-cards-drawer-open', drawerActive);
-    return () => {
-      document.documentElement.classList.remove('study-cards-drawer-open');
-    };
-  }, [drawerActive]);
-
-  useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-      if (unlatchTimerRef.current) window.clearTimeout(unlatchTimerRef.current);
-    };
-  }, []);
-
-  const openDrawer = useCallback(() => {
-    if (drawerOpen || unlatching) return;
-    setUnlatching(true);
-    unlatchTimerRef.current = window.setTimeout(() => {
-      setUnlatching(false);
-      setDrawerOpen(true);
-      setDrawerVisible(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setDrawerActive(true));
-      });
-    }, UNLATCH_MS);
-  }, [drawerOpen, unlatching]);
-
-  const closeDrawer = useCallback(() => {
-    if (!drawerOpen || closing) return;
-    setClosing(true);
-    setDrawerActive(false);
-    setDetailIndex(null);
-    closeTimerRef.current = window.setTimeout(() => {
-      setDrawerOpen(false);
-      setDrawerVisible(false);
-      setClosing(false);
-      setSelectedIds(new Set());
-      setLangFilter('all');
-    }, DRAWER_MS);
-  }, [drawerOpen, closing]);
-
-  useEffect(() => {
-    if (drawerActive) return;
-    setDismissDragY(0);
-    setDismissDragging(false);
-  }, [drawerActive]);
-
-  const onDismissHandlePointerDown = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      if (detailIndex != null || closing || !drawerActive) return;
-      e.currentTarget.setPointerCapture(e.pointerId);
-      dismissDragStartYRef.current = e.clientY;
-      dismissDragStartOffsetRef.current = dismissDragY;
-      setDismissDragging(true);
-    },
-    [detailIndex, closing, drawerActive, dismissDragY],
-  );
-
-  const onDismissHandlePointerMove = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      if (!dismissDragging) return;
-      const dy = e.clientY - dismissDragStartYRef.current;
-      setDismissDragY(Math.max(0, dismissDragStartOffsetRef.current + dy));
-    },
-    [dismissDragging],
-  );
-
-  const onDismissHandlePointerUp = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      if (!dismissDragging) return;
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      }
-      const dy = e.clientY - dismissDragStartYRef.current;
-      const finalY = Math.max(0, dismissDragStartOffsetRef.current + dy);
-      setDismissDragging(false);
-      setDismissDragY(0);
-      if (finalY >= DISMISS_DRAG_THRESHOLD_PX) {
-        closeDrawer();
-      }
-    },
-    [dismissDragging, closeDrawer],
-  );
-
-  const onDismissHandlePointerCancel = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      if (!dismissDragging) return;
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      }
-      setDismissDragging(false);
-      setDismissDragY(0);
-    },
-    [dismissDragging],
-  );
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -358,8 +274,15 @@ export default function StudyCardsLibrary(_props: Props) {
         </header>
 
         <div className="study-cards-drawer__body">
-          {loading && <p className="saved-library-hint">{L('加载中…', 'Loading…')}</p>}
-          {error && <p className="error-msg">{error}</p>}
+          {loading && <SkeletonCard count={4} />}
+          {error && (
+            <div className="saved-library-hint saved-library-hint--drawer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <p className="error-msg" style={{ margin: 0 }}>{error}</p>
+              <button type="button" className="btn-tonal" onClick={() => void reload()}>
+                {L('重试', 'Retry')}
+              </button>
+            </div>
+          )}
 
           {!loading && items.length === 0 && (
             <p className="saved-library-hint saved-library-hint--drawer">

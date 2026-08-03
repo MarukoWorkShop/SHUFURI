@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { L } from '../utils/i18n';
 import type { PosterLayoutProfile } from '../utils/shufuriPoster/types';
 import { executeBatchExport } from '../utils/batchExportPdf';
@@ -62,7 +62,7 @@ export default function BatchExportPanel({ open, onClose }: BatchExportPanelProp
       await executeBatchExport(selectedProfile, (p) => setProgress({ ...p }));
       setPhase('done');
     } catch (e) {
-      setError(e instanceof Error ? e.message : '导出失败，请重试');
+      setError(e instanceof Error ? e.message : L('导出失败，请重试', 'Export failed, please retry'));
       setPhase('select');
     }
   }, [selectedProfile]);
@@ -74,12 +74,25 @@ export default function BatchExportPanel({ open, onClose }: BatchExportPanelProp
     onClose();
   }, [onClose]);
 
+  // Escape 键关闭
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [open, handleClose]);
+
   if (!open) return null;
 
   return (
     <div className="batch-export-overlay" onClick={handleClose}>
       <div
         className="batch-export-card"
+        role="dialog"
+        aria-modal="true"
+        aria-label={L('批量导出 PDF', 'Batch Export as PDF')}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题 */}

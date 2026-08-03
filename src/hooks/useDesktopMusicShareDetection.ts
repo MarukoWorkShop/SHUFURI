@@ -25,14 +25,15 @@ type Options = {
   showToast?: (message: string) => void;
 };
 
-const POLL_MS = 1500;
-
 /**
- * 桌面浏览器：轮询剪贴板，自动检测 QQ 音乐 / 网易云音乐分享链接，
+ * 桌面浏览器：在用户交互事件时检测剪贴板中 QQ 音乐 / 网易云音乐分享链接，
  * 并在识别到歌名/歌手时自动填入表单。
  *
  * 依赖 Apple Universal Clipboard（iPhone → Mac）将手机剪贴板同步到 Mac。
  * 仅在非原生 WebView 环境（桌面浏览器）生效，与 useClipboardDetection 互补。
+ *
+ * 不使用后台轮询，仅通过窗口聚焦/页面可见/bfcache 恢复等事件触发检测，
+ * 避免触发浏览器剪贴板权限限制导致的 NotAllowedError。
  */
 export function useDesktopMusicShareDetection({
   setShareOcrData,
@@ -109,11 +110,11 @@ export function useDesktopMusicShareDetection({
       if (document.visibilityState === 'visible') check();
     };
 
-    // 多种触发时机：聚焦、页面可见、从 bfcache 恢复、定时轮询
+    // 多种触发时机：聚焦、页面可见、从 bfcache 恢复
     window.addEventListener('focus', check);
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', check);
-    const pollTimer = window.setInterval(check, POLL_MS);
+    // 初次加载时检查一次
     check();
 
     return () => {
@@ -121,7 +122,6 @@ export function useDesktopMusicShareDetection({
       window.removeEventListener('focus', check);
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('pageshow', check);
-      window.clearInterval(pollTimer);
     };
   }, [consumedClipboardRef, prevClipboardHashRef]);
 }

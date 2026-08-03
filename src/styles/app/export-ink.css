@@ -20,13 +20,13 @@
 .ink-fine-tune-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 400;
+  z-index: var(--z-modal);
   background: transparent;
 }
 
 .ink-fine-tune-popover {
   position: fixed;
-  z-index: 401;
+  z-index: var(--z-popover);
   padding: var(--ui-space-2);
   border-radius: 4px;
   background: var(--color-ink-popover);
@@ -89,7 +89,7 @@
   border-radius: 0;
   background: transparent;
   padding: 4px 0 6px;
-  font-family: var(--ui-font-sans);
+  font-family: var(--ui-font-mixed);
   font-size: 13px;
   color: var(--ui-fg);
   outline: none;

@@ -23,12 +23,14 @@ export type PosterWorkspaceInkSession = {
   inkDraftKanji: string;
   inkDraftKana: string;
   inkDraftZh: string;
+  inkDraftKo: string;
   inkDraftTitle: string;
   inkDraftArtist: string;
   inkDraftJp: string;
   setInkDraftKanji: (v: string) => void;
   setInkDraftKana: (v: string) => void;
   setInkDraftZh: (v: string) => void;
+  setInkDraftKo: (v: string) => void;
   setInkDraftTitle: (v: string) => void;
   setInkDraftArtist: (v: string) => void;
   setInkDraftJp: (v: string) => void;

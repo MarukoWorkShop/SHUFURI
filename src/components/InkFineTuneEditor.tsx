@@ -52,6 +52,19 @@ export function resolveEditTarget(el: Element): InkEditTarget | null {
     };
   }
 
+  const koLine = el.closest('.ko-line');
+  if (koLine) {
+    const group = koLine.closest('[data-ink-g]');
+    const groupIndex = group?.getAttribute('data-ink-g');
+    if (groupIndex == null) return null;
+    return {
+      kind: 'ko',
+      groupIndex: Number(groupIndex),
+      text: koLine.textContent?.trim() ?? '',
+      anchorRect: koLine.getBoundingClientRect(),
+    };
+  }
+
   const jpLine = el.closest('.jp-line');
   if (jpLine) {
     const group = jpLine.closest('[data-ink-g]');
@@ -76,6 +89,7 @@ type Props = {
   draftKanji: string;
   draftKana: string;
   draftZh: string;
+  draftKo: string;
   draftTitle: string;
   draftArtist: string;
   draftJp: string;
@@ -87,6 +101,7 @@ type Props = {
   onKanjiChange: (v: string) => void;
   onKanaChange: (v: string) => void;
   onZhChange: (v: string) => void;
+  onKoChange: (v: string) => void;
   onTitleChange: (v: string) => void;
   onArtistChange: (v: string) => void;
   onJpChange: (v: string) => void;
@@ -103,6 +118,7 @@ export default function InkFineTuneEditor({
   draftKanji,
   draftKana,
   draftZh,
+  draftKo,
   draftTitle,
   draftArtist,
   draftJp,
@@ -113,6 +129,7 @@ export default function InkFineTuneEditor({
   onKanjiChange,
   onKanaChange,
   onZhChange,
+  onKoChange,
   onTitleChange,
   onArtistChange,
   onJpChange,
@@ -212,12 +229,14 @@ export default function InkFineTuneEditor({
           kanji={draftKanji}
           kana={draftKana}
           zhText={draftZh}
+          koText={draftKo}
           titleText={draftTitle}
           artistText={draftArtist}
           jpText={draftJp}
           onKanjiChange={onKanjiChange}
           onKanaChange={onKanaChange}
           onZhChange={onZhChange}
+          onKoChange={onKoChange}
           onTitleChange={onTitleChange}
           onArtistChange={onArtistChange}
           onJpChange={onJpChange}

@@ -21,6 +21,8 @@ import { useHomeSessionContext } from './context/HomeSessionContext';
 import { useAppSettings, type UseAppSettingsReturn } from './hooks/useAppSettings';
 import { useStudyCardsSession } from './hooks/useStudyCardsSession';
 import { useChainLink } from './hooks/useChainLink';
+import { L } from './utils/i18n';
+import { CLIPBOARD_BLOCKED_EVENT } from './utils/clipboard';
 
 type AppShellProps = {
   settings: UseAppSettingsReturn;
@@ -73,43 +75,75 @@ function AppShell({
       toastMessage={toastMessage ?? ''}
     >
       {mode === 'input' && (
-        <HomeScreen
-          inputResetKey={inputResetKey}
-          appSettings={appSettings}
-          wheelLanguages={wheelLanguages}
-          languageMatrixContext={languageMatrixContext}
-          shareOcrData={homeSession.shareOcrData}
-          pasteLayoutReady={pasteLayoutReady}
-          clipboardStreamTitle={clipboardStructured.title}
-          libraryRefreshKey={libraryRefreshKey}
-          onLanguageChange={(lang) => {
-            handleSettingsChange(saveAppSettings({ lyricsLanguage: lang }));
-          }}
-          onActivatePasteLayout={(formMeta) =>
-            void homeSession.handleActivatePasteLayout(formMeta)
+        <ErrorBoundary
+          fallback={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 32 }}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 15, color: 'var(--color-fg-secondary)', marginBottom: 16 }}>
+                  {L('首页加载异常', 'Home page load error')}
+                </p>
+                <button type="button" className="btn-tonal" onClick={() => window.location.reload()}>
+                  {L('刷新页面', 'Reload')}
+                </button>
+              </div>
+            </div>
           }
-          onFormMetaChange={(meta) => {
-            homeSession.homeFormMetaRef.current = meta;
-          }}
-          onOpenProject={openProject}
-          setShareOcrData={homeSession.setShareOcrData}
-          setAppSettings={setAppSettings}
-          onMusicShareStored={storeMusicShare}
-          onStructuredLyrics={(text, opts) =>
-            homeSession.activateClipboardDetectCardFromText(text, {
-              title: homeSession.homeFormMetaRef.current.title,
-              artist: homeSession.homeFormMetaRef.current.artist,
-              ...(opts ?? {}),
-            })
-          }
-          consumedClipboardRef={homeSession.consumedClipboardRef}
-          prevClipboardHashRef={homeSession.prevClipboardHashRef}
-          externalPrompt={homeSession.externalPrompt}
-          onExternalPromptHandled={homeSession.clearExternalPrompt}
-        />
+        >
+          <HomeScreen
+            inputResetKey={inputResetKey}
+            appSettings={appSettings}
+            wheelLanguages={wheelLanguages}
+            languageMatrixContext={languageMatrixContext}
+            shareOcrData={homeSession.shareOcrData}
+            pasteLayoutReady={pasteLayoutReady}
+            clipboardStreamTitle={clipboardStructured.title}
+            libraryRefreshKey={libraryRefreshKey}
+            onLanguageChange={(lang) => {
+              handleSettingsChange(saveAppSettings({ lyricsLanguage: lang }));
+            }}
+            onActivatePasteLayout={(formMeta) =>
+              void homeSession.handleActivatePasteLayout(formMeta)
+            }
+            onFormMetaChange={(meta) => {
+              homeSession.homeFormMetaRef.current = meta;
+            }}
+            onOpenProject={openProject}
+            setShareOcrData={homeSession.setShareOcrData}
+            setAppSettings={setAppSettings}
+            onMusicShareStored={storeMusicShare}
+            onStructuredLyrics={(text, opts) =>
+              homeSession.activateClipboardDetectCardFromText(text, {
+                title: homeSession.homeFormMetaRef.current.title,
+                artist: homeSession.homeFormMetaRef.current.artist,
+                ...(opts ?? {}),
+              })
+            }
+            consumedClipboardRef={homeSession.consumedClipboardRef}
+            prevClipboardHashRef={homeSession.prevClipboardHashRef}
+            externalPrompt={homeSession.externalPrompt}
+            onExternalPromptHandled={homeSession.clearExternalPrompt}
+          />
+        </ErrorBoundary>
       )}
 
-      {mode === 'edit' && <EditScreen />}
+      {mode === 'edit' && (
+        <ErrorBoundary
+          fallback={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 32 }}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 15, color: 'var(--color-fg-secondary)', marginBottom: 16 }}>
+                  {L('编辑器加载异常', 'Editor load error')}
+                </p>
+                <button type="button" className="btn-tonal" onClick={() => window.location.reload()}>
+                  {L('刷新页面', 'Reload')}
+                </button>
+              </div>
+            </div>
+          }
+        >
+          <EditScreen />
+        </ErrorBoundary>
+      )}
       {mode === 'export' && <ExportScreen />}
     </AppLayout>
   );
@@ -133,6 +167,21 @@ export default function App() {
     useStudyCardsSession(appSettings.defaultIncludeVocabAndGrammar);
 
   const appToast = useTimedMessage(3000);
+
+  // 监听剪贴板被静默阻止事件，展示 fallback 提示
+  useEffect(() => {
+    const onBlocked = () => {
+      appToast.show(
+        L(
+          '无法读取剪贴板，请在地址栏左侧点击 🔧 图标，将剪贴板权限设为允许',
+          'Cannot read clipboard. Click the 🔧 icon left of the address bar and allow clipboard access.',
+        ),
+        6000,
+      );
+    };
+    window.addEventListener(CLIPBOARD_BLOCKED_EVENT, onBlocked);
+    return () => window.removeEventListener(CLIPBOARD_BLOCKED_EVENT, onBlocked);
+  }, [appToast.show]);
 
   return (
     <ErrorBoundary>

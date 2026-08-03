@@ -17,6 +17,7 @@ import {
   BASE_AUX_PX,
   BASE_MAIN_PX,
   BASE_SECTION_TITLE_PX,
+  BODY_TEXT_COLOR,
   GLOSS_COLOR,
   JP_RUBY_COLOR,
   JP_RUBY_RT_EM_MOBILE,
@@ -37,6 +38,10 @@ import {
   ZH_OPTICAL_SCALE,
   ZH_VOCAB_ITEM_MB_EM,
   CN_RUBY_GAP_EM,
+  TITLE_TEXT_COLOR,
+  ARTIST_TEXT_COLOR,
+  SECTION_TITLE_COLOR,
+  PAGE_NUMBER_TEXT_COLOR,
 } from './typographyConstants.ts';
 import type {
   LayoutSpacingTokens,
@@ -106,7 +111,7 @@ function baseToken(
 ): TypographyToken {
   return {
     letterSpacing: '0',
-    color: '#0a0a0a',
+    color: BODY_TEXT_COLOR,
     wrap: 'inherit',
     ...partial,
   };
@@ -228,7 +233,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
     fontSize: titleFsPx,
     fontWeight: LYRIC_PRIMARY_WEIGHT,
     lineHeight: layout.titleLineHeight,
-    color: '#111827',
+    color: TITLE_TEXT_COLOR,
     letterSpacing: '0.02em',
     wrap: 'inherit',
   });
@@ -238,7 +243,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
     fontSize: Math.round(titleFsPx * 0.58),
     fontWeight: LYRIC_PRIMARY_WEIGHT,
     lineHeight: layout.titleLineHeight,
-    color: '#64748b',
+    color: ARTIST_TEXT_COLOR,
     letterSpacing: '0.02em',
     wrap: 'inherit',
   });
@@ -248,7 +253,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
     fontSize: lyricPrimarySize,
     fontWeight: lyricPrimaryWeight,
     lineHeight: isZhPipeline ? jpLh : lang === 'ko' ? koLh : jpLh,
-    color: '#0a0a0a',
+    color: BODY_TEXT_COLOR,
     letterSpacing: cjkLs,
     wrap: 'cjk',
   });
@@ -261,7 +266,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
     fontSize: auxPx,
     fontWeight: lang === 'jp' ? JP_ZH_LINE_WEIGHT : LYRIC_SECONDARY_WEIGHT,
     lineHeight: zhLyricsLh,
-    color: isZhPipeline ? GLOSS_COLOR : '#0a0a0a',
+    color: isZhPipeline ? GLOSS_COLOR : BODY_TEXT_COLOR,
     letterSpacing: isZhPipeline ? '0' : cjkLs,
     wrap: isZhPipeline ? 'latin' : 'cjk',
   });
@@ -287,7 +292,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
     fontSize: h2Px,
     fontWeight: AUX_WEIGHT,
     lineHeight: 1.4,
-    color: '#1e293b',
+    color: SECTION_TITLE_COLOR,
     wrap: 'cjk',
   });
 
@@ -307,7 +312,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
     /** 与歌词译文 lyricSecondary 同字重（日语稿 JP_ZH_LINE_WEIGHT=400） */
     fontWeight: lang === 'jp' ? JP_ZH_LINE_WEIGHT : LYRIC_SECONDARY_WEIGHT,
     lineHeight: zhLyricsLh,
-    color: isZhPipeline ? GLOSS_COLOR : '#0a0a0a',
+    color: isZhPipeline ? GLOSS_COLOR : BODY_TEXT_COLOR,
     letterSpacing: isZhPipeline ? '0' : cjkLs,
     wrap: isZhPipeline ? 'latin' : 'cjk',
   });
@@ -317,7 +322,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
     fontSize: auxPx,
     fontWeight: lyricPrimaryWeight,
     lineHeight: lang === 'ko' || lang === 'en' ? koLh : jpLh,
-    color: '#0a0a0a',
+    color: BODY_TEXT_COLOR,
     letterSpacing: cjkLs,
     wrap: 'cjk',
   });
@@ -327,7 +332,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
     fontSize: auxPx,
     fontWeight: AUX_WEIGHT,
     lineHeight: zhLyricsLh,
-    color: '#0a0a0a',
+    color: BODY_TEXT_COLOR,
     letterSpacing: cjkLs,
     wrap: 'cjk',
   });
@@ -337,7 +342,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
     fontSize: 13,
     fontWeight: AUX_WEIGHT,
     lineHeight: 1.2,
-    color: '#94a3b8',
+    color: PAGE_NUMBER_TEXT_COLOR,
     wrap: 'inherit',
   });
 

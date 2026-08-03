@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { reportHandledError } from '../services/errorReport';
+import { L } from '../utils/i18n';
 
 interface Props {
   children: ReactNode;
@@ -37,16 +38,16 @@ export default class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="error-boundary">
-          <h2 className="error-boundary__title">应用出现异常</h2>
+          <h2 className="error-boundary__title">{L('应用出现异常', 'An error occurred')}</h2>
           <p className="error-boundary__message">
-            {this.state.error?.message || '未知错误，请尝试重启应用'}
+            {this.state.error?.message || L('未知错误，请尝试重启应用', 'Unknown error, please try restarting the app')}
           </p>
           <button
             type="button"
             className="btn-filled error-boundary__retry"
             onClick={this.handleReset}
           >
-            重试
+            {L('重试', 'Retry')}
           </button>
         </div>
       );

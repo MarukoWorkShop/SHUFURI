@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   deleteSavedLyricsProject,
@@ -9,15 +9,13 @@ import {
 import { ExpandToggleButton } from './a11y/AriaToggleButtons';
 import { L } from '../utils/i18n';
 import BatchExportPanel from './BatchExportPanel';
+import { useDrawer } from '../hooks/useDrawer';
+import SkeletonCard from './SkeletonCard';
 
 type SavedLyricsLibraryProps = {
   onOpen: (project: SavedLyricsProject) => void;
   refreshKey?: number;
 };
-
-const DRAWER_MS = 400;
-const UNLATCH_MS = 100;
-const DISMISS_DRAG_THRESHOLD_PX = 72;
 
 function formatDrawerDate(ts: number): string {
   const d = new Date(ts);
@@ -35,21 +33,30 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
   const [items, setItems] = useState<SavedLyricsProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerVisible, setDrawerVisible] = useState(false);
-  const [drawerActive, setDrawerActive] = useState(false);
-  const [unlatching, setUnlatching] = useState(false);
-  const [closing, setClosing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [showBatchExport, setShowBatchExport] = useState(false);
-  const closeTimerRef = useRef<number | null>(null);
-  const unlatchTimerRef = useRef<number | null>(null);
-  const dismissDragStartYRef = useRef(0);
-  const dismissDragStartOffsetRef = useRef(0);
-  const [dismissDragY, setDismissDragY] = useState(0);
-  const [dismissDragging, setDismissDragging] = useState(false);
-  const drawerRef = useRef<HTMLDivElement>(null);
+
+  // --- drawer via shared hook ---
+  const {
+    drawerOpen,
+    drawerVisible,
+    drawerActive,
+    unlatching,
+    closing,
+    dismissDragY,
+    dismissDragging,
+    drawerRef,
+    openDrawer,
+    closeDrawer,
+    onDismissHandlePointerDown,
+    onDismissHandlePointerMove,
+    onDismissHandlePointerUp,
+    onDismissHandlePointerCancel,
+  } = useDrawer({
+    cssClass: 'saved-library-drawer-open',
+    onBeforeClose: () => setSelectedIds(new Set()),
+  });
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -66,100 +73,6 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
   useEffect(() => {
     void reload();
   }, [reload, refreshKey]);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('saved-library-drawer-open', drawerActive);
-    return () => {
-      document.documentElement.classList.remove('saved-library-drawer-open');
-    };
-  }, [drawerActive]);
-
-  useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-      if (unlatchTimerRef.current) window.clearTimeout(unlatchTimerRef.current);
-    };
-  }, []);
-
-  const openDrawer = useCallback(() => {
-    if (drawerOpen || unlatching) return;
-    setUnlatching(true);
-    unlatchTimerRef.current = window.setTimeout(() => {
-      setUnlatching(false);
-      setDrawerOpen(true);
-      setDrawerVisible(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setDrawerActive(true));
-      });
-    }, UNLATCH_MS);
-  }, [drawerOpen, unlatching]);
-
-  const closeDrawer = useCallback(() => {
-    if (!drawerOpen || closing) return;
-    setClosing(true);
-    setDrawerActive(false);
-    closeTimerRef.current = window.setTimeout(() => {
-      setDrawerOpen(false);
-      setDrawerVisible(false);
-      setClosing(false);
-      setSelectedIds(new Set());
-    }, DRAWER_MS);
-  }, [drawerOpen, closing]);
-
-  useEffect(() => {
-    if (drawerActive) return;
-    setDismissDragY(0);
-    setDismissDragging(false);
-  }, [drawerActive]);
-
-  const onDismissHandlePointerDown = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      if (closing || !drawerActive) return;
-      e.currentTarget.setPointerCapture(e.pointerId);
-      dismissDragStartYRef.current = e.clientY;
-      dismissDragStartOffsetRef.current = dismissDragY;
-      setDismissDragging(true);
-    },
-    [closing, drawerActive, dismissDragY],
-  );
-
-  const onDismissHandlePointerMove = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      if (!dismissDragging) return;
-      const dy = e.clientY - dismissDragStartYRef.current;
-      setDismissDragY(Math.max(0, dismissDragStartOffsetRef.current + dy));
-    },
-    [dismissDragging],
-  );
-
-  const onDismissHandlePointerUp = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      if (!dismissDragging) return;
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      }
-      const dy = e.clientY - dismissDragStartYRef.current;
-      const finalY = Math.max(0, dismissDragStartOffsetRef.current + dy);
-      setDismissDragging(false);
-      setDismissDragY(0);
-      if (finalY >= DISMISS_DRAG_THRESHOLD_PX) {
-        closeDrawer();
-      }
-    },
-    [dismissDragging, closeDrawer],
-  );
-
-  const onDismissHandlePointerCancel = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      if (!dismissDragging) return;
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      }
-      setDismissDragging(false);
-      setDismissDragY(0);
-    },
-    [dismissDragging],
-  );
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -298,8 +211,15 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
         </header>
 
         <div className="saved-library-drawer__body">
-          {loading && <p className="saved-library-hint">加载中…</p>}
-          {error && <p className="error-msg">{error}</p>}
+          {loading && <SkeletonCard count={4} />}
+          {error && (
+            <div className="saved-library-hint saved-library-hint--drawer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <p className="error-msg" style={{ margin: 0 }}>{error}</p>
+              <button type="button" className="btn-tonal" onClick={() => void reload()}>
+                {L('重试', 'Retry')}
+              </button>
+            </div>
+          )}
 
           {!loading && items.length === 0 && (
             <p className="saved-library-hint saved-library-hint--drawer">

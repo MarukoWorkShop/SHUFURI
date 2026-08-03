@@ -32,3 +32,6 @@ android/
 
 # KRDICT XML 下载缓存（构建 lite 用）
 tmp/
+
+# 本地工作日报（个人记录，不提交；daily 03:00 自动生成）
+logs/

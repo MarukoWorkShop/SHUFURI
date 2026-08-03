@@ -56,15 +56,15 @@ export default function LyricConfirmSheet({
   // 界面语言（P1 散点切换；切换时 App 重渲染会传导新值）
   const iface = getAppSettings().interfaceLanguage;
   const L = (zh: string, en: string) => (iface === 'en' ? en : zh);
-  // 默认开启内部 AI 生成，用户可手动关闭
-  const [wantStudy, setWantStudy] = useState(true);
+  // 默认不勾选词解（首次顺滑体验），用户可手动开启
+  const [wantStudy, setWantStudy] = useState(false);
   /** 流式模式下，当前已显示的最后一行索引（-1 = 尚未开始） */
   const [visibleLineCount, setVisibleLineCount] = useState(-1);
 
   // 打开/关闭时重置流式状态
   useEffect(() => {
     if (visible) {
-      setWantStudy(true);
+      setWantStudy(false);
       if (streamingDelayMs > 0) {
         setVisibleLineCount(-1);
       } else {

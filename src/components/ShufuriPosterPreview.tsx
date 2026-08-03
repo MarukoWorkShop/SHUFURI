@@ -26,9 +26,10 @@ import { useTimedMessage } from '../hooks/useTimedMessage';
 import { L } from '../utils/i18n';
 import AppToast from './AppToast';
 
+import { PAGE_NUMBER_TEXT_COLOR } from '../utils/posterTypography/typographyConstants';
+
 /** 页码字体常量 */
 const PAGE_NUMBER_FONT_PX = 13;
-const PAGE_NUMBER_TEXT_COLOR = '#94A3B8';
 const PAGE_NUMBER_FONT_FAMILY = ZH_FONT_FAMILY;
 
 /** 最小净化：防脚本注入 */

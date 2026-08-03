@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { InkEditTarget } from '../components/InkFineTunePopover';
-import { applyRubyEdit, applyZhLineEdit, applyRemoveRuby, applyJpLineEdit } from '../utils/inkFineTune/applyInkEdit';
+import { applyRubyEdit, applyZhLineEdit, applyRemoveRuby, applyJpLineEdit, applyKoLineEdit } from '../utils/inkFineTune/applyInkEdit';
 import { saveInkFineTuneDraft } from '../utils/inkFineTune/inkFineTuneDraft';
 import { playPencilScratchSound } from '../utils/inkFineTune/pencilScratchSound';
 import {
@@ -53,6 +53,7 @@ export function useInkEditSession({
   const [inkDraftKanji, setInkDraftKanji] = useState('');
   const [inkDraftKana, setInkDraftKana] = useState('');
   const [inkDraftZh, setInkDraftZh] = useState('');
+  const [inkDraftKo, setInkDraftKo] = useState('');
   const [inkDraftTitle, setInkDraftTitle] = useState('');
   const [inkDraftArtist, setInkDraftArtist] = useState('');
   const [inkDraftJp, setInkDraftJp] = useState('');
@@ -107,6 +108,8 @@ export function useInkEditSession({
       setInkDraftZh(target.text);
     } else if (target.kind === 'jp') {
       setInkDraftJp(target.text);
+    } else if (target.kind === 'ko') {
+      setInkDraftKo(target.text);
     } else {
       setInkDraftKanji(target.kanji);
       setInkDraftKana(target.kana);
@@ -132,6 +135,8 @@ export function useInkEditSession({
       nextBody = applyZhLineEdit(bodyHtml, inkEditTarget.groupIndex, inkDraftZh);
     } else if (inkEditTarget.kind === 'jp') {
       nextBody = applyJpLineEdit(bodyHtml, inkEditTarget.groupIndex, inkDraftJp);
+    } else if (inkEditTarget.kind === 'ko') {
+      nextBody = applyKoLineEdit(bodyHtml, inkEditTarget.groupIndex, inkDraftKo);
     } else {
       nextBody = applyRubyEdit(
         bodyHtml,
@@ -151,6 +156,7 @@ export function useInkEditSession({
     inkEditTarget,
     bodyHtml,
     inkDraftZh,
+    inkDraftKo,
     inkDraftKanji,
     inkDraftKana,
     inkDraftJp,
@@ -213,12 +219,14 @@ export function useInkEditSession({
     inkDraftKanji,
     inkDraftKana,
     inkDraftZh,
+    inkDraftKo,
     inkDraftTitle,
     inkDraftArtist,
     inkDraftJp,
     setInkDraftKanji,
     setInkDraftKana,
     setInkDraftZh,
+    setInkDraftKo,
     setInkDraftTitle,
     setInkDraftArtist,
     setInkDraftJp,

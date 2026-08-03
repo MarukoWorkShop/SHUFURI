@@ -1,4 +1,5 @@
 import SettingsMenuIcon from '../icons/SettingsMenuIcon';
+import { L } from '../../utils/i18n';
 
 type Props = {
   showHomeChrome: boolean;
@@ -25,7 +26,7 @@ export default function AppHeader({
               <button
                 type="button"
                 className="app-settings-btn"
-                aria-label="设置"
+                aria-label={L('设置', 'Settings')}
                 onClick={onSettingsClick}
               >
                 <SettingsMenuIcon />

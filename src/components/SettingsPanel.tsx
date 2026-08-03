@@ -23,6 +23,7 @@ import {
 import { useAppToast } from '../context/AppToastContext';
 import { L } from '../utils/i18n';
 import { PressedButton } from './a11y/AriaToggleButtons';
+import { useDarkMode } from '../hooks/useDarkMode';
 
 type Props = {
   open: boolean;
@@ -55,6 +56,7 @@ export default function SettingsPanel({
   onLibraryImported,
 }: Props) {
   const showToast = useAppToast();
+  const { isDark, toggleDark } = useDarkMode();
   const [visible, setVisible] = useState(false);
   const [active, setActive] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(() => getAppSettings());
@@ -73,6 +75,7 @@ export default function SettingsPanel({
   useEffect(() => {
     if (open) return;
     setActive(false);
+    // 关闭延迟必须匹配 CSS transition（--transition-normal = --duration-normal + --ease-out）
     const timer = window.setTimeout(() => setVisible(false), 280);
     return () => window.clearTimeout(timer);
   }, [open]);
@@ -237,21 +240,83 @@ export default function SettingsPanel({
           </section>
 
           <section className="app-settings__section">
+            <label
+              className="app-settings__row"
+              onClick={toggleDark}
+              style={{ justifyContent: 'space-between', cursor: 'pointer' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 18, lineHeight: 1 }}>
+                  {isDark ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    </svg>
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="5" />
+                      <line x1="12" y1="1" x2="12" y2="3" />
+                      <line x1="12" y1="21" x2="12" y2="23" />
+                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                      <line x1="1" y1="12" x2="3" y2="12" />
+                      <line x1="21" y1="12" x2="23" y2="12" />
+                      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                    </svg>
+                  )}
+                </span>
+                <div>
+                  <span className="app-settings__row-text" style={{ fontSize: 'var(--ui-text-base, 15px)' }}>
+                    {L('明暗模式', 'Theme')}
+                  </span>
+                  <p className="app-settings__hint" style={{ margin: 0 }}>
+                    {isDark ? L('暗色', 'Dark') : L('浅色', 'Light')}
+                  </p>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                className="app-settings__checkbox"
+                checked={isDark}
+                readOnly
+              />
+            </label>
+          </section>
+
+          <section className="app-settings__section">
             <p className="app-settings__row-text">{L('附词解与语法品读', 'Include Vocab & Grammar')}</p>
+            <label className="app-settings__row app-settings__row--toggle">
+              <span className="app-settings__row-text app-settings__row-text--strong">
+                {L('默认勾选词解', 'Opt-in by default')}
+              </span>
+              <input
+                type="checkbox"
+                className="app-settings__checkbox"
+                checked={settings.defaultIncludeVocabAndGrammar}
+                onChange={(e) => patch({ defaultIncludeVocabAndGrammar: e.target.checked })}
+              />
+            </label>
             <p className="app-settings__hint">
-              {L('在歌词确认页勾选后，会按下方难度生成词解与语法讲解', 'When enabled on the confirmation page, vocab & grammar will be generated at the selected difficulty level.')}
+              {L(
+                '歌词确认页默认是否勾选「词解与语法」。关闭后弹窗默认不勾选，需手动开启才会生成；保持关闭可加快首次排版体验。',
+                'Whether the lyric confirm sheet pre-checks the vocab & grammar box. When off, the sheet defaults to unchecked for a faster first-run layout experience.',
+              )}
             </p>
-            <p className="app-settings__sublabel app-settings__sublabel--targets">{L('词解难度', 'Difficulty Level')}</p>
+            <p className="app-settings__sublabel app-settings__sublabel--targets">
+              {L('词解难度', 'Difficulty Level')}
+            </p>
             <div
-              className="app-settings__segmented app-settings__segmented--triple"
+              className={`app-settings__segmented app-settings__segmented--triple${settings.defaultIncludeVocabAndGrammar ? '' : ' is-locked'}`}
               role="group"
               aria-label={L('词解难度', 'Difficulty Level')}
+              aria-disabled={!settings.defaultIncludeVocabAndGrammar}
             >
               {PEDAGOGICAL_LEVEL_ORDER.map((level) => (
                 <PressedButton
                   key={level}
                   className={`app-settings__segment${settings.defaultPedagogicalLevel === level ? ' is-active' : ''}`}
                   pressed={settings.defaultPedagogicalLevel === level}
+                  disabled={!settings.defaultIncludeVocabAndGrammar}
                   onClick={() => patch({ defaultPedagogicalLevel: level as PedagogicalLevel })}
                 >
                   {pedagogicalLevelLabel(level, settings.interfaceLanguage)}

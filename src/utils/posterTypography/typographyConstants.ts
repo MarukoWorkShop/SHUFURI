@@ -48,6 +48,25 @@ export const VOCAB_EMPHASIS_COLOR = '#1e3a5f';
 
 /** 中文 gloss 辅文色 */
 export const GLOSS_COLOR = '#64748b';
+/** 艺术家 / 歌手颜色（与 gloss 同色阶） */
+export const ARTIST_TEXT_COLOR = '#64748b';
+
+/** —— 海报全局颜色常量 —— */
+
+/** 正文色（日/中/韩歌词行、例句） */
+export const BODY_TEXT_COLOR = '#0a0a0a';
+/** 海报标题色 */
+export const TITLE_TEXT_COLOR = '#111827';
+/** 章节标题色（"重点词汇""重点语法"） */
+export const SECTION_TITLE_COLOR = '#1e293b';
+/** 占位符（空歌名/歌手） */
+export const PLACEHOLDER_COLOR = '#cbd5e1';
+/** 分隔线色 */
+export const SEPARATOR_COLOR = '#e0e0e0';
+/** 海报 / 打印页白色背景 */
+export const POSTER_BG_COLOR = '#ffffff';
+/** 页码颜色 */
+export const PAGE_NUMBER_TEXT_COLOR = '#94a3b8';
 
 /** 中文词汇条目间距 em */
 export const ZH_VOCAB_ITEM_MB_EM = 0.55;

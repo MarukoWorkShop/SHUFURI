@@ -119,7 +119,7 @@ html:has(.app--edit) body,
   padding-bottom: var(--ui-space-2);
   border-bottom: var(--ui-border-hairline);
   position: relative;
-  z-index: 3;
+  z-index: var(--z-3);
   background: var(--color-edit-canvas-bg);
   touch-action: manipulation;
 }
@@ -152,7 +152,7 @@ html:has(.app--edit) body,
   padding-bottom: var(--ui-space-1);
   border-bottom: var(--ui-border-hairline);
   position: relative;
-  z-index: 3;
+  z-index: var(--z-3);
   background: var(--ui-bg);
   touch-action: manipulation;
 }

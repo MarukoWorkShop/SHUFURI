@@ -66,6 +66,11 @@ export default function HomeSessionProvider({
     handleConfirmDismiss: clipboardCard.handleConfirmDismiss,
     externalPrompt: clipboardCard.externalPrompt,
     clearExternalPrompt: clipboardCard.clearExternalPrompt,
+    manualPasteOpen: clipboardCard.manualPasteOpen,
+    manualPasteText: clipboardCard.manualPasteText,
+    setManualPasteText: clipboardCard.setManualPasteText,
+    handleManualPasteSubmit: clipboardCard.handleManualPasteSubmit,
+    handleManualPasteCancel: clipboardCard.handleManualPasteCancel,
   };
 
   return <HomeSessionContext.Provider value={value}>{children}</HomeSessionContext.Provider>;

@@ -21,6 +21,7 @@ import {
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
 import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
+import { PAGE_NUMBER_TEXT_COLOR } from './posterTypography/typographyConstants';
 
 /** 将 JS 样式对象转为内联 style 属性字符串 */
 function styleObjToAttr(style: Record<string, string | number>): string {
@@ -130,7 +131,7 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
         right: ${pad.right}px;
         bottom: ${pageNoBottom}px;
         font-size: 13px;
-        color: #94A3B8;
+        color: ${PAGE_NUMBER_TEXT_COLOR};
         font-family: ${ZH_FONT_FAMILY};
         font-weight: 400;
         letter-spacing: 0.04em;

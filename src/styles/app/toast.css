@@ -1,6 +1,6 @@
 /* ---- 全局 Toast 轻提示 ---- */
 .app-toast {
-  z-index: 10002;
+  z-index: var(--z-toast);
   padding: var(--toast-padding-y) var(--toast-padding-x);
   border-radius: var(--toast-radius);
   background: var(--toast-bg);
@@ -27,7 +27,7 @@
   bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 11;
+  z-index: var(--z-content-anchored);
 }
 
 @keyframes app-toast-in {

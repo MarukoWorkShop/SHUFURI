@@ -26,6 +26,18 @@ export function applyZhLineEdit(bodyHtml: string, groupIndex: number, newZh: str
   return parsed.root.innerHTML;
 }
 
+export function applyKoLineEdit(bodyHtml: string, groupIndex: number, newKo: string): string {
+  const parsed = parseBodyDoc(bodyHtml);
+  if (!parsed) return bodyHtml;
+
+  const group = parsed.root.querySelector(`[data-ink-g="${groupIndex}"]`);
+  const koLine = group?.querySelector('.ko-line');
+  if (!koLine) return bodyHtml;
+
+  koLine.textContent = newKo.trim();
+  return parsed.root.innerHTML;
+}
+
 export function applyRubyEdit(
   bodyHtml: string,
   groupIndex: number,

@@ -22,6 +22,14 @@ import {
   KO_PRIMARY_WEIGHT,
   LYRIC_PRIMARY_WEIGHT,
   LYRIC_SECONDARY_WEIGHT,
+  BODY_TEXT_COLOR,
+  TITLE_TEXT_COLOR,
+  GLOSS_COLOR,
+  SECTION_TITLE_COLOR,
+  PLACEHOLDER_COLOR,
+  SEPARATOR_COLOR,
+  PAGE_NUMBER_TEXT_COLOR,
+  POSTER_BG_COLOR,
 } from './typographyConstants.ts';
 import type { ResolvedTypography } from './tokenRegistry.ts';
 import { mm, pxToMm, type PrintPageSpec } from '../vectorPrint/printPageSpec.ts';
@@ -90,7 +98,7 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
     font-size: ${fs(zh.cnFs)} !important;
     font-weight: ${LYRIC_PRIMARY_WEIGHT} !important;
     line-height: ${zh.mainLh} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     letter-spacing: ${r.cjkLetterSpacing} !important;
     ${cjkWrap}
   }
@@ -105,7 +113,7 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
     font-size: ${fs(zh.cnFs)} !important;
     font-weight: ${LYRIC_PRIMARY_WEIGHT} !important;
     line-height: ${zh.mainLh} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     letter-spacing: ${r.cjkLetterSpacing} !important;
     ${cjkWrap}
   }
@@ -117,7 +125,7 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
     font-size: ${fs(zh.glossFs)} !important;
     font-weight: ${LYRIC_PRIMARY_WEIGHT} !important;
     line-height: ${zh.mainLh} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     letter-spacing: ${r.cjkLetterSpacing} !important;
     ${cjkWrap}
   }
@@ -224,7 +232,7 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
     font-size: ${fs(zh.glossFs)} !important;
     font-weight: ${LYRIC_SECONDARY_WEIGHT} !important;
     line-height: ${zh.glossLh} !important;
-    color: #64748b !important;
+    color: ${GLOSS_COLOR} !important;
     letter-spacing: 0 !important;
     ${latinWrap}
   }
@@ -237,7 +245,7 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
     font-size: ${fs(zh.glossFs)} !important;
     font-weight: ${LYRIC_SECONDARY_WEIGHT} !important;
     line-height: ${zh.glossLh} !important;
-    color: #64748b !important;
+    color: ${GLOSS_COLOR} !important;
     letter-spacing: 0 !important;
     ${latinWrap}
   }
@@ -246,7 +254,7 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
     font-size: ${fs(zh.glossFs)} !important;
     font-weight: ${LYRIC_SECONDARY_WEIGHT} !important;
     line-height: ${zh.glossLh} !important;
-    color: #64748b !important;
+    color: ${GLOSS_COLOR} !important;
     letter-spacing: 0 !important;
     ${latinWrap}
   }
@@ -255,7 +263,7 @@ function compileZhLayoutCss(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Pri
     font-size: ${fs(zh.glossFs)} !important;
     font-weight: ${LYRIC_SECONDARY_WEIGHT} !important;
     line-height: ${zh.glossLh} !important;
-    color: #64748b !important;
+    color: ${GLOSS_COLOR} !important;
     letter-spacing: 0 !important;
     margin: 0 0 ${gap(zh.lyricsAuxGapEm)} 0 !important;
     ${latinWrap}
@@ -304,7 +312,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${titleFont};
     font-size: ${titleFs};
     font-weight: ${titleWght};
-    color: #111827;
+    color: ${TITLE_TEXT_COLOR};
     text-align: center;
     margin: 0 0 ${fs(L.titleMbPx)} 0;
     line-height: ${L.titleLineHeight};
@@ -321,7 +329,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     display: block;
     font-size: 0.58em;
     font-weight: ${artistWght};
-    color: #64748b;
+    color: ${GLOSS_COLOR};
     letter-spacing: 0.02em;
     text-align: center;
     white-space: normal;
@@ -330,7 +338,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   }
   ${root}.fv-title-name--placeholder,
   ${root}.fv-title-artist--placeholder {
-    color: #cbd5e1;
+    color: ${PLACEHOLDER_COLOR};
     font-weight: 400;
   }
   /* 歌名/歌手：简体中文形 → 思源宋体；日文汉字形 → KozMin */
@@ -413,7 +421,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${jpLyricFont} !important;
     font-size: ${mainFs} !important;
     font-weight: ${primaryWght} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     line-height: ${L.jpLh} !important;
     margin: 0 !important;
     letter-spacing: ${r.cjkLetterSpacing};
@@ -426,7 +434,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   ${bodySel} .lyrics-group .zh-line * {
     font-size: ${auxFs} !important;
     font-weight: ${zhLineWght} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     line-height: ${L.zhLyricsLh} !important;
     font-family: ${ZH_FONT_FAMILY} !important;
     margin: ${unit === 'px' ? L.lyricsJpZhGap : emSize(L.lyricsJpZhGap, L.mainPx, unit, spec)} 0 0 0 !important;
@@ -439,7 +447,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${KOZMIN_PRO_REGULAR_FAMILY} !important;
     font-size: ${auxFs} !important;
     font-weight: ${zhAuxWght} !important;
-    color: ${F.isZhPipeline ? '#64748b' : '#0a0a0a'} !important;
+    color: ${F.isZhPipeline ? GLOSS_COLOR : BODY_TEXT_COLOR} !important;
     line-height: ${L.zhLyricsLh} !important;
     margin: ${unit === 'px' ? L.lyricsJpZhGap : emSize(L.lyricsJpZhGap, L.mainPx, unit, spec)} 0 0 0 !important;
     letter-spacing: 0 !important;
@@ -450,7 +458,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${jpLyricFont} !important;
     font-size: ${mainFs} !important;
     font-weight: ${primaryWght} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     line-height: ${L.jpLh} !important;
     letter-spacing: ${r.cjkLetterSpacing};
     font-kerning: normal;
@@ -461,7 +469,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${KO_FONT_FAMILY} !important;
     font-size: ${mainFs} !important;
     font-weight: ${koWght} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     line-height: ${L.koLh} !important;
     letter-spacing: ${r.cjkLetterSpacing};
   }
@@ -472,7 +480,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${jpStudyFont} !important;
     font-size: ${auxFs} !important;
     font-weight: ${primaryWght} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     line-height: ${L.jpLh} !important;
     margin: 0 !important;
   }
@@ -483,7 +491,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${KO_FONT_FAMILY} !important;
     font-size: ${auxFs} !important;
     font-weight: ${koWght} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     line-height: ${L.koLh} !important;
     margin: 0 !important;
   }
@@ -493,7 +501,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   ${bodySel} .grammar-ex-zh * {
     font-size: ${auxFs} !important;
     font-weight: ${primaryWght} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     line-height: ${L.zhLyricsLh} !important;
     font-family: ${ZH_FONT_FAMILY} !important;
   }
@@ -502,7 +510,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   ${bodySel} .vocab-formula {
     font-size: ${auxFs} !important;
     font-weight: ${zhAuxWght} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     line-height: ${L.zhLyricsLh} !important;
     font-family: ${ZH_FONT_FAMILY} !important;
   }
@@ -511,7 +519,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     margin: 0 0 ${unit === 'px' ? L.auxJpZhGap : emSize(L.auxJpZhGap, L.auxPx, unit, spec)} 0 !important;
     max-width: 100%;
     ${cjkWrap}
-    ${unit === 'mm' ? `border-bottom: 0.5px solid #e0e0e0; padding-bottom: ${emSize(L.auxJpZhGap, L.auxPx, unit, spec)};` : ''}
+    ${unit === 'mm' ? `border-bottom: 0.5px solid ${SEPARATOR_COLOR}; padding-bottom: ${emSize(L.auxJpZhGap, L.auxPx, unit, spec)};` : ''}
   }`}
   ${bodySel} .vocab-ex-zh,
   ${bodySel} .grammar-ex-zh {
@@ -524,7 +532,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${ZH_FONT_FAMILY} !important;
     font-size: ${auxFs} !important;
     font-weight: ${primaryWght} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     line-height: ${L.zhLyricsLh} !important;
     ${latinWrap}
   }
@@ -568,7 +576,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${ZH_FONT_FAMILY} !important;
     font-size: ${mainFs} !important;
     font-weight: ${LYRIC_PRIMARY_WEIGHT} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     line-height: ${L.zhLyricsLh} !important;
     letter-spacing: 0 !important;
     ${latinWrap}
@@ -596,7 +604,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${KOZMIN_PRO_REGULAR_FAMILY} !important;
     font-size: ${rtEm}em !important;
     font-weight: ${JP_RUBY_WEIGHT} !important;
-    color: #64748b !important;
+    color: ${GLOSS_COLOR} !important;
     line-height: 1.1 !important;
   }
   ${F.isZhPipeline ? '' : `
@@ -610,7 +618,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${KOZMIN_PRO_REGULAR_FAMILY};
     font-size: ${rtEm}em;
     font-weight: ${JP_RUBY_WEIGHT};
-    color: #64748b;
+    color: ${GLOSS_COLOR};
     line-height: 1.1;
     letter-spacing: normal;
     font-feature-settings: "palt" 0;
@@ -624,9 +632,9 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${sectionTitleFont};
     font-size: ${h2Fs};
     font-weight: ${AUX_WEIGHT};
-    color: #1e293b;
+    color: ${SECTION_TITLE_COLOR};
     margin: ${unit === 'px' ? L.sectionTitleMt : emSize(L.sectionTitleMt, L.h2Px, unit, spec)} 0 0.5em;
-    ${unit === 'mm' ? `border-top: 0.5px solid #e0e0e0; padding-top: ${emSize(L.sectionTitleFirstMt, L.h2Px, unit, spec)};` : ''}
+    ${unit === 'mm' ? `border-top: 0.5px solid ${SEPARATOR_COLOR}; padding-top: ${emSize(L.sectionTitleFirstMt, L.h2Px, unit, spec)};` : ''}
   }
   ${bodySel} .lyrics-grammar > h2.lyrics-section-title:first-child,
   ${bodySel} .lyrics-vocabulary > h2.lyrics-section-title:first-child {
@@ -657,7 +665,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-size: ${auxFs} !important;
     font-weight: ${zhAuxWght} !important;
     line-height: ${L.zhLyricsLh} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
     -webkit-text-size-adjust: 100%;
     ${latinWrap}
   }
@@ -665,7 +673,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${KOZMIN_PRO_REGULAR_FAMILY};
     font-size: ${rtEm}em;
     font-weight: ${JP_RUBY_WEIGHT};
-    color: #64748b;
+    color: ${GLOSS_COLOR};
     line-height: 1.1;
     max-width: 100%;
   }
@@ -675,7 +683,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-size: ${auxFs} !important;
     font-weight: ${zhAuxWght} !important;
     line-height: ${L.zhLyricsLh} !important;
-    color: #0a0a0a !important;
+    color: ${BODY_TEXT_COLOR} !important;
   }`;
 }
 
@@ -686,14 +694,14 @@ function compilePrintPageShell(spec: PrintPageSpec): string {
     margin: 0;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: #fff; }
+  html, body { margin: 0; padding: 0; background: ${POSTER_BG_COLOR}; }
   .print-page {
     width: ${mm(spec.widthMm)};
     height: ${mm(spec.heightMm)};
     position: relative;
     box-sizing: border-box;
     padding: ${mm(spec.padTopMm)} ${mm(spec.padRightMm)} ${mm(spec.padBottomMm)} ${mm(spec.padLeftMm)};
-    background: #fff;
+    background: ${POSTER_BG_COLOR};
     overflow: hidden;
     page-break-after: always;
     break-after: page;
@@ -738,7 +746,7 @@ function compilePageNumberCss(
     right: ${size(d.padH, unit, spec)};
     bottom: ${size(pageNoBottomPx, unit, spec)};
     font-size: ${size(13, unit, spec)};
-    color: #94a3b8;
+    color: ${PAGE_NUMBER_TEXT_COLOR};
     font-family: ${r.roles.posterTitle.fontFamily};
     font-weight: 400;
     letter-spacing: 0.04em;

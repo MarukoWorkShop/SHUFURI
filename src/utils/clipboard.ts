@@ -1,4 +1,7 @@
-import { isNativeWebView, postClipboardRead, postClipboardWrite } from './nativeBridge';
+import {
+  isNativeWebView,
+  postClipboardWrite,
+} from './nativeBridge';
 
 async function writeWithDomFallback(text: string): Promise<void> {
   const textarea = document.createElement('textarea');
@@ -14,7 +17,7 @@ async function writeWithDomFallback(text: string): Promise<void> {
       throw new Error('无法写入剪贴板');
     }
   } finally {
-    document.body.removeChild(textarea);
+    document.removeChild(textarea);
   }
 }
 
@@ -38,15 +41,20 @@ export async function writeClipboardText(text: string): Promise<void> {
   throw new Error('当前环境不支持剪贴板写入');
 }
 
+/**
+ * 当剪贴板读取因权限被静默阻止而失败时，派发此事件。
+ * 上层可监听该事件来展示 fallback 提示。
+ */
+export const CLIPBOARD_BLOCKED_EVENT = 'clipboard:blocked';
+
 export async function readClipboardText(): Promise<string> {
-  // Capacitor 原生环境通过插件读取
-  if (isNativeWebView()) {
-    return postClipboardRead();
+  try {
+    return await navigator.clipboard.readText();
+  } catch (err: any) {
+    // NotAllowedError：用户拒绝了权限，或被浏览器静默阻止（多次拒绝后自动拦截）
+    if (err?.name === 'NotAllowedError') {
+      window.dispatchEvent(new CustomEvent(CLIPBOARD_BLOCKED_EVENT));
+    }
+    throw err;
   }
-
-  if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
-    return navigator.clipboard.readText();
-  }
-
-  throw new Error('当前环境不支持剪贴板读取');
 }

@@ -7,6 +7,7 @@ import {
   compilePosterCss,
   compileEditCssOverrides,
 } from '../posterTypography/index.ts';
+import { POSTER_BG_COLOR } from '../posterTypography/typographyConstants.ts';
 
 export { dimForFuriganaPoster };
 
@@ -164,7 +165,7 @@ export function buildFuriganaPosterRootStyle(
     height: `${h}px`,
     boxSizing: 'border-box',
     padding: `${pad.top}px ${pad.right}px ${pad.bottom}px ${pad.left}px`,
-    background: '#fff',
+    background: POSTER_BG_COLOR,
     overflow: 'hidden',
     textAlign: 'left',
     display: 'flex',

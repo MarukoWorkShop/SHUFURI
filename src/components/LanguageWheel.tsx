@@ -4,6 +4,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import { hapticButton } from '../hooks/useHaptics';
 import { isInteractionSoundEnabled, type LyricsLanguage } from '../services/appSettings';
@@ -170,16 +171,51 @@ export default function LanguageWheel({ value, onChange, languages, soundEnabled
     if (!scroller) return;
 
     const onScrollEnd = () => settleScroll(true);
+
+    /** 将鼠标滚轮的纵向滚动（deltaY）转为横向滚动 */
+    const onWheel = (e: WheelEvent) => {
+      // 不拦截触控板双指横向滑动（deltaX 为主时让原生行为处理）
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      scroller.scrollLeft += e.deltaY;
+    };
+
     scroller.addEventListener('scroll', onScroll, { passive: true });
     scroller.addEventListener('scrollend', onScrollEnd);
+    scroller.addEventListener('wheel', onWheel, { passive: false });
 
     return () => {
       scroller.removeEventListener('scroll', onScroll);
       scroller.removeEventListener('scrollend', onScrollEnd);
+      scroller.removeEventListener('wheel', onWheel);
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       if (settleTimerRef.current != null) window.clearTimeout(settleTimerRef.current);
     };
   }, [onScroll, settleScroll]);
+
+  const handleKeyDown = useCallback(
+    (e: ReactKeyboardEvent<HTMLDivElement>) => {
+      const currentIndex = langIndex(value, wheelLanguages);
+      let nextIndex = currentIndex;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        nextIndex = Math.max(0, currentIndex - 1);
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        nextIndex = Math.min(wheelLanguages.length - 1, currentIndex + 1);
+      } else {
+        return;
+      }
+      if (nextIndex !== currentIndex) {
+        const next = wheelLanguages[nextIndex];
+        if (next) {
+          onChange(next);
+          scrollToIndex(nextIndex, true);
+        }
+      }
+    },
+    [value, wheelLanguages, onChange, scrollToIndex],
+  );
 
   return (
     <div className="lang-wheel">
@@ -188,8 +224,9 @@ export default function LanguageWheel({ value, onChange, languages, soundEnabled
           ref={scrollerRef}
           className="lang-wheel__scroller"
           tabIndex={0}
+          onKeyDown={handleKeyDown}
         >
-          <div className="lang-wheel__list" role="listbox" aria-label="语言选择">
+          <div className="lang-wheel__list" role="listbox" aria-label={L('语言选择', 'Language selection')}>
             {wheelLanguages.map((code, i) => (
               <div
                 key={code}

@@ -42,7 +42,7 @@
   --edit-split-min: 900px;
 
   /* Typography — 字体族（UI 与英文统一 PingFang Light） */
-  --font-zh: "PingFang SC", "PingFang SC Light", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-zh: "PingFang SC", "PingFang SC Light", "Hiragino Sans GB", "Microsoft YaHei", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
   --font-sans: var(--font-zh);
   --font-en: var(--font-zh);
   /** 日文/英文学习区衬线（词卡正面主标、例句等） */
@@ -55,12 +55,17 @@
   --font-mono: "SF Mono", "Menlo", monospace;
 
   /* Typography — 字号阶梯 */
+  --text-2xs: 8px;
+  --text-xxs: 10px;
   --text-xs: 11px;
   --text-sm: 13px;
   --text-base: 15px;
+  --text-md: 14px;
+  --text-subtitle: 17px;
   --text-lg: 20px;
-  --text-xl: 28px;
   --text-home-title: 24px;
+  --text-xl: 28px;
+  --text-heading: 34px;
 
   /* Typography — 字重 */
   --weight-light: 300;
@@ -89,9 +94,12 @@
 
   /* Radius — 圆角阶梯 */
   --radius-xs: 2px;
+  --radius-item: 4px;
   --radius-sm: 8px;
   --radius-md: 10px;
   --radius-lg: 14px;
+  --radius-card: 16px;
+  --radius-sheet: 20px;
   --radius-pill: 9999px;
 
   /* Motion */
@@ -107,10 +115,43 @@
   --btn-press-duration: 0.1s;
   --btn-press-ease: cubic-bezier(0.33, 1, 0.68, 1);
 
-  /* Z-index */
+  /* Z-index 层级系统
+   * L0 内容堆叠    0-11    波轮、页码、工具栏
+   * L1 浮动面板    40-80   microscope 面板
+   * L2 固定头部    250     导航栏
+   * L3 抽屉        300     歌词库抽屉
+   * L4 浮层        350-401 工具箱、墨水微调弹窗
+   * L5 遮罩/模态   400-560 设置、截屏、离线、学习卡
+   * L6 确认弹窗    1000-1250 幻觉确认、批量导出、AI反馈
+   * L7 全局顶层    9999-10002 tooltip, ocr, clipboard, action sheet, toast
+   * L8 导出引擎    2147483646-2147483647 离屏渲染、图片模态
+   */
+  --z-0: 0;
+  --z-1: 1;
+  --z-2: 2;
+  --z-3: 3;
+  --z-content: 5;
+  --z-content-raised: 10;
+  --z-content-anchored: 11;
+  --z-floating-panel: 40;
+  --z-floating-panel-mobile: 80;
+  --z-sticky: 250;
   --z-drawer: 300;
+  --z-toolbox: 350;
   --z-modal: 400;
+  --z-popover: 401;
+  --z-offline-banner: 500;
+  --z-study-cards-drawer: 520;
+  --z-study-card-detail: 560;
+  --z-dialog: 1000;
+  --z-batch-export: 1200;
+  --z-ai-feedback: 1250;
+  --z-tooltip: 9999;
+  --z-clipboard: 10000;
+  --z-action-sheet: 10001;
+  --z-toast: 10002;
   --z-export-backdrop: 2147483646;
+  --z-export-modal: 2147483647;
 
   /* 图片预览模态（深色遮罩，各主题结构一致） */
   --color-image-modal-scrim: rgba(0, 0, 0, 0.88);
@@ -171,8 +212,8 @@
 
   --color-fg: #000000;
   --color-fg-secondary: #666666;
-  --color-fg-muted: #999999;
-  --color-fg-subtle: #94a3b8;
+  --color-fg-muted: #7a7a7a;
+  --color-fg-subtle: #718096;
   --color-fg-faint: #cbd5e1;
   --color-fg-disabled: #b0b8c4;
 
@@ -317,6 +358,94 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* 3.5 暗色模式                                                         */
+/* ------------------------------------------------------------------ */
+
+[data-theme="dark"] {
+  --color-bg: #151522;
+  --color-bg-elevated: #1e1e30;
+  --color-bg-muted: #24243a;
+  --color-bg-muted-active: #2e2e48;
+  --color-bg-subtle: #1a1a2a;
+  --color-bg-segment: #151522;
+  --color-bg-textarea: #202038;
+  --color-edit-canvas-bg: var(--color-bg);
+  --color-edit-title: #e8e8f0;
+  --color-edit-artist: #9090a8;
+  --color-edit-lyric: #d0d0e0;
+  --color-edit-section: #d0d0e0;
+  --color-edit-study-term: #b8b8d0;
+  --color-edit-study-rail: color-mix(in srgb, #b8b8d0 38%, transparent);
+  --color-edit-section-rule: color-mix(in srgb, #d0d0e0 22%, transparent);
+
+  --color-fg: #e8e8f0;
+  --color-fg-secondary: #a0a0b8;
+  --color-fg-muted: #707088;
+  --color-fg-subtle: #5a5a70;
+  --color-fg-faint: #3a3a50;
+  --color-fg-disabled: #484860;
+
+  --color-border: #3a3a50;
+  --color-border-subtle: #2a2a3d;
+  --color-border-faint: #22223b;
+  --color-border-strong: #e8e8f0;
+  --color-border-input: #424260;
+  --color-border-emphasis: rgba(255, 255, 255, 0.18);
+
+  --color-accent: #e8e8f0;
+  --color-accent-hover: #c0c0d0;
+  --color-accent-muted: #808098;
+  --color-accent-on: #151522;
+  --color-overlay: rgba(0, 0, 0, 0.35);
+  --color-overlay-hover: rgba(255, 255, 255, 0.04);
+  --color-overlay-hover-active: rgba(255, 255, 255, 0.07);
+  --color-focus-ring: rgba(255, 255, 255, 0.22);
+  --color-scrim-light: rgba(0, 0, 0, 0.72);
+  --color-scrim-dark: rgba(0, 0, 0, 0.88);
+  --color-row-hover: rgba(255, 255, 255, 0.03);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 12px 40px rgba(0, 0, 0, 0.35);
+  --shadow-segment: 0 1px 3px rgba(0, 0, 0, 0.28);
+  --shadow-popover: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.35);
+
+  --color-drawer-binding: #9090a8;
+  --color-ink-popover: #24243a;
+
+  --gradient-divider: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 20%,
+    rgba(255, 255, 255, 0.07) 50%,
+    rgba(255, 255, 255, 0.04) 80%,
+    transparent 100%
+  );
+
+  --btn-filled-shadow: 0 2px 8px rgba(232, 232, 240, 0.16), 0 1px 2px rgba(232, 232, 240, 0.08);
+  --btn-filled-shadow-hover: 0 4px 14px rgba(232, 232, 240, 0.2), 0 2px 4px rgba(232, 232, 240, 0.1);
+
+  --btn-tonal-fg: #a0a0b8;
+  --btn-tonal-fg-hover: #e8e8f0;
+  --btn-tonal-fg-disabled: rgba(255, 255, 255, 0.25);
+  --btn-tonal-bg-hover: rgba(255, 255, 255, 0.06);
+  --btn-tonal-border: 1px solid rgba(255, 255, 255, 0.1);
+  --btn-tonal-shadow: none;
+  --btn-tonal-border-hover-color: rgba(255, 255, 255, 0.22);
+  --btn-tonal-border-disabled-color: rgba(255, 255, 255, 0.08);
+
+  --color-home-quote-fg: var(--color-fg);
+  --color-home-quote-source-fg: var(--color-fg-muted);
+
+  --skeleton-start: #24243a;
+  --skeleton-mid: #3a3a55;
+
+  --color-status-success-bg: #0a2e1a;
+  --color-status-warn-bg: #2e2205;
+  --color-status-error-bg: #2e0a0a;
+}
+
+/* ------------------------------------------------------------------ */
 /* 4. 兼容别名 — 现有 --ui-* 引用                                       */
 /* ------------------------------------------------------------------ */
 
@@ -333,13 +462,20 @@
   --ui-font-sans: var(--font-sans);
   --ui-font-serif: var(--font-serif-jp);
   --ui-font-mono: var(--font-mono);
+  /** 含韩文/日文 fallback 的 UI 字体 — 编辑弹窗等多语言输入框使用 */
+  --ui-font-mixed: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans CJK SC", "HCR Batang", "Malgun Gothic", sans-serif;
 
   --ui-text-xs: var(--text-xs);
+  --ui-text-2xs: var(--text-2xs);
+  --ui-text-xxs: var(--text-xxs);
   --ui-text-sm: var(--text-sm);
   --ui-text-base: var(--text-base);
+  --ui-text-md: var(--text-md);
+  --ui-text-subtitle: var(--text-subtitle);
   --ui-text-lg: var(--text-lg);
-  --ui-text-xl: var(--text-xl);
   --ui-text-home-title: var(--text-home-title);
+  --ui-text-xl: var(--text-xl);
+  --ui-text-heading: var(--text-heading);
 
   --ui-weight-light: var(--weight-light);
   --ui-weight-regular: var(--weight-regular);
@@ -354,9 +490,12 @@
   --ui-space-6: var(--space-6);
 
   --ui-radius-xs: var(--radius-xs);
+  --ui-radius-item: var(--radius-item);
   --ui-radius-sm: var(--radius-sm);
   --ui-radius-md: var(--radius-md);
   --ui-radius-lg: var(--radius-lg);
+  --ui-radius-card: var(--radius-card);
+  --ui-radius-sheet: var(--radius-sheet);
   --ui-radius-pill: var(--radius-pill);
 
   --ui-border-hairline: 1px solid var(--color-border);
@@ -364,6 +503,16 @@
   --ui-accent-bar: 3px solid var(--color-accent);
 
   --ui-transition: var(--transition-fast);
+
+  /* z-index 层级别名 */
+  --ui-z-content: var(--z-content);
+  --ui-z-sticky: var(--z-sticky);
+  --ui-z-drawer: var(--z-drawer);
+  --ui-z-modal: var(--z-modal);
+  --ui-z-dialog: var(--z-dialog);
+  --ui-z-topmost: var(--z-tooltip);
+  --ui-z-toast: var(--z-toast);
+  --ui-z-export-backdrop: var(--z-export-backdrop);
 
   /* 首页歌词摘录 — 淡墨水印感 */
   --home-daily-quote-opacity: 0.45;

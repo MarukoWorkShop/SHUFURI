@@ -61,6 +61,16 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
     onClose();
   }, [copiedText, onClose]);
 
+  // Escape 键关闭
+  useEffect(() => {
+    if (!visible) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [visible, onClose]);
+
   if (!visible) return null;
 
   return (
@@ -68,6 +78,9 @@ export default function AiAppActionSheet({ visible, onClose, copiedText, onOpenA
       <div
         ref={sheetRef}
         className="ai-action-sheet-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={L('AI 应用选择', 'Choose AI app')}
         onClick={(e) => e.stopPropagation()}
       >
         {!isNativeWebView() ? (

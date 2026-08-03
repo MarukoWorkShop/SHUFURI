@@ -116,7 +116,7 @@
   position: fixed;
   left: 50%;
   bottom: 0;
-  z-index: 300;
+  z-index: var(--z-drawer);
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -454,7 +454,7 @@
 .batch-export-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: var(--z-batch-export);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -725,7 +725,7 @@
 .ai-limit-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1250;
+  z-index: var(--z-ai-feedback);
   display: flex;
   align-items: center;
   justify-content: center;

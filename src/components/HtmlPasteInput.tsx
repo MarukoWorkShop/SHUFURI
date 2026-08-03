@@ -83,10 +83,10 @@ export default function HtmlPasteInput({
   const [promptLocked, setPromptLocked] = useState(false);
 
   /**
-   * 主次暗示（互不 disabled）：
-   * - 剪贴板可排版且表单歌名未偏离流内歌名 → 粘贴为主
-   * - 否则有标题 → 生成口令为主
-   * 仅「缺标题」禁用口令；仅「剪贴板无可排版流」禁用粘贴。
+   * 主次暗示：
+   * - 剪贴板可排版且表单歌名未偏离流内歌名 → 粘贴为主（btn-filled）
+   * - 否则粘贴为次（btn-tonal），但不能 disabled——浏览器要求在用户手势中读剪贴板
+   * 仅「缺标题」禁用口令。
    */
   const { pastePrimary, canGenerate } = useMemo(() => {
     const formTitle = songTitle.trim();
@@ -394,9 +394,8 @@ export default function HtmlPasteInput({
               <button
                 type="button"
                 className={`ext-pipeline__action-btn ext-pipeline__paste-btn ${
-                  pastePrimary ? 'btn-filled' : 'btn-tonal is-dormant'
+                  pastePrimary ? 'btn-filled' : 'btn-tonal'
                 }`}
-                disabled={!pasteLayoutReady}
                 title={L('读取剪贴板中的结构化歌词并排版（不是分享链接）', 'Read structured lyrics from the clipboard and format them (not share links).')}
                 onClick={() =>
                   onActivatePasteLayout({

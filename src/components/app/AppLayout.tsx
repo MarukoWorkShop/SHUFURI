@@ -5,6 +5,7 @@ import SettingsPanel from '../SettingsPanel';
 import ClipboardDetectCard from '../ClipboardDetectCard';
 import LyricConfirmSheet from '../LyricConfirmSheet';
 import AppToast from '../AppToast';
+import ManualPasteModal from '../ManualPasteModal';
 import AppHeader from './AppHeader';
 import { useHomeSessionContext } from '../../context/HomeSessionContext';
 
@@ -115,6 +116,8 @@ export default function AppLayout({
       />
 
       <AppToast message={toastMessage} placement="fixed" />
+
+      <ManualPasteModal />
     </div>
   );
 }

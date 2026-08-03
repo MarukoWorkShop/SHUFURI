@@ -3,7 +3,7 @@
   right: calc(var(--ui-space-1) + var(--safe-right, 0px));
   top: 50%;
   transform: translateY(-50%);
-  z-index: 350;
+  z-index: var(--z-toolbox);
   display: flex;
   flex-direction: row-reverse;
   align-items: center;

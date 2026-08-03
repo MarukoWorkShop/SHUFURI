@@ -28,7 +28,7 @@ html:has(.app--export) {
   left: 0;
   right: 0;
   flex: 0 0 auto;
-  z-index: 250;
+  z-index: var(--z-sticky);
   background: var(--ui-bg);
 }
 
@@ -121,7 +121,7 @@ html:has(.app--export) {
   transform: translateY(-50%);
   display: flex;
   align-items: center;
-  z-index: 3;
+  z-index: var(--z-3);
 }
 
 .app-chain-btn {
@@ -178,7 +178,7 @@ html:has(.app--export) {
   box-sizing: border-box;
   box-shadow: var(--shadow-tooltip);
   animation: chain-tooltip-in 0.22s ease;
-  z-index: 9999;
+  z-index: var(--z-tooltip);
   pointer-events: none;
   white-space: normal;
   word-break: break-word;

@@ -16,6 +16,7 @@ import type {
 } from '../utils/shufuriPoster/types';
 import { postToNative } from '../bridge/nativeBridge';
 import { L } from '../utils/i18n';
+import type { ShowAppToast } from '../context/AppToastContext';
 
 const EXPORT_DEADLINE_MS = 180_000;
 
@@ -40,6 +41,7 @@ type Options = WorkspaceRefs & {
   previewTypographyRef: { current: import('../utils/shufuriPoster/types').PreviewTypography };
   setPages: (pages: PosterPageSlice[]) => void;
   nativeExportingRef: { current: boolean };
+  showToast: ShowAppToast;
 };
 
 export function usePosterExport({
@@ -60,6 +62,7 @@ export function usePosterExport({
   previewTypographyRef,
   setPages,
   nativeExportingRef,
+  showToast,
 }: Options) {
   const [exporting, setExporting] = useState(false);
   const exportingRef = useRef(false);
@@ -163,7 +166,7 @@ export function usePosterExport({
 
   const handleExportPdf = useCallback(async () => {
     if (!pages.length) {
-      alert(L('没有可导出的页面', 'No pages to export.'));
+      showToast(L('没有可导出的页面', 'No pages to export.'), 3000);
       return;
     }
     if (exportingRef.current) return;
@@ -189,7 +192,7 @@ export function usePosterExport({
       ]);
     } catch (e) {
       console.error('[export-pdf]', e);
-      alert(e instanceof Error ? e.message : L('导出失败', 'Failed to export.'));
+      showToast(e instanceof Error ? e.message : L('导出失败', 'Failed to export.'), 5000);
     } finally {
       exportingRef.current = false;
       setExporting(false);

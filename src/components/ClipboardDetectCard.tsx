@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef } from 'react';
 import type { LangCode } from '../services/appSettings';
+import { L } from '../utils/i18n';
 
 type Props = {
   /** 检测到的歌名 */
@@ -67,19 +68,19 @@ export default function ClipboardDetectCard({
         aria-labelledby={titleId}
       >
         <div className="clipboard-detect-card__field">
-          <span className="clipboard-detect-card__label">Title</span>
+          <span className="clipboard-detect-card__label">{L('歌名', 'Title')}</span>
           <p id={titleId} className="clipboard-detect-card__value clipboard-detect-card__value--title">
             《{songTitle}》
           </p>
         </div>
 
         <div className="clipboard-detect-card__field">
-          <span className="clipboard-detect-card__label">Artist</span>
+          <span className="clipboard-detect-card__label">{L('歌手', 'Artist')}</span>
           <p className="clipboard-detect-card__value">{artist?.trim() || '—'}</p>
         </div>
 
         <div className="clipboard-detect-card__field">
-          <span className="clipboard-detect-card__label">Language</span>
+          <span className="clipboard-detect-card__label">{L('语言', 'Language')}</span>
           <p className="clipboard-detect-card__value">{formatLanguageLabel(language)}</p>
         </div>
 
@@ -89,14 +90,14 @@ export default function ClipboardDetectCard({
             className="btn-tonal clipboard-detect-card__btn"
             onClick={onDismiss}
           >
-            取消
+            {L('取消', 'Cancel')}
           </button>
           <button
             type="button"
             className="btn-filled clipboard-detect-card__btn"
             onClick={onRenderLayout}
           >
-            一键渲染排版
+            {L('一键渲染排版', 'Render Layout')}
           </button>
         </div>
       </div>

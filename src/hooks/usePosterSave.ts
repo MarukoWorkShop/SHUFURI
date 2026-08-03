@@ -140,7 +140,7 @@ export function usePosterSave({
       hapticSuccess();
     } catch (e) {
       hapticError();
-      alert(e instanceof Error ? e.message : L('保存失败', 'Failed to save.'));
+      showToast(e instanceof Error ? e.message : L('保存失败', 'Failed to save.'), 5000);
     } finally {
       setSaving(false);
     }

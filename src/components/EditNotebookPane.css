@@ -208,7 +208,7 @@
   position: absolute;
   top: 0.2em;
   right: 0.2em;
-  z-index: 5;
+  z-index: var(--z-content);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -306,7 +306,7 @@
   flex-direction: column;
   min-height: 0;
   background: var(--color-bg-elevated, #fff);
-  z-index: 2;
+  z-index: var(--z-2);
 }
 
 .edit-notebook__microscope-host .microscope-root {

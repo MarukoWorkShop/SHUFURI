@@ -4,6 +4,7 @@ import InkToolbox from '../InkToolbox';
 import ShufuriPosterEditCanvas from '../ShufuriPosterEditCanvas';
 import ExplainMicroscopePanel from '../ExplainMicroscopePanel';
 import EditNotebookPane from '../EditNotebookPane';
+import EditItemOverlay from '../EditItemOverlay';
 import {
   usePosterDocumentContext,
   usePosterInkContext,
@@ -33,6 +34,34 @@ import { extractLyricsOnlyBodyHtml } from '../../utils/lyricsOnlyBodyHtml';
 import { L } from '../../utils/i18n';
 
 type StudyEditorKind = 'vocab' | 'grammar';
+
+// —— 弹窗共享样式常量（消除 22 处重复 rgba 硬编码） ——
+const MODAL_BACKDROP_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 200,
+  background: 'rgba(15, 23, 42, 0.35)',
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'center',
+  paddingTop: 84,
+  overflowY: 'auto',
+};
+
+const MODAL_PANEL_STYLE: React.CSSProperties = {
+  width: 'min(560px, calc(100vw - 32px))',
+  background: '#ffffff',
+  borderRadius: 14,
+  boxShadow: '0 16px 48px rgba(15, 23, 42, 0.18)',
+  border: '1px solid rgba(148, 163, 184, 0.35)',
+  padding: 16,
+};
+
+const MODAL_INPUT_STYLE: React.CSSProperties = {
+  border: '1px solid rgba(148, 163, 184, 0.5)',
+  borderRadius: 10,
+  padding: '8px 10px',
+};
 
 export default function EditScreen() {
   const {
@@ -494,6 +523,34 @@ export default function EditScreen() {
         </div>
       </div>
 
+      {!bodyHtml.trim() ? (
+        <div className="edit-area__workspace edit-area__empty-state" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{
+            textAlign: 'center',
+            maxWidth: 420,
+            padding: '48px 24px',
+          }}>
+            <p style={{
+              fontSize: 'var(--ui-text-lg, 18px)',
+              color: 'var(--color-fg-secondary, #64748b)',
+              margin: '0 0 20px 0',
+              lineHeight: 1.6,
+            }}>
+              {L('请先输入日语歌词', 'Please enter Japanese lyrics first')}
+            </p>
+            <p style={{
+              fontSize: 'var(--ui-text-sm, 13px)',
+              color: 'var(--color-fg-tertiary, #94a3b8)',
+              margin: '0 0 28px 0',
+            }}>
+              {L('在首页粘贴日语歌词即可开始编辑', 'Paste Japanese lyrics on the home screen to get started')}
+            </p>
+            <button type="button" className="btn-export btn-export-primary" onClick={handleReset}>
+              ← {L('返回首页', 'Back to Home')}
+            </button>
+          </div>
+        </div>
+      ) : (
       <div className="edit-area__workspace">
         <div className="edit-area__lyrics-pane">
           <InkToolbox
@@ -518,6 +575,7 @@ export default function EditScreen() {
               draftKanji={ink.inkDraftKanji}
               draftKana={ink.inkDraftKana}
               draftZh={ink.inkDraftZh}
+              draftKo={ink.inkDraftKo}
               draftTitle={ink.inkDraftTitle}
               draftArtist={ink.inkDraftArtist}
               draftJp={ink.inkDraftJp}
@@ -528,6 +586,7 @@ export default function EditScreen() {
               onKanjiChange={ink.setInkDraftKanji}
               onKanaChange={ink.setInkDraftKana}
               onZhChange={ink.setInkDraftZh}
+              onKoChange={ink.setInkDraftKo}
               onTitleChange={ink.setInkDraftTitle}
               onArtistChange={ink.setInkDraftArtist}
               onJpChange={ink.setInkDraftJp}
@@ -578,6 +637,7 @@ export default function EditScreen() {
           <ExplainMicroscopePanel session={explain} />
         )}
       </div>
+        )}
 
         {editingNoteId && (
           <div
@@ -587,28 +647,11 @@ export default function EditScreen() {
             onClick={(e) => {
               if (e.target === e.currentTarget) closeEditors();
             }}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 200,
-              background: 'rgba(15, 23, 42, 0.35)',
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'center',
-              paddingTop: 84,
-              overflowY: 'auto',
-            }}
+            style={MODAL_BACKDROP_STYLE}
           >
             <div
               className="shufuri-explain-note-editor-panel"
-              style={{
-                width: 'min(560px, calc(100vw - 32px))',
-                background: '#ffffff',
-                borderRadius: 14,
-                boxShadow: '0 16px 48px rgba(15, 23, 42, 0.18)',
-                border: '1px solid rgba(148, 163, 184, 0.35)',
-                padding: 16,
-              }}
+              style={MODAL_PANEL_STYLE}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>{L('编辑划词笔记', 'Edit Selection Note')}</h3>
@@ -690,244 +733,158 @@ export default function EditScreen() {
           </div>
         )}
 
-        {editingStudy?.kind === 'vocab' && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="shufuri-explain-note-editor-overlay"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) closeEditors();
-            }}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 200,
-              background: 'rgba(15, 23, 42, 0.35)',
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'center',
-              paddingTop: 84,
-              overflowY: 'auto',
-            }}
-          >
-            <div
-              className="shufuri-explain-note-editor-panel"
-              style={{
-                width: 'min(560px, calc(100vw - 32px))',
-                background: '#ffffff',
-                borderRadius: 14,
-                boxShadow: '0 16px 48px rgba(15, 23, 42, 0.18)',
-                border: '1px solid rgba(148, 163, 184, 0.35)',
-                padding: 16,
+        <EditItemOverlay
+          open={editingStudy?.kind === 'vocab'}
+          title={L('编辑重点词汇', 'Edit Key Vocabulary')}
+          onClose={closeEditors}
+        >
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {L('词条', 'Entry')}
+            <input
+              value={vocabDraft.term}
+              onChange={(ev) =>
+                setVocabDraft((d) => ({ ...d, term: ev.target.value }))
+              }
+              style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px' }}
+            />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {L('释义', 'Meaning')}
+            <textarea
+              value={vocabDraft.meaning}
+              rows={2}
+              onChange={(ev) =>
+                setVocabDraft((d) => ({ ...d, meaning: ev.target.value }))
+              }
+              style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
+            />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {L('例句', 'Example')}
+            <textarea
+              value={vocabDraft.example}
+              rows={2}
+              onChange={(ev) =>
+                setVocabDraft((d) => ({ ...d, example: ev.target.value }))
+              }
+              style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
+            />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {L('例句译文', 'Example Translation')}
+            <textarea
+              value={vocabDraft.translation}
+              rows={2}
+              onChange={(ev) =>
+                setVocabDraft((d) => ({ ...d, translation: ev.target.value }))
+              }
+              style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
+            />
+          </label>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+            <button type="button" className="btn-tonal" onClick={closeEditors}>
+              {L('取消', 'Cancel')}
+            </button>
+            <button
+              type="button"
+              className="btn-export btn-export-primary"
+              disabled={!vocabDraft.term.trim()}
+              onClick={() => {
+                updateVocabItem(editingStudy!.id, {
+                  term: vocabDraft.term.trim(),
+                  meaning: vocabDraft.meaning.trim(),
+                  example: vocabDraft.example.trim(),
+                  translation: vocabDraft.translation.trim(),
+                });
+                closeEditors();
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>{L('编辑重点词汇', 'Edit Key Vocabulary')}</h3>
-                <button
-                  type="button"
-                  aria-label={L('关闭', 'Close')}
-                  className="btn-tonal"
-                  onClick={closeEditors}
-                  style={{ minHeight: 30, padding: '0 10px' }}
-                >
-                  ×
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('词条', 'Entry')}
-                  <input
-                    value={vocabDraft.term}
-                    onChange={(ev) =>
-                      setVocabDraft((d) => ({ ...d, term: ev.target.value }))
-                    }
-                    style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px' }}
-                  />
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('释义', 'Meaning')}
-                  <textarea
-                    value={vocabDraft.meaning}
-                    rows={2}
-                    onChange={(ev) =>
-                      setVocabDraft((d) => ({ ...d, meaning: ev.target.value }))
-                    }
-                    style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
-                  />
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('例句', 'Example')}
-                  <textarea
-                    value={vocabDraft.example}
-                    rows={2}
-                    onChange={(ev) =>
-                      setVocabDraft((d) => ({ ...d, example: ev.target.value }))
-                    }
-                    style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
-                  />
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('例句译文', 'Example Translation')}
-                  <textarea
-                    value={vocabDraft.translation}
-                    rows={2}
-                    onChange={(ev) =>
-                      setVocabDraft((d) => ({ ...d, translation: ev.target.value }))
-                    }
-                    style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
-                  />
-                </label>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-                  <button type="button" className="btn-tonal" onClick={closeEditors}>
-                    {L('取消', 'Cancel')}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-export btn-export-primary"
-                    disabled={!vocabDraft.term.trim()}
-                    onClick={() => {
-                      updateVocabItem(editingStudy.id, {
-                        term: vocabDraft.term.trim(),
-                        meaning: vocabDraft.meaning.trim(),
-                        example: vocabDraft.example.trim(),
-                        translation: vocabDraft.translation.trim(),
-                      });
-                      closeEditors();
-                    }}
-                  >
-                    {L('保存', 'Save')}
-                  </button>
-                </div>
-              </div>
-            </div>
+              {L('保存', 'Save')}
+            </button>
           </div>
-        )}
+        </EditItemOverlay>
 
-        {editingStudy?.kind === 'grammar' && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="shufuri-explain-note-editor-overlay"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) closeEditors();
-            }}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 200,
-              background: 'rgba(15, 23, 42, 0.35)',
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'center',
-              paddingTop: 84,
-              overflowY: 'auto',
-            }}
-          >
-            <div
-              className="shufuri-explain-note-editor-panel"
-              style={{
-                width: 'min(560px, calc(100vw - 32px))',
-                background: '#ffffff',
-                borderRadius: 14,
-                boxShadow: '0 16px 48px rgba(15, 23, 42, 0.18)',
-                border: '1px solid rgba(148, 163, 184, 0.35)',
-                padding: 16,
+        <EditItemOverlay
+          open={editingStudy?.kind === 'grammar'}
+          title={L('编辑重点语法', 'Edit Key Grammar')}
+          onClose={closeEditors}
+        >
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {L('语法点', 'Grammar Point')}
+            <input
+              value={grammarDraft.titlePrimary}
+              onChange={(ev) =>
+                setGrammarDraft((d) => ({ ...d, titlePrimary: ev.target.value }))
+              }
+              style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px' }}
+            />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {L('旁注释义', 'Definition')}
+            <input
+              value={grammarDraft.titleSecondary}
+              onChange={(ev) =>
+                setGrammarDraft((d) => ({ ...d, titleSecondary: ev.target.value }))
+              }
+              style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px' }}
+            />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {L('详细解析', 'Detailed Analysis')}
+            <textarea
+              value={grammarDraft.detail}
+              rows={3}
+              onChange={(ev) =>
+                setGrammarDraft((d) => ({ ...d, detail: ev.target.value }))
+              }
+              style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
+            />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {L('例句', 'Example')}
+            <textarea
+              value={grammarDraft.example}
+              rows={2}
+              onChange={(ev) =>
+                setGrammarDraft((d) => ({ ...d, example: ev.target.value }))
+              }
+              style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
+            />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {L('例句译文', 'Example Translation')}
+            <textarea
+              value={grammarDraft.translation}
+              rows={2}
+              onChange={(ev) =>
+                setGrammarDraft((d) => ({ ...d, translation: ev.target.value }))
+              }
+              style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
+            />
+          </label>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+            <button type="button" className="btn-tonal" onClick={closeEditors}>
+              {L('取消', 'Cancel')}
+            </button>
+            <button
+              type="button"
+              className="btn-export btn-export-primary"
+              disabled={!grammarDraft.titlePrimary.trim()}
+              onClick={() => {
+                updateGrammarItem(editingStudy!.id, {
+                  titlePrimary: grammarDraft.titlePrimary.trim(),
+                  titleSecondary: grammarDraft.titleSecondary.trim(),
+                  detail: grammarDraft.detail.trim(),
+                  example: grammarDraft.example.trim(),
+                  translation: grammarDraft.translation.trim(),
+                });
+                closeEditors();
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 15, letterSpacing: '0.02em' }}>{L('编辑重点语法', 'Edit Key Grammar')}</h3>
-                <button
-                  type="button"
-                  aria-label={L('关闭', 'Close')}
-                  className="btn-tonal"
-                  onClick={closeEditors}
-                  style={{ minHeight: 30, padding: '0 10px' }}
-                >
-                  ×
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('语法点', 'Grammar Point')}
-                  <input
-                    value={grammarDraft.titlePrimary}
-                    onChange={(ev) =>
-                      setGrammarDraft((d) => ({ ...d, titlePrimary: ev.target.value }))
-                    }
-                    style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px' }}
-                  />
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('旁注释义', 'Definition')}
-                  <input
-                    value={grammarDraft.titleSecondary}
-                    onChange={(ev) =>
-                      setGrammarDraft((d) => ({ ...d, titleSecondary: ev.target.value }))
-                    }
-                    style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px' }}
-                  />
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('详细解析', 'Detailed Analysis')}
-                  <textarea
-                    value={grammarDraft.detail}
-                    rows={3}
-                    onChange={(ev) =>
-                      setGrammarDraft((d) => ({ ...d, detail: ev.target.value }))
-                    }
-                    style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
-                  />
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('例句', 'Example')}
-                  <textarea
-                    value={grammarDraft.example}
-                    rows={2}
-                    onChange={(ev) =>
-                      setGrammarDraft((d) => ({ ...d, example: ev.target.value }))
-                    }
-                    style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
-                  />
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {L('例句译文', 'Example Translation')}
-                  <textarea
-                    value={grammarDraft.translation}
-                    rows={2}
-                    onChange={(ev) =>
-                      setGrammarDraft((d) => ({ ...d, translation: ev.target.value }))
-                    }
-                    style={{ border: '1px solid rgba(148, 163, 184, 0.5)', borderRadius: 10, padding: '8px 10px', resize: 'vertical' }}
-                  />
-                </label>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-                  <button type="button" className="btn-tonal" onClick={closeEditors}>
-                    {L('取消', 'Cancel')}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-export btn-export-primary"
-                    disabled={!grammarDraft.titlePrimary.trim()}
-                    onClick={() => {
-                      updateGrammarItem(editingStudy.id, {
-                        titlePrimary: grammarDraft.titlePrimary.trim(),
-                        titleSecondary: grammarDraft.titleSecondary.trim(),
-                        detail: grammarDraft.detail.trim(),
-                        example: grammarDraft.example.trim(),
-                        translation: grammarDraft.translation.trim(),
-                      });
-                      closeEditors();
-                    }}
-                  >
-                    {L('保存', 'Save')}
-                  </button>
-                </div>
-              </div>
-            </div>
+              {L('保存', 'Save')}
+            </button>
           </div>
-        )}
+        </EditItemOverlay>
     </div>
   );
 }

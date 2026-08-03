@@ -45,7 +45,7 @@ const STORAGE_KEY = 'shufu-lyrics-app-settings';
 function buildDefaults(): AppSettings {
   return {
     colorTheme: 'mono',
-    defaultIncludeVocabAndGrammar: true,
+    defaultIncludeVocabAndGrammar: false,
     defaultPedagogicalLevel: DEFAULT_PEDAGOGICAL_LEVEL,
     interfaceLanguage: resolveSystemInterfaceLanguage(),
     followSystemLanguage: true,

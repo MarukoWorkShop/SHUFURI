@@ -5,6 +5,9 @@ import {
   getShufuriCanvasInsets,
   getShufuriPosterCanvasDimensions,
 } from './shufuriPoster/shufuriPosterShared';
+import {
+  PAGE_NUMBER_TEXT_COLOR,
+} from './posterTypography/typographyConstants';
 import { ZH_FONT_FAMILY } from './shufuriPoster/fonts';
 import type { PosterLayoutProfile, PosterRenderOptions } from './shufuriPoster/types';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
@@ -13,7 +16,6 @@ import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
 import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
 
 const PAGE_NUMBER_FONT_PX = 13;
-const PAGE_NUMBER_TEXT_COLOR = '#94A3B8';
 const PAGE_NUMBER_FONT_FAMILY = ZH_FONT_FAMILY;
 
 /**
