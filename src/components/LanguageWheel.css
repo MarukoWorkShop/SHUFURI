@@ -27,7 +27,6 @@
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  scroll-snap-stop: always;
   scroll-padding-inline: calc(50% - var(--lang-wheel-item-w) / 2);
   overscroll-behavior: contain;
   touch-action: pan-x;
