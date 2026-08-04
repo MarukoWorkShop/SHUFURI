@@ -24,6 +24,7 @@ export type GrammarItemPayload = {
   detail: string;
   example: string;
   translation: string;
+  lang?: LangCode;
 };
 
 const STUDY_ID_ATTR = 'data-shufuri-study-id';

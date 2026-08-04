@@ -57,12 +57,6 @@ const MODAL_PANEL_STYLE: React.CSSProperties = {
   padding: 16,
 };
 
-const MODAL_INPUT_STYLE: React.CSSProperties = {
-  border: '1px solid rgba(148, 163, 184, 0.5)',
-  borderRadius: 10,
-  padding: '8px 10px',
-};
-
 export default function EditScreen() {
   const {
     bodyHtml,
