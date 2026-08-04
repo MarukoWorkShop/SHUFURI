@@ -83,12 +83,13 @@ export default function HtmlPasteInput({
   const [promptLocked, setPromptLocked] = useState(false);
 
   /**
-   * 主次暗示：
-   * - 剪贴板可排版且表单歌名未偏离流内歌名 → 粘贴为主（btn-filled）
-   * - 否则粘贴为次（btn-tonal），但不能 disabled——浏览器要求在用户手势中读剪贴板
-   * 仅「缺标题」禁用口令。
+   * 主次暗示（同一时间最多一个主按钮）：
+   * - 剪贴板可排版且表单歌名未偏离 → 粘贴为主（btn-filled）
+   * - 否则若已填标题 → 生成口令为主（btn-filled），粘贴为次（btn-tonal）
+   * - 粘贴永不 disabled（浏览器要求在用户手势中读剪贴板）
+   * - 仅「缺标题」禁用口令
    */
-  const { pastePrimary, canGenerate } = useMemo(() => {
+  const { pastePrimary, genPrimary, canGenerate } = useMemo(() => {
     const formTitle = songTitle.trim();
     const canGen = formTitle.length > 0;
     const streamKey = normalizeTitleKey(clipboardStreamTitle);
@@ -99,8 +100,10 @@ export default function HtmlPasteInput({
       formKey.length > 0 &&
       streamKey !== formKey;
     const pasteIsPrimary = pasteLayoutReady && !diverged;
+    const genIsPrimary = canGen && !pasteIsPrimary;
     return {
       pastePrimary: pasteIsPrimary,
+      genPrimary: genIsPrimary,
       canGenerate: canGen,
     };
   }, [songTitle, pasteLayoutReady, clipboardStreamTitle]);
@@ -409,8 +412,12 @@ export default function HtmlPasteInput({
             )}
             <button
               type="button"
-              className={`ext-pipeline__action-btn ext-pipeline__gen-btn btn-tonal ${
-                !canGenerate ? 'is-dormant' : ''
+              className={`ext-pipeline__action-btn ext-pipeline__gen-btn ${
+                !canGenerate
+                  ? 'btn-tonal is-dormant'
+                  : genPrimary
+                    ? 'btn-filled'
+                    : 'btn-tonal'
               }`}
               onClick={handleCopyPrompt}
               disabled={!canGenerate}

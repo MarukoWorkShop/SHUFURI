@@ -10,11 +10,11 @@
 .home-hero {
   display: block;
   text-align: center;
-  padding: 0 0 24px;
+  padding: 0 32px 24px;
 }
 
 .home-hero__headline {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   font-family: var(--ui-font-sans);
   font-size: 22px;
   font-weight: 500;
@@ -24,16 +24,22 @@
 }
 
 .home-hero__subtitle {
-  margin: 0 0 20px;
+  margin: 0 auto 20px;
   font-family: var(--ui-font-sans);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: var(--ui-weight-regular);
-  letter-spacing: 0.03em;
-  line-height: 1.6;
-  color: var(--color-fg-secondary);
-  max-width: 360px;
-  margin-left: auto;
-  margin-right: auto;
+  letter-spacing: 0.02em;
+  line-height: 1.75;
+  color: var(--color-fg-muted);
+  max-width: 20.5em;
+  text-wrap: pretty;
+}
+
+/* 英文副标题更宽，约收束为三行 */
+.home-hero__subtitle[lang='en'] {
+  max-width: 42ch;
+  letter-spacing: 0.01em;
+  line-height: 1.65;
 }
 
 /* ---- Footer (桌面显示, 移动隐藏) ---- */
@@ -270,6 +276,19 @@
   outline: none !important;
   box-shadow: none !important;
   border: none !important;
+}
+
+/* 保留浏览器自动完成建议，但盖掉 UA autofill 黄/蓝底 */
+.ext-pipeline__input:-webkit-autofill,
+.ext-pipeline__input:-webkit-autofill:hover,
+.ext-pipeline__input:-webkit-autofill:focus,
+.ext-pipeline__input:-webkit-autofill:focus-visible {
+  -webkit-text-fill-color: var(--ui-fg);
+  caret-color: var(--ui-fg);
+  border: none !important;
+  /* 与明色输入区视觉一致（透明底 ≈ 表面色） */
+  box-shadow: inset 0 0 0 1000px var(--color-bg-elevated) !important;
+  transition: background-color 99999s ease-out;
 }
 
 .ext-pipeline__actions {
@@ -1096,22 +1115,27 @@
     max-width: 520px;
   }
 
-  /* Hero — 桌面加大字号/间距 */
+  /* Hero — 桌面加大字号/间距；副标题列宽贴近下方卡片（≤3 行） */
   .home-hero {
-    padding-bottom: 28px;
+    padding: 0 64px 28px;
   }
 
   .home-hero__headline {
     font-size: 34px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
   }
 
-  .home-hero__subtitle {
-    font-size: 15px;
+  .home-hero__subtitle,
+  .home-hero__subtitle[lang='en'] {
+    font-size: 13px;
     font-weight: var(--ui-weight-regular);
-    color: var(--color-fg-secondary);
-    max-width: 560px;
+    line-height: 1.7;
+    color: var(--color-fg-muted);
+    /* 与 .app--home .ext-pipeline 同宽，避免副标题过窄多折行 */
+    max-width: 820px;
+    width: 100%;
     margin-bottom: 22px;
+    letter-spacing: 0.01em;
   }
 
   /* 输入卡片 - 拉长拉瘪, 水平居中 */
@@ -1315,42 +1339,287 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* 暗色模式 — 首页文字可见性加固（字重上调）                                */
+/* 暗色模式 — 首页（纯黑底 / 灰卡片 / Kinari 点缀；LOGO 保持现有样式）      */
 /* ------------------------------------------------------------------ */
 
-[data-theme="dark"] .home-hero__headline {
-  font-weight: 600;
+[data-theme='dark'] .app--home,
+[data-theme='dark'] .app--home .app-screen,
+[data-theme='dark'] .app--home .app-screen__body,
+[data-theme='dark'] .app--home .app-screen__header,
+[data-theme='dark'] .app--home .app-header,
+[data-theme='dark'] .app--home .home-body,
+[data-theme='dark'] .app--home .app-main {
+  background: #000000;
+  color: #ffffff;
 }
 
-[data-theme="dark"] .home-hero__subtitle {
-  font-weight: 400;
-  color: var(--color-fg);
+[data-theme='dark'] .app--home .home-hero {
+  padding-left: 28px;
+  padding-right: 28px;
 }
 
-[data-theme="dark"] .home-footer {
-  font-weight: 400;
-}
-
-[data-theme="dark"] .home-footer__copy {
-  font-weight: 400;
-}
-
-[data-theme="dark"] .home-daily-quote {
-  font-weight: 400;
-}
-
-[data-theme="dark"] .ext-pipeline__input::placeholder {
-  font-weight: 400;
-}
-
-[data-theme="dark"] .saved-library-title {
+[data-theme='dark'] .app--home .home-hero__headline {
+  color: #ffffff;
+  font-family: var(--ui-font-sans);
+  font-style: normal;
   font-weight: 500;
+  letter-spacing: 0.04em;
 }
 
-[data-theme="dark"] .saved-library-count__num {
-  font-weight: 600;
-}
-
-[data-theme="dark"] .saved-library-count__unit {
+[data-theme='dark'] .app--home .home-hero__subtitle {
   font-weight: 400;
+  color: #a0a0a0;
+}
+
+[data-theme='dark'] .app--home .home-footer,
+[data-theme='dark'] .app--home .home-footer__copy,
+[data-theme='dark'] .app--home .home-daily-quote {
+  font-weight: 400;
+  color: #a0a0a0;
+}
+
+/* 表单卡片：移动端也呈现抬升卡片 */
+[data-theme='dark'] .app--home .ext-pipeline {
+  background: #2a2a2a;
+  border: 1px solid #2c2c30;
+  border-radius: 24px;
+  padding: 22px 18px 18px;
+  margin: 0 16px;
+  max-width: 800px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__meta {
+  gap: 16px;
+}
+
+/* 输入框：深灰底，无黄描边 */
+[data-theme='dark'] .app--home .ext-pipeline__field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__field::after {
+  display: none;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__label {
+  position: static;
+  bottom: auto;
+  left: auto;
+  right: auto;
+  color: #666666;
+  font-size: 11px !important;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__label-meta {
+  color: #666666;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__input {
+  background: #1a1a1a;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 13px 14px;
+  text-align: left;
+  color: #ffffff;
+  font-weight: 400;
+  box-shadow: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__input::placeholder {
+  color: #666666;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__input:focus,
+[data-theme='dark'] .app--home .ext-pipeline__input:focus-visible {
+  border-color: #3a3a3a;
+  box-shadow: none;
+  background: #1f1f1f;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__input:-webkit-autofill,
+[data-theme='dark'] .app--home .ext-pipeline__input:-webkit-autofill:hover,
+[data-theme='dark'] .app--home .ext-pipeline__input:-webkit-autofill:focus,
+[data-theme='dark'] .app--home .ext-pipeline__input:-webkit-autofill:focus-visible {
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+  border: 1px solid transparent !important;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1000px #1a1a1a !important;
+  transition: background-color 99999s ease-out;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__input:-webkit-autofill:focus,
+[data-theme='dark'] .app--home .ext-pipeline__input:-webkit-autofill:focus-visible {
+  border-color: #3a3a3a !important;
+  box-shadow: inset 0 0 0 1000px #1f1f1f !important;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__share-fill-btn {
+  background: #1a1a1a;
+  border: 1px dashed #3a3a3a;
+  color: #a0a0a0;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__share-fill-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-kinari) 18%, #1a1a1a);
+  border-color: color-mix(in srgb, var(--color-kinari) 40%, #3a3a3a);
+  color: color-mix(in srgb, var(--color-kinari) 70%, #ffffff);
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__share-fill-input {
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__share-fill-input:focus {
+  border-color: color-mix(in srgb, var(--color-kinari) 45%, #3a3a3a);
+  box-shadow: none;
+  background: color-mix(in srgb, var(--color-kinari) 10%, #1a1a1a);
+}
+
+[data-theme='dark'] .app--home .lang-wheel-with-hint__label {
+  color: #666666;
+  letter-spacing: 0.14em;
+}
+
+[data-theme='dark'] .app--home .lang-wheel {
+  border-bottom-color: #2c2c30;
+}
+
+[data-theme='dark'] .app--home .lang-wheel__item {
+  color: #a0a0a0;
+}
+
+[data-theme='dark'] .app--home .lang-wheel__mask {
+  background: linear-gradient(
+    to right,
+    #2a2a2a 0%,
+    transparent 24%,
+    transparent 76%,
+    #2a2a2a 100%
+  );
+}
+
+/* 选中态：莹黄短下划线（替代三角，贴近设计稿） */
+[data-theme='dark'] .app--home .lang-wheel__indicator {
+  width: 28px;
+  height: 2px;
+  border: none;
+  border-radius: 1px;
+  background: var(--color-kinari);
+  opacity: 1;
+  bottom: 4px;
+}
+
+/*
+ * 暗色 CTA：严格跟 class（动态主操作）
+ * - 主（btn-filled）：莹黄实心 — 粘贴就绪时贴为主；否则有标题时口令为主
+ * - 次可用（btn-tonal）：深灰黄实心
+ * - 不可点（disabled / is-dormant）：偏灰弱化（仅生成口令）
+ */
+[data-theme='dark'] .app--home .ext-pipeline__action-btn.btn-filled {
+  background: var(--color-kinari) !important;
+  color: var(--color-kinari-text) !important;
+  border: none !important;
+  border-radius: 999px;
+  box-shadow: none;
+  opacity: 1;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__action-btn.btn-filled:hover:not(:disabled) {
+  background: var(--color-kinari-hover) !important;
+  color: var(--color-kinari-text) !important;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__action-btn.btn-tonal:not(:disabled):not(.is-dormant) {
+  background: color-mix(in srgb, var(--color-kinari) 22%, #1a1a1a) !important;
+  color: color-mix(in srgb, var(--color-kinari) 55%, #ffffff) !important;
+  border: none !important;
+  border-radius: 999px;
+  box-shadow: none;
+  opacity: 1;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__action-btn.btn-tonal:not(:disabled):not(.is-dormant):hover {
+  background: color-mix(in srgb, var(--color-kinari) 32%, #1a1a1a) !important;
+  color: color-mix(in srgb, var(--color-kinari) 70%, #ffffff) !important;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__action-btn.btn-tonal:disabled,
+[data-theme='dark'] .app--home .ext-pipeline__action-btn.btn-tonal.is-dormant {
+  background: #222222 !important;
+  color: #666666 !important;
+  border: none !important;
+  border-radius: 999px;
+  box-shadow: none;
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__hint,
+[data-theme='dark'] .app--home .ext-pipeline__mode-hint {
+  color: #666666;
+}
+
+/* 统计卡 */
+[data-theme='dark'] .app--home .saved-library-title {
+  font-weight: 500;
+  color: #666666;
+}
+
+[data-theme='dark'] .app--home .saved-library-count__num {
+  font-weight: 600;
+  color: var(--color-kinari);
+}
+
+[data-theme='dark'] .app--home .saved-library-count__unit {
+  font-weight: 400;
+  color: #a0a0a0;
+}
+
+[data-theme='dark'] .app--home .home-libraries-grid > .saved-library,
+[data-theme='dark'] .app--home .home-body > .saved-library {
+  background: #2a2a2a;
+  border-color: #2c2c30;
+}
+
+@media (min-width: 768px) {
+  [data-theme='dark'] .app--home .ext-pipeline {
+    padding: 28px 40px 24px;
+    margin: 0 auto;
+    border-radius: 24px;
+  }
+
+  [data-theme='dark'] .app--home .ext-pipeline__input {
+    padding: 14px 16px;
+  }
+
+  [data-theme='dark'] .app--home .ext-pipeline__action-btn {
+    border-radius: 999px;
+    height: 48px;
+  }
+
+  [data-theme='dark'] .app--home .home-libraries-grid > .saved-library,
+  [data-theme='dark'] .app--home .home-body .home-libraries-grid > .saved-library:not(.study-cards-library),
+  [data-theme='dark'] .app--home .home-body .home-libraries-grid > .study-cards-library {
+    background: #2a2a2a;
+    border: 1px solid #2c2c30;
+    border-radius: 16px;
+  }
 }
