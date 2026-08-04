@@ -1,0 +1,279 @@
+/* ============================================================
+   HowItWorks · 首页「4 步说明带」（明色定稿）
+   白底 + 深灰线条 + 荧光黄(--color-kinari)点缀
+   本组件为固定浅色带，不随页面暗色主题翻转（与 PM「暗 Hero + 浅说明带」对比节奏一致）
+   ============================================================ */
+
+.hiw {
+  /* 与首页输入卡等宽 */
+  max-width: 980px;
+  margin: 30px auto 0;
+  width: 100%;
+  padding: 28px 16px 30px;
+  box-sizing: border-box;
+
+  /* 固定浅色带：上下细描边，使其作为「说明区」在浅/深色页面都清晰可辨 */
+  background: #ffffff;
+  border-top: 1px solid var(--hiw-border, #e4e4e7);
+  border-bottom: 1px solid var(--hiw-border, #e4e4e7);
+
+  --hiw-ink: #1c1c22;
+  --hiw-line: #3f3f46;          /* 深灰线条/图标 */
+  --hiw-muted: #52525b;
+  --hiw-border: #e4e4e7;
+  --hiw-accent: var(--color-kinari);
+  --hiw-accent-ink: var(--color-kinari-text);
+}
+
+.hiw.is-collapsed {
+  /* 收起：去掉说明带底板，只留左侧莹黄标签 */
+  margin-top: 16px;
+  padding: 0 16px;
+  background: transparent;
+  border: none;
+}
+
+.hiw__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+
+.hiw.is-collapsed .hiw__head {
+  margin-bottom: 0;
+  justify-content: flex-start;
+}
+
+.hiw__head-main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.hiw__toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 2px 0 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--hiw-muted);
+  cursor: pointer;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hiw__toggle:hover {
+  color: var(--hiw-ink);
+  background: #f4f4f5;
+}
+
+.hiw__toggle-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.hiw__kicker {
+  display: inline-block;
+  background: var(--hiw-accent);
+  color: var(--hiw-accent-ink);
+  font-family: var(--ui-font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 14px;
+  border: none;
+}
+
+.hiw__kicker--btn {
+  margin-bottom: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hiw__kicker--btn:hover {
+  filter: brightness(0.97);
+}
+
+.hiw__title {
+  margin: 0;
+  font-family: var(--ui-font-sans);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--hiw-ink);
+  line-height: 1.3;
+}
+
+.hiw__sub {
+  margin: 8px 0 0;
+  font-family: var(--ui-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--hiw-muted);
+}
+
+/* ---- 步骤条（桌面：4 列 + 箭头；移动：2×2） ---- */
+.hiw__strip {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  flex-wrap: nowrap;
+}
+
+.hiw__card {
+  flex: 1 1 0;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid var(--hiw-border);
+  border-radius: 18px;
+  padding: 24px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.hiw__badge {
+  position: absolute;
+  top: -14px;
+  left: 18px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--hiw-accent);
+  color: var(--hiw-accent-ink);
+  font-family: var(--ui-font-sans);
+  font-weight: 800;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 4px #fff;
+}
+
+.hiw__icon {
+  width: 52px;
+  height: 52px;
+  color: var(--hiw-line);
+  margin: 6px 0 16px;
+  flex-shrink: 0;
+}
+
+.hiw__icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hiw__card-title {
+  margin: 0;
+  font-family: var(--ui-font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--hiw-ink);
+  line-height: 1.35;
+}
+
+.hiw__card-en {
+  font-family: var(--ui-font-sans);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--hiw-muted);
+  margin-top: 3px;
+  font-weight: 600;
+}
+
+.hiw__card-desc {
+  margin: 12px 0 0;
+  font-family: var(--ui-font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--hiw-line);
+  flex: 1 1 auto;
+}
+
+.hiw__bullets {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hiw__bullets li {
+  position: relative;
+  padding-left: 14px;
+  font-family: var(--ui-font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.65;
+  color: var(--hiw-line);
+}
+
+.hiw__bullets li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 9px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--hiw-accent);
+}
+
+.hiw__arrow {
+  flex: 0 0 34px;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hiw__arrow svg {
+  width: 22px;
+  height: 22px;
+  color: var(--hiw-line);
+}
+
+/* ---- 移动端：2×2 网格 ---- */
+@media (max-width: 760px) {
+  .hiw {
+    padding: 24px 14px 26px;
+  }
+
+  .hiw.is-collapsed {
+    padding: 0 14px;
+  }
+
+  .hiw__strip {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .hiw__arrow {
+    display: none;
+  }
+
+  .hiw__card {
+    flex: 1 1 calc(50% - 7px);
+    max-width: calc(50% - 7px);
+  }
+}
+
+/* 超窄屏：单列堆叠，保证极小屏可读 */
+@media (max-width: 420px) {
+  .hiw__card {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}

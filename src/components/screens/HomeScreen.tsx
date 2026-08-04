@@ -8,6 +8,7 @@ import HtmlPasteInput from '../HtmlPasteInput';
 import SavedLyricsLibrary from '../SavedLyricsLibrary';
 import StudyCardsLibrary from '../StudyCardsLibrary';
 import HomeDailyLyricQuote from '../HomeDailyLyricQuote';
+import HowItWorks from '../HowItWorks';
 import { useLayoutEffect, type RefObject, type Dispatch, type SetStateAction } from 'react';
 import type { SavedLyricsProject } from '../../services/savedLyricsStore';
 import { ensurePosterFontsLoaded } from '../../utils/shufuriPoster/fonts';
@@ -115,7 +116,7 @@ export default function HomeScreen({
         >
           {appSettings.interfaceLanguage === 'en'
             ? 'Your AI companion for singing across borders. With one click, fetch lyrics and transform them into comprehensive study texts—revealing pronunciation, deep grammar, and the delicate nuances of the written word.'
-            : '用AI帮助你跨语言学唱，一键检索，将歌词瞬间整理为结构化学习文本，涵盖注音、生词与深度语法剖析，一起读懂属于文字的幽微之美。'}
+            : '外语歌词标注排版工具 · 快速生成Prompt，去免费 AI Chat 搜索歌词，SHUFURI帮你一键转化成结构化学习文本，涵盖注音、生词与语法剖析，并快速导出 PDF，制作独家歌词学习集。'}
         </p>
       </div>
       <HtmlPasteInput
@@ -139,6 +140,7 @@ export default function HomeScreen({
         externalPrompt={externalPrompt}
         onExternalPromptHandled={onExternalPromptHandled}
       />
+      <HowItWorks />
       <div className="home-libraries-grid">
         <SavedLyricsLibrary onOpen={onOpenProject} refreshKey={libraryRefreshKey} />
         <StudyCardsLibrary />
