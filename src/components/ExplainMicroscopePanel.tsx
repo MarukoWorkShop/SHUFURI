@@ -27,12 +27,70 @@ function highlightFocusInSentence(sentence: string, focus: string): { before: st
   };
 }
 
+/** 中文语法标签 → 英文标签映射（English UI 下 Grammar Formula 使用） */
+const POS_LABEL_MAP_EN: Record<string, string> = {
+  // 词性
+  '名词': 'noun',
+  '动词': 'verb',
+  '形容词': 'adj',
+  '副词': 'adv',
+  '连词': 'conj',
+  '代词': 'pron',
+  '助词': 'particle',
+  '介词': 'prep',
+  '冠词': 'article',
+  '感叹词': 'interj',
+  // 日语特有
+  '連体詞': 'adnominal',
+  '動詞詞干': 'stem',
+  'て形': 'te-form',
+  'た形': 'ta-form',
+  'ない形': 'nai-form',
+  '連用形': 'ren\'yōkei',
+  '終止形': 'shūshikei',
+  '連体形': 'rentaikei',
+  '仮定形': 'kateikei',
+  '命令形': 'meireikei',
+  '未然形': 'mizenkei',
+  '已然形': 'izenkei',
+  '活用': 'conjugation',
+  '完了': 'perfective',
+  '縮略': 'contraction',
+  '補語': 'complement',
+  '定语': 'attributive',
+  '补语': 'complement',
+  '情态': 'modal',
+  '能': 'ability',
+  '程度': 'degree',
+  '时态': 'tense',
+  '语态': 'voice',
+  '体': 'aspect',
+  '否定': 'negative',
+  '过去': 'past',
+  '被动': 'passive',
+  '使役': 'causative',
+  '可能': 'potential',
+  '敬语': 'honorific',
+  '敬体': 'polite',
+  '简体': 'plain',
+  '辞书形': 'dict form',
+  '词典形': 'dict form',
+  '无特殊变形': 'no change',
+};
+
+function translatePosLabel(label: string, ifaceLang: string): string {
+  if (ifaceLang !== 'en') return label;
+  return POS_LABEL_MAP_EN[label] ?? label;
+}
+
 function GrammarFormulaView({
   tokens,
   fallback,
+  ifaceLang,
 }: {
   tokens: { surface: string; label: string }[];
   fallback: string;
+  ifaceLang: string;
 }) {
   if (tokens.length === 0) {
     if (!fallback) return null;
@@ -45,7 +103,7 @@ function GrammarFormulaView({
           {i > 0 ? <span className="microscope-formula__plus" aria-hidden>+</span> : null}
           <span className="microscope-formula__chip">
             <span className="microscope-formula__surface">{tok.surface}</span>
-            {tok.label ? <span className="microscope-formula__label">{tok.label}</span> : null}
+            {tok.label ? <span className="microscope-formula__label">{translatePosLabel(tok.label, ifaceLang)}</span> : null}
           </span>
         </span>
       ))}
@@ -334,7 +392,7 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                 {aiParts.formula.length > 0 || aiParts.formulaRaw ? (
                   <div className="microscope-ai-card__row">
                     <p className="microscope-ai-card__label">{L('语法分子式', 'Grammar Formula')}</p>
-                    <GrammarFormulaView tokens={aiParts.formula} fallback={aiParts.formulaRaw} />
+                    <GrammarFormulaView tokens={aiParts.formula} fallback={aiParts.formulaRaw} ifaceLang={iface} />
                   </div>
                 ) : null}
                 {aiParts.grammar ? (

@@ -147,10 +147,22 @@ const AI_EXPLAIN_FORMULA_EXAMPLES: Record<MicroscopeLanguageName, string> = {
 - 标签只用日语语法用语（て形/助词/词干等），勿写韩语语尾名。`,
   Korean: `- 例：\`[나|代词·我] + [바라다|动词·期盼] + [~는|定语词尾] + [건|것은缩略]\`
 - 标签只用韩语形态学术语，勿写日语ます/て形。`,
-  English: `- 例：\`[can|情态·能] + [reach|动词] + [but|连词] + [not quite|程度] + [hold|动词]\`
-- 标签只用英语语法用语（情态/时态/短语动词等），勿写日韩活用名。`,
-  Chinese: `- 例：\`[把|介词] + [梦|名词] + [做|动词] + [完|补语]\`
+  English: `- 例：\`[can|modal·ability] + [reach|verb] + [but|conj] + [not quite|degree] + [hold|verb]\`
+- 标签只用英语语法用语（modal/tense/phrasal verb等），勿写日韩活用名。`,
+  Chinese: `- 例：\`[把|prep] + [梦|noun] + [做|verb] + [完|complement]\`
 - 标签只用中文语法用语，勿写日韩活用名。`,
+};
+
+/** 英文界面下的分子式示例（标签用英文） */
+const AI_EXPLAIN_FORMULA_EXAMPLES_EN: Record<MicroscopeLanguageName, string> = {
+  Japanese: `- Example: \`[信じ|stem] + [て|te-form] + [しまう|perfective]\`; contractions may be written as \`[信じちゃう|te-shimau contraction]\`
+- Use only Japanese grammar terms in English (te-form/particle/stem etc.), no Korean endings.`,
+  Korean: `- Example: \`[나|pron·I] + [바라다|verb·hope] + [~는|attributive ending] + [건|것은 contraction]\`
+- Use only Korean morphological terms in English, no Japanese ます/て形.`,
+  English: `- Example: \`[can|modal·ability] + [reach|verb] + [but|conj] + [not quite|degree] + [hold|verb]\`
+- Use only English grammar terms (modal/tense/phrasal verb etc.), no Japanese/Korean inflection names.`,
+  Chinese: `- Example: \`[把|prep] + [梦|noun] + [做|verb] + [完|complement]\`
+- Use only Chinese grammar terms in English, no Japanese/Korean inflection names.`,
 };
 
 const AI_EXPLAIN_CAPSULE_EXAMPLES: Record<MicroscopeLanguageName, string> = {
@@ -331,16 +343,19 @@ export function buildMicroscopeAiExplainPrompt(songContext: MicroscopeSongContex
   const langHint = LANGUAGE_RULES[lang] ?? LANGUAGE_RULES.English;
   const examTag = EXAM_TAG_BY_LANG[lang] ?? '考试';
   const forbiddenExams = FORBIDDEN_EXAM_TAGS[lang] ?? '';
+
+  // 输出语言跟随界面语言（EN 用户得英文讲解）；段落标签保留中文以兼容解析器
+  const ifaceLabel = INTERFACE_LANG_LABEL[songContext.interfaceLanguage ?? 'zh'];
+
   const formulaExamples =
-    AI_EXPLAIN_FORMULA_EXAMPLES[lang] ?? AI_EXPLAIN_FORMULA_EXAMPLES.English;
+    (ifaceLabel === 'English'
+      ? AI_EXPLAIN_FORMULA_EXAMPLES_EN
+      : AI_EXPLAIN_FORMULA_EXAMPLES)[lang] ?? AI_EXPLAIN_FORMULA_EXAMPLES.English;
   const capsuleExamples =
     AI_EXPLAIN_CAPSULE_EXAMPLES[lang] ?? AI_EXPLAIN_CAPSULE_EXAMPLES.English;
   const capsuleTask = AI_EXPLAIN_CAPSULE_TASK[lang] ?? AI_EXPLAIN_CAPSULE_TASK.English;
   const slangHints =
     AI_EXPLAIN_SLANG_HINTS[lang] ?? AI_EXPLAIN_SLANG_HINTS.English;
-
-  // 输出语言跟随界面语言（EN 用户得英文讲解）；段落标签保留中文以兼容解析器
-  const ifaceLabel = INTERFACE_LANG_LABEL[songContext.interfaceLanguage ?? 'zh'];
 
   const isJp = lang === 'Japanese';
   const forceLoan =
