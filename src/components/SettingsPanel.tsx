@@ -299,8 +299,8 @@ export default function SettingsPanel({
             </label>
             <p className="app-settings__hint">
               {L(
-                '歌词确认页默认是否勾选「词解与语法」。关闭后弹窗默认不勾选，需手动开启才会生成；保持关闭可加快首次排版体验。',
-                'Whether the lyric confirm sheet pre-checks the vocab & grammar box. When off, the sheet defaults to unchecked for a faster first-run layout experience.',
+                '歌词确认页默认是否勾选「词解与语法」。关闭后弹窗默认不勾选，需手动开启才会生成。',
+                'Whether the lyric confirm sheet pre-checks the vocab & grammar box. When off, the sheet defaults to unchecked.',
               )}
             </p>
             <p className="app-settings__sublabel app-settings__sublabel--targets">

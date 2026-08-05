@@ -955,7 +955,7 @@
 
 .app-settings__segment.is-active {
   color: var(--ui-fg);
-  background: var(--panel-bg);
+  background: #e8e8ec;
   box-shadow: var(--shadow-segment);
 }
 
@@ -1475,6 +1475,11 @@
 [data-theme='dark'] .app--home .home-daily-quote {
   font-weight: 400;
   color: #a0a0a0;
+}
+
+/* 暗色模式：去掉随机歌词区线条框 */
+[data-theme='dark'] .app--home .home-body > .home-daily-quote {
+  border: none;
 }
 
 /* 表单卡片：移动端也呈现抬升卡片 */
