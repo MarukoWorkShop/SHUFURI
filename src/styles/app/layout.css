@@ -582,3 +582,16 @@ html.saved-library-drawer-open .home-body {
   }
 }
 
+/* ---- 暗色模式：全局滚动条莹黄化 ---- */
+
+[data-theme='dark'] .app-screen__body::-webkit-scrollbar-thumb,
+[data-theme='dark'] .app--home .app-main::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-kinari) 50%, transparent);
+  border-radius: 999px;
+}
+
+[data-theme='dark'] .app-screen__body::-webkit-scrollbar-thumb:hover,
+[data-theme='dark'] .app--home .app-main::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-kinari) 70%, transparent);
+}
+
