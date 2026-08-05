@@ -15,6 +15,13 @@
   animation: app-toast-in 0.3s ease;
 }
 
+/* 暗色模式：Toast 去蓝紫、改纯灰度 */
+[data-theme='dark'] .app-toast {
+  background: #4a4a5c;
+  color: #e8e8ec;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.45);
+}
+
 .app-toast--fixed {
   position: fixed;
   bottom: var(--toast-fixed-bottom);

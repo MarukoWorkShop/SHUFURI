@@ -402,34 +402,34 @@
   --color-paper: #151522;
   --color-selection-highlight: rgba(234, 227, 112, 0.45);
 
-  --color-bg: #151522;
-  --color-bg-elevated: #1e1e30;
-  --color-bg-muted: #24243a;
-  --color-bg-muted-active: #2e2e48;
-  --color-bg-subtle: #1a1a2a;
-  --color-bg-segment: #151522;
-  --color-bg-textarea: #202038;
+  --color-bg: #141414;
+  --color-bg-elevated: #1c1c1c;
+  --color-bg-muted: #242424;
+  --color-bg-muted-active: #2c2c2c;
+  --color-bg-subtle: #1a1a1a;
+  --color-bg-segment: #141414;
+  --color-bg-textarea: #202020;
   --color-edit-canvas-bg: var(--color-bg);
   --color-edit-title: #e8e8f0;
-  --color-edit-artist: #9090a8;
-  --color-edit-lyric: #d0d0e0;
-  --color-edit-section: #d0d0e0;
-  --color-edit-study-term: #b8b8d0;
-  --color-edit-study-rail: color-mix(in srgb, #b8b8d0 38%, transparent);
-  --color-edit-section-rule: color-mix(in srgb, #d0d0e0 22%, transparent);
+  --color-edit-artist: #9a9a9a;
+  --color-edit-lyric: #d0d0d0;
+  --color-edit-section: #d0d0d0;
+  --color-edit-study-term: #b8b8b8;
+  --color-edit-study-rail: color-mix(in srgb, #b8b8b8 38%, transparent);
+  --color-edit-section-rule: color-mix(in srgb, #d0d0d0 22%, transparent);
 
-  --color-fg: #e8e8f0;
-  --color-fg-secondary: #a0a0b8;
-  --color-fg-muted: #707088;
-  --color-fg-subtle: #5a5a70;
-  --color-fg-faint: #3a3a50;
-  --color-fg-disabled: #484860;
+  --color-fg: #e8e8ec;
+  --color-fg-secondary: #a0a0a8;
+  --color-fg-muted: #707070;
+  --color-fg-subtle: #5a5a5a;
+  --color-fg-faint: #3a3a3a;
+  --color-fg-disabled: #484848;
 
-  --color-border: #3a3a50;
-  --color-border-subtle: #2a2a3d;
-  --color-border-faint: #22223b;
-  --color-border-strong: #e8e8f0;
-  --color-border-input: #424260;
+  --color-border: #3a3a3a;
+  --color-border-subtle: #2c2c30;
+  --color-border-faint: #222222;
+  --color-border-strong: #e8e8ec;
+  --color-border-input: #424242;
   --color-border-emphasis: rgba(255, 255, 255, 0.18);
 
   --color-accent: #e8e8f0;
@@ -450,8 +450,8 @@
   --shadow-popover: 0 4px 24px rgba(0, 0, 0, 0.3);
   --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.35);
 
-  --color-drawer-binding: #9090a8;
-  --color-ink-popover: #24243a;
+  --color-drawer-binding: #9a9a9a;
+  --color-ink-popover: #242424;
 
   --gradient-divider: linear-gradient(
     90deg,
@@ -477,8 +477,8 @@
   --color-home-quote-fg: var(--color-fg);
   --color-home-quote-source-fg: var(--color-fg-muted);
 
-  --skeleton-start: #24243a;
-  --skeleton-mid: #3a3a55;
+  --skeleton-start: #242424;
+  --skeleton-mid: #3a3a3a;
 
   --color-status-success-bg: #0a2e1a;
   --color-status-warn-bg: #2e2205;

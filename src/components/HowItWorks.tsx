@@ -5,9 +5,9 @@ import { getAppSettings } from '../services/appSettings';
 import { listSavedLyricsProjects } from '../services/savedLyricsStore';
 
 /**
- * HowItWorks · 首页「4 步说明带」（明色定稿）
+ * HowItWorks · 首页「4 步说明带」
  * 放置位：输入卡下方、歌词库上方。
- * 固定浅色带（白底 + 深灰线条 + Kinari 点缀），不随暗色主题翻转。
+ * 明色：白底 + 深灰线条 + Kinari；暗色随 data-theme 翻转，对齐首页输入卡灰阶。
  * 暖用户（本地已有歌词本）默认收起；偏好写入 localStorage。
  */
 

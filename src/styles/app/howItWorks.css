@@ -1,7 +1,7 @@
 /* ============================================================
-   HowItWorks · 首页「4 步说明带」（明色定稿）
-   白底 + 深灰线条 + 荧光黄(--color-kinari)点缀
-   本组件为固定浅色带，不随页面暗色主题翻转（与 PM「暗 Hero + 浅说明带」对比节奏一致）
+   HowItWorks · 首页「4 步说明带」
+   明色：白底 + 深灰线条 + 荧光黄(--color-kinari)点缀
+   暗色：随 [data-theme='dark'] 翻转，对齐首页输入卡灰阶
    ============================================================ */
 
 .hiw {
@@ -12,17 +12,21 @@
   padding: 28px 16px 30px;
   box-sizing: border-box;
 
-  /* 固定浅色带：上下细描边，使其作为「说明区」在浅/深色页面都清晰可辨 */
-  background: #ffffff;
-  border-top: 1px solid var(--hiw-border, #e4e4e7);
-  border-bottom: 1px solid var(--hiw-border, #e4e4e7);
-
   --hiw-ink: #1c1c22;
   --hiw-line: #3f3f46;          /* 深灰线条/图标 */
   --hiw-muted: #52525b;
-  --hiw-border: #e4e4e7;
+  --hiw-border: var(--color-border-subtle);
+  --hiw-surface: var(--color-bg-surface);
+  --hiw-card: #ffffff;
+  --hiw-badge-ring: var(--color-bg-surface);
+  --hiw-toggle-hover: #f4f4f5;
   --hiw-accent: var(--color-kinari);
   --hiw-accent-ink: var(--color-kinari-text);
+
+  /* 明色：与首页输入卡（.ext-pipeline）保持一致的卡片风格 */
+  background: var(--hiw-surface);
+  border: 1px solid var(--hiw-border);
+  border-radius: 16px;
 }
 
 .hiw.is-collapsed {
@@ -71,7 +75,7 @@
 
 .hiw__toggle:hover {
   color: var(--hiw-ink);
-  background: #f4f4f5;
+  background: var(--hiw-toggle-hover);
 }
 
 .hiw__toggle-icon {
@@ -134,7 +138,7 @@
 .hiw__card {
   flex: 1 1 0;
   min-width: 0;
-  background: #fff;
+  background: var(--hiw-card);
   border: 1px solid var(--hiw-border);
   border-radius: 18px;
   padding: 24px 18px 20px;
@@ -158,7 +162,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 0 4px #fff;
+  box-shadow: 0 0 0 4px var(--hiw-badge-ring);
 }
 
 .hiw__icon {
@@ -276,4 +280,36 @@
     flex: 1 1 100%;
     max-width: 100%;
   }
+}
+
+/* ============================================================
+   暗色主题 · 对齐首页输入卡（#2a2a2a / #1a1a1a + Kinari）
+   ============================================================ */
+[data-theme='dark'] .hiw {
+  --hiw-ink: #f4f4f5;
+  --hiw-line: #a1a1aa;
+  --hiw-muted: #a1a1aa;
+  --hiw-border: #3f3f46;
+  --hiw-surface: #2a2a2a;
+  --hiw-card: #1a1a1a;
+  --hiw-badge-ring: #1a1a1a;
+  --hiw-toggle-hover: rgba(255, 255, 255, 0.08);
+  --hiw-accent: var(--color-kinari);
+  --hiw-accent-ink: var(--color-kinari-text);
+
+  background: var(--hiw-surface);
+  border: 1px solid #2c2c30;
+  border-radius: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme='dark'] .hiw.is-collapsed {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .hiw__kicker--btn:hover {
+  filter: brightness(1.05);
 }
