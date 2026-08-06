@@ -18,6 +18,7 @@ import {
 import { ZH_CHAR_SLOT_CLASS } from '../zhLayout/zhRubyMarkup.ts';
 import {
   AUX_WEIGHT,
+  JP_RUBY_BASE_GAP_EM,
   JP_RUBY_WEIGHT,
   KO_PRIMARY_WEIGHT,
   LYRIC_PRIMARY_WEIGHT,
@@ -299,6 +300,11 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   const zhAuxWght = zhLineWght;
   const koWght = KO_PRIMARY_WEIGHT;
   const rtEm = L.mainRtEm;
+  /** 日语假名工具层色（#aaa）；其它语言沿用 gloss */
+  const rubyRtColor = R.rubyAnnotation.ruby?.rtColor ?? R.rubyAnnotation.color ?? GLOSS_COLOR;
+  /** 假名与汉字间距：仅日语管线 */
+  const rubyBaseGapEm = r.lang === 'jp' ? JP_RUBY_BASE_GAP_EM : 0;
+  const rubyBaseGapCss = rubyBaseGapEm > 0 ? `padding-bottom: ${rubyBaseGapEm}em;` : '';
 
   const titleFont = R.posterTitle.fontFamily;
   const titleWght = R.posterTitle.fontWeight;
@@ -359,7 +365,13 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     ${unit === 'mm' ? 'flex: 0 1 auto; min-height: 0;' : ''}
   }
   ${bodySel} .lyrics-group {
-    margin-bottom: ${unit === 'px' ? L.groupMb : emSize(L.groupMb, L.mainPx, unit, spec)};
+    margin-bottom: ${
+      unit === 'px'
+        ? L.groupMb
+        : L.groupMb.endsWith('px')
+          ? size(parseFloat(L.groupMb), unit, spec)
+          : emSize(L.groupMb, L.mainPx, unit, spec)
+    };
     break-inside: avoid;
     page-break-inside: avoid;
     overflow: hidden;
@@ -604,8 +616,9 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${KOZMIN_PRO_REGULAR_FAMILY} !important;
     font-size: ${rtEm}em !important;
     font-weight: ${JP_RUBY_WEIGHT} !important;
-    color: ${GLOSS_COLOR} !important;
+    color: ${rubyRtColor} !important;
     line-height: 1.1 !important;
+    ${rubyBaseGapCss}
   }
   ${F.isZhPipeline ? '' : `
   ${bodySel} ruby {
@@ -618,11 +631,12 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${KOZMIN_PRO_REGULAR_FAMILY};
     font-size: ${rtEm}em;
     font-weight: ${JP_RUBY_WEIGHT};
-    color: ${GLOSS_COLOR};
+    color: ${rubyRtColor};
     line-height: 1.1;
     letter-spacing: normal;
     font-feature-settings: "palt" 0;
     max-width: 100%;
+    ${rubyBaseGapCss}
   }
   /* 漏标兜底空 rt：不占注音行高，避免分页/预览被撑高 */
   ${bodySel} ruby[data-ink-empty-rt] rt:empty {
@@ -673,9 +687,10 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-family: ${KOZMIN_PRO_REGULAR_FAMILY};
     font-size: ${rtEm}em;
     font-weight: ${JP_RUBY_WEIGHT};
-    color: ${GLOSS_COLOR};
+    color: ${rubyRtColor};
     line-height: 1.1;
     max-width: 100%;
+    ${rubyBaseGapCss}
   }
   ${bodySel} .vocab-line1 .vocab-meaning,
   ${bodySel} .vocab-line1 .vocab-meaning * {
@@ -833,7 +848,7 @@ export function compileEditCssOverrides(): string {
     margin-top: 0.28em !important;
   }
   ${body} ruby rt {
-    color: var(--color-fg-muted) !important;
+    color: #555555 !important;
   }
 
   /* —— 区段标题（重点词汇 / 重点语法） —— */

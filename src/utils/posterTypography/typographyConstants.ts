@@ -4,13 +4,30 @@ export const BASE_AUX_PX = 18;
 export const BASE_SECTION_TITLE_PX = 18;
 
 /**
+ * 日语导出页字号层级（相对 POSTER_ELASTIC_FONT_BASE_PX=18 的设计基准，随 elasticFontBase 缩放）
+ * 主文 24 / 译文 14.4 / 组间距 18（略收束，避免组间过空）
+ */
+export const JP_LYRIC_MAIN_BASE_PX = 24;
+export const JP_LYRIC_AUX_BASE_PX = 14.4;
+export const JP_LYRIC_GROUP_GAP_BASE_PX = 18;
+/** 组间距相对主文：18 / 24 = 0.75em（打印 mm 路径按 mainPx 换算） */
+export const JP_LYRIC_GROUP_GAP_EM = JP_LYRIC_GROUP_GAP_BASE_PX / JP_LYRIC_MAIN_BASE_PX;
+/**
+ * 假名相对汉字的垂直间距（rt 的 padding-bottom，em 相对 rt 字号）。
+ * WebKit/Chromium 下可把注音顶离汉字；配合 JP_LYRIC_LINE_HEIGHT 避免行间碰撞。
+ */
+export const JP_RUBY_BASE_GAP_EM = 0.28;
+/** 日语歌词行高（略宽于 Kami 1.52，给假名留空） */
+export const JP_LYRIC_LINE_HEIGHT = 1.72;
+
+/**
  * Kami 阅读档（编辑页宽行距）。
  * mobilePoster / clipPosterPrint（拨轮「A5」纸型）共用；页级仍可通过 spacingScale（≥0.85）弹性收紧。
  */
 export const KAMI_LINE_HEIGHT = 1.52;
 /** 译文 / gloss 行高（编辑页原 1.5） */
 export const KAMI_ZH_LYRICS_LINE_HEIGHT = 1.5;
-/** 歌词组间距 em（mobilePoster） */
+/** 歌词组间距 em（mobilePoster；日语导出见 JP_LYRIC_GROUP_GAP_EM） */
 export const KAMI_GROUP_MB_EM = 1.7;
 /** 正文字距（mobilePoster，spacingScale=1 时） */
 export const KAMI_LETTER_SPACING_EM = 0.06;
@@ -22,17 +39,20 @@ export const ZH_OPTICAL_SCALE = 1;
 export const LYRIC_PRIMARY_WEIGHT = 400;
 /** 译文 / gloss 默认轻字重 */
 export const LYRIC_SECONDARY_WEIGHT = 300;
-/** 日语歌中文译文字重（字号/颜色不变，仅加重） */
+/** 日语歌中文译文字重（与主文同重；字号仍用 JP_LYRIC_AUX） */
 export const JP_ZH_LINE_WEIGHT = 400;
 
 /** 辅助文案 / 标题轻字重 */
 export const AUX_WEIGHT = 300;
 
-/** 日文 ruby 注音层（KozMin Pro R，与主文同族、略浅色） */
+/** 日文 ruby 注音层（工具层；略深于 #aaa，保证可读） */
 export const JP_RUBY_WEIGHT = 400;
-export const JP_RUBY_COLOR = '#64748b';
+export const JP_RUBY_COLOR = '#888';
+/** 假名相对主文比例（修改前原值；手机竖屏约主文×0.54） */
 export const JP_RUBY_RT_EM_MOBILE = 0.54;
 export const JP_RUBY_RT_EM_PRINT = 0.58;
+/** @deprecated 等同 JP_RUBY_RT_EM_MOBILE；保留以免旧引用断裂 */
+export const JP_RUBY_RT_EM = JP_RUBY_RT_EM_MOBILE;
 
 /** 中文拼音注音字号：比日文振假名大一档，提升可读性 */
 export const ZH_RUBY_RT_EM_MOBILE = 0.62;

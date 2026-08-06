@@ -1,4 +1,4 @@
-/** 小塚明朝 Pro Light / R（public/assets/KozMinPro-Light.otf）— 日文主文 + ruby 注音 */
+/** 小塚明朝 Pro Regular（public/assets/KozMinPro-Regular.otf）— 日文主文 + ruby 注音 */
 export const KOZMIN_PRO_REGULAR_FAMILY =
   '"Kozuka Mincho Pro R", "Kozuka Mincho Pro", "Hiragino Mincho ProN", "Source Han Serif SC", "Songti SC", serif';
 
@@ -19,7 +19,7 @@ export const SOURCE_HAN_SERIF_SC_FAMILY = '"Source Han Serif SC"';
 export const ZH_SONGTI_FONT_FAMILY =
   `${SOURCE_HAN_SERIF_SC_FAMILY}, "Songti SC", "STSong", "Songti TC", "SimSun", serif`;
 
-/** 英文海报正文（歌词主文、英译、gloss 词解）— 与日文主文同用 KozMin Pro Light */
+/** 英文海报正文（歌词主文、英译、gloss 词解）— 与日文主文同用 KozMin Pro Regular */
 export const EN_FONT_FAMILY = KOZMIN_PRO_REGULAR_FAMILY;
 
 /** 全局 UI：PingFang Light，中英文统一 */
@@ -40,9 +40,9 @@ const FONT_LOAD_TIMEOUT_MS = 8000;
 /** 与 Vite base:'./' 及 Expo 离线 bundle 一致，避免 file:// 下 /assets 失效 */
 export function getPosterJapaneseRegularFontUrl(): string {
   if (typeof window !== 'undefined' && window.location?.href) {
-    return new URL('assets/KozMinPro-Light.otf', window.location.href).href;
+    return new URL('assets/KozMinPro-Regular.otf', window.location.href).href;
   }
-  return './assets/KozMinPro-Light.otf';
+  return './assets/KozMinPro-Regular.otf';
 }
 
 /** @deprecated 使用 getPosterJapaneseRegularFontUrl */
@@ -105,7 +105,7 @@ export function getPosterJapaneseRegularFontFaceCss(): string {
 }`;
 }
 
-/** @deprecated 已无 ExtraLight；等同 getPosterJapaneseRegularFontFaceCss */
+/** @deprecated 已无 ExtraLight / Light 分档；等同 getPosterJapaneseRegularFontFaceCss */
 export function getPosterJapaneseFontFaceCss(): string {
   return getPosterJapaneseRegularFontFaceCss();
 }

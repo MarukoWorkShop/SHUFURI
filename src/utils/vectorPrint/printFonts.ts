@@ -50,7 +50,7 @@ export async function getPrintJapaneseRegularFontFaceCss(): Promise<string> {
   }
   const base64 = await loadFontBase64FromGenerated(
     'PRINT_JP_REGULAR_FONT_BASE64_GENERATED',
-    'KozMinPro-Light.otf',
+    'KozMinPro-Regular.otf',
   );
   cachedJpRegularFontFaceCss = `
 @font-face {

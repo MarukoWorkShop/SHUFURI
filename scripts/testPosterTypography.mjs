@@ -1,6 +1,10 @@
 import { resolvePosterTypography } from '../src/utils/posterTypography/fontResolver.ts';
 import { compilePosterCss } from '../src/utils/posterTypography/cssCompiler.ts';
 import {
+  JP_RUBY_COLOR,
+  JP_RUBY_RT_EM_MOBILE,
+  JP_RUBY_RT_EM_PRINT,
+  JP_ZH_LINE_WEIGHT,
   LYRIC_PRIMARY_WEIGHT,
 } from '../src/utils/posterTypography/typographyConstants.ts';
 import {
@@ -14,55 +18,82 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-/** 三 profile 黄金快照：mainPx = zhMainPx = titleFsPx */
+/** 非日语 profile：mainPx = zhMainPx = titleFsPx（仍用 BASE_MAIN 26） */
 const PROFILE_SCALE_GOLDEN = [
   { profile: 'mobilePoster', mainPx: 46, auxPx: 32 },
   { profile: 'squarePoster', mainPx: 40, auxPx: 28 },
   { profile: 'clipPosterPrint', mainPx: 17, auxPx: 12 },
 ];
 
+/** 日语导出层级：基准 24/14.4，随 elasticFontBase 缩放（相对初版 20/12 ×1.2） */
+const JP_PROFILE_SCALE_GOLDEN = [
+  { profile: 'mobilePoster', mainPx: 43, auxPx: 26 },
+  { profile: 'squarePoster', mainPx: 37, auxPx: 22 },
+  { profile: 'clipPosterPrint', mainPx: 16, auxPx: 10 },
+];
+
 for (const { profile, mainPx, auxPx } of PROFILE_SCALE_GOLDEN) {
-  const jp = resolvePosterTypography({ profile, lang: 'jp', spacingScale: 1 });
   const zh = resolvePosterTypography({ profile, lang: 'zh', spacingScale: 1 });
 
-  assert(jp.layout.mainPx === mainPx, `${profile} jp mainPx expected ${mainPx}, got ${jp.layout.mainPx}`);
-  assert(jp.layout.auxPx === auxPx, `${profile} jp auxPx expected ${auxPx}, got ${jp.layout.auxPx}`);
-  assert(jp.layout.titleFsPx === mainPx, `${profile} titleFsPx expected ${mainPx}, got ${jp.layout.titleFsPx}`);
+  assert(zh.layout.mainPx === mainPx, `${profile} zh mainPx expected ${mainPx}, got ${zh.layout.mainPx}`);
+  assert(zh.layout.auxPx === auxPx, `${profile} zh auxPx expected ${auxPx}, got ${zh.layout.auxPx}`);
+  assert(zh.layout.titleFsPx === mainPx, `${profile} titleFsPx expected ${mainPx}, got ${zh.layout.titleFsPx}`);
   assert(zh.layout.zhMainPx === mainPx, `${profile} zhMainPx expected ${mainPx}, got ${zh.layout.zhMainPx}`);
   assert(
-    zh.roles.lyricPrimary.fontSize === jp.roles.lyricPrimary.fontSize,
-    `${profile} zh/jp lyricPrimary should match`,
+    zh.roles.lyricPrimary.fontSize === zh.layout.mainPx,
+    `${profile} zh lyricPrimary should match mainPx`,
   );
+}
+
+for (const { profile, mainPx, auxPx } of JP_PROFILE_SCALE_GOLDEN) {
+  const jp = resolvePosterTypography({ profile, lang: 'jp', spacingScale: 1 });
+  assert(jp.layout.mainPx === mainPx, `${profile} jp mainPx expected ${mainPx}, got ${jp.layout.mainPx}`);
+  assert(jp.layout.auxPx === auxPx, `${profile} jp auxPx expected ${auxPx}, got ${jp.layout.auxPx}`);
+  assert(jp.roles.lyricPrimary.fontSize === mainPx, `${profile} jp lyricPrimary size`);
+  assert(jp.roles.lyricSecondary.fontSize === auxPx, `${profile} jp lyricSecondary size`);
   assert(
-    zh.layout.zhMainPx === jp.layout.mainPx,
-    `${profile} zhMainPx should equal mainPx`,
+    Math.abs(
+      jp.layout.mainRtEm -
+        (profile === 'mobilePoster' ? JP_RUBY_RT_EM_MOBILE : JP_RUBY_RT_EM_PRINT),
+    ) < 1e-9,
+    `${profile} jp ruby rtEm restored`,
   );
+  const expectedGap = `${Math.round(18 * ({ mobilePoster: 32, squarePoster: 28, clipPosterPrint: 12 }[profile] / 18))}px`;
+  assert(jp.layout.groupMb === expectedGap, `${profile} jp group gap ${expectedGap}, got ${jp.layout.groupMb}`);
+  assert(jp.layout.jpLh === 1.72, `${profile} jp lyric line-height 1.72`);
 }
 
 const mobileJp = resolvePosterTypography({ profile: 'mobilePoster', lang: 'jp', spacingScale: 1 });
 assert(
   mobileJp.roles.lyricPrimary.fontFamily === KOZMIN_PRO_REGULAR_FAMILY,
-  'jp lyricPrimary uses KozMin Pro Light (Kozuka Mincho Pro R stack)',
+  'jp lyricPrimary uses KozMin Pro Regular (Kozuka Mincho Pro R stack)',
 );
 assert(
   mobileJp.roles.lyricPrimary.fontWeight === LYRIC_PRIMARY_WEIGHT,
   'lyricPrimary weight 400',
 );
 assert(
-  mobileJp.roles.lyricSecondary.fontWeight === LYRIC_PRIMARY_WEIGHT,
+  mobileJp.roles.lyricSecondary.fontWeight === JP_ZH_LINE_WEIGHT,
   'jp lyricSecondary (zh-line) weight 400',
+);
+assert(
+  mobileJp.roles.lyricSecondary.fontWeight === 400,
+  'jp translation weight restored to 400',
 );
 assert(
   mobileJp.roles.rubyAnnotation.fontFamily.includes('Kozuka Mincho Pro R'),
   'jp ruby uses KozMin Pro R',
 );
+assert(
+  mobileJp.roles.rubyAnnotation.color === JP_RUBY_COLOR,
+  'jp ruby color #888',
+);
+assert(
+  mobileJp.roles.rubyAnnotation.ruby?.rtColor === JP_RUBY_COLOR,
+  'jp ruby rt color #888',
+);
 
 const zhTight = resolvePosterTypography({ profile: 'mobilePoster', lang: 'zh', spacingScale: 0.9 });
-const jpTight = resolvePosterTypography({ profile: 'mobilePoster', lang: 'jp', spacingScale: 0.9 });
-assert(
-  zhTight.roles.lyricPrimary.fontSize === jpTight.roles.lyricPrimary.fontSize,
-  'zh/jp stay matched at spacingScale 0.9',
-);
 assert(
   zhTight.layout.zhMainPx === zhTight.roles.lyricPrimary.fontSize,
   'zhMainPx equals lyricPrimary',
@@ -72,11 +103,11 @@ const mobileEn = resolvePosterTypography({ profile: 'mobilePoster', lang: 'en', 
 assert(mobileEn.roles.lyricPrimary.fontWeight === 400, 'en lyricPrimary weight 400');
 assert(
   mobileEn.roles.lyricPrimary.fontFamily === KOZMIN_PRO_REGULAR_FAMILY,
-  'en lyricPrimary uses KozMin Pro Light',
+  'en lyricPrimary uses KozMin Pro Regular',
 );
 assert(
   mobileEn.roles.lyricSecondary.fontFamily === KOZMIN_PRO_REGULAR_FAMILY,
-  'en gloss-line uses KozMin Pro Light',
+  'en gloss-line uses KozMin Pro Regular',
 );
 
 const mobileZh = resolvePosterTypography({ profile: 'mobilePoster', lang: 'zh', spacingScale: 1 });
@@ -86,7 +117,7 @@ assert(
 );
 assert(
   mobileZh.roles.lyricSecondary.fontFamily === KOZMIN_PRO_REGULAR_FAMILY,
-  'zh gloss-line uses KozMin Pro Light',
+  'zh gloss-line uses KozMin Pro Regular',
 );
 
 const mobileKo = resolvePosterTypography({ profile: 'mobilePoster', lang: 'ko', spacingScale: 1 });
@@ -95,9 +126,18 @@ assert(mobileKo.roles.studyTerm.lineHeight === 1.25, 'ko studyTerm compact lh');
 assert(mobileKo.roles.studyExample.fontSize === 32, 'ko studyExample uses auxPx');
 
 const mobileJpStudy = resolvePosterTypography({ profile: 'mobilePoster', lang: 'jp', spacingScale: 1 });
-assert(mobileJpStudy.roles.studyExample.fontSize === 32, 'jp studyExample uses auxPx');
-assert(mobileJpStudy.roles.studyExample.lineHeight === 1.48, 'jp studyExample jpLh');
-assert(mobileJpStudy.roles.studyTerm.fontSize === 46, 'jp studyTerm uses mainPx');
+assert(
+  mobileJpStudy.roles.studyExample.fontSize === mobileJpStudy.layout.auxPx,
+  'jp studyExample uses auxPx',
+);
+assert(
+  mobileJpStudy.roles.studyExample.lineHeight === mobileJpStudy.layout.jpLh,
+  'jp studyExample uses jpLh',
+);
+assert(
+  mobileJpStudy.roles.studyTerm.fontSize === mobileJpStudy.layout.mainPx,
+  'jp studyTerm uses mainPx',
+);
 assert(
   mobileJpStudy.roles.studyTerm.fontSize === mobileJpStudy.roles.grammarPointShell.fontSize ||
     mobileJpStudy.roles.studyTerm.fontSize > mobileJpStudy.roles.grammarPointShell.fontSize,

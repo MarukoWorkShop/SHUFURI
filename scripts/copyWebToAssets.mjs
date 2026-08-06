@@ -52,7 +52,7 @@ copyRecursive(distDir, targetDir);
 
 const indexInTarget = path.join(targetDir, 'index.html');
 const assetsDir = path.join(targetDir, 'assets');
-const fontFileLight = path.join(assetsDir, 'KozMinPro-Light.otf');
+const fontFileRegular = path.join(assetsDir, 'KozMinPro-Regular.otf');
 const fontFileSourceHan = path.join(assetsDir, 'SourceHanSerifSC-Regular.otf');
 
 if (!fs.existsSync(indexInTarget)) {
@@ -67,7 +67,7 @@ const manifest = {
   target: 'assets/web/',
   fileCount,
   hasIndexHtml: true,
-  hasJapaneseLightFont: fs.existsSync(fontFileLight),
+  hasJapaneseRegularFont: fs.existsSync(fontFileRegular),
   hasSourceHanSerifSc: fs.existsSync(fontFileSourceHan),
 };
 
@@ -75,6 +75,6 @@ fs.writeFileSync(path.join(targetDir, 'offline-manifest.json'), `${JSON.stringif
 
 console.log(`[copy:web-assets] ${distDir} → ${targetDir}`);
 console.log(
-  `[copy:web-assets] ${fileCount} files, index.html OK, Light ${manifest.hasJapaneseLightFont ? 'OK' : 'MISSING'}, SourceHan ${manifest.hasSourceHanSerifSc ? 'OK' : 'MISSING'}`,
+  `[copy:web-assets] ${fileCount} files, index.html OK, Regular ${manifest.hasJapaneseRegularFont ? 'OK' : 'MISSING'}, SourceHan ${manifest.hasSourceHanSerifSc ? 'OK' : 'MISSING'}`,
 );
 console.log('[copy:web-assets] iOS 构建时会从 assets/web 复制到 App 包内 web/ 目录');

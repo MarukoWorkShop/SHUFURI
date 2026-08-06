@@ -19,6 +19,10 @@ import {
   BASE_SECTION_TITLE_PX,
   BODY_TEXT_COLOR,
   GLOSS_COLOR,
+  JP_LYRIC_AUX_BASE_PX,
+  JP_LYRIC_GROUP_GAP_BASE_PX,
+  JP_LYRIC_LINE_HEIGHT,
+  JP_LYRIC_MAIN_BASE_PX,
   JP_RUBY_COLOR,
   JP_RUBY_RT_EM_MOBILE,
   JP_RUBY_RT_EM_PRINT,
@@ -135,17 +139,24 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   const isCompact = lang === 'ko' || lang === 'en' || !rubyAffectsLayout;
   const isZhPipeline = lang === 'zh';
   const isEnglish = lang === 'en';
+  const isJpPipeline = lang === 'jp';
 
-  const mainPx = Math.round(BASE_MAIN_PX * scaleBody * cjkFsMul);
-  const auxPx = Math.round(BASE_AUX_PX * scaleBody * cjkFsMul);
+  // 日语导出：主文 / 译文基准见 JP_LYRIC_*；其它语言沿用 BASE_MAIN / BASE_AUX
+  const mainBasePx = isJpPipeline ? JP_LYRIC_MAIN_BASE_PX : BASE_MAIN_PX;
+  const auxBasePx = isJpPipeline ? JP_LYRIC_AUX_BASE_PX : BASE_AUX_PX;
+  const mainPx = Math.round(mainBasePx * scaleBody * cjkFsMul);
+  const auxPx = Math.round(auxBasePx * scaleBody * cjkFsMul);
   const zhMainPx = Math.round(mainPx * ZH_OPTICAL_SCALE);
   const h2Px = Math.round(BASE_SECTION_TITLE_PX * scaleBody);
   const titleFsPx = mainPx;
+  // 假名相对主文：恢复修改前 mobile 0.54 / print 0.58
   const mainRtEm = isMobile ? JP_RUBY_RT_EM_MOBILE : JP_RUBY_RT_EM_PRINT;
 
   const jpLhBase = isCompact
     ? (d.compactLineHeightBase ?? (isMobile ? 1.25 : 1.45))
-    : (isMobile ? d.elasticLhBase : (d.jpLineHeightBase ?? 1.75));
+    : isJpPipeline
+      ? JP_LYRIC_LINE_HEIGHT
+      : (isMobile ? d.elasticLhBase : (d.jpLineHeightBase ?? 1.75));
   const zhLyricsLhBase = isCompact
     ? (d.compactZhLineHeightBase ?? (isMobile ? 1.15 : 1.2))
     : (d.zhLineHeightBase ?? (isMobile ? 1.3 : 1.35));
@@ -159,7 +170,9 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   const jpStudyFont = isEnglish ? EN_FONT_FAMILY : KOZMIN_PRO_REGULAR_FAMILY;
 
   const layout: LayoutSpacingTokens = {
-    groupMb: scaleEmLine(isMobile ? KAMI_GROUP_MB_EM : 1.35),
+    groupMb: isJpPipeline
+      ? `${Math.round(JP_LYRIC_GROUP_GAP_BASE_PX * scaleBody * lineScale)}px`
+      : scaleEmLine(isMobile ? KAMI_GROUP_MB_EM : 1.35),
     lyricsJpZhGap: scaleEmLine(isMobile ? 0.06 : 0.04),
     auxJpZhGap: scaleEmLine(isMobile ? 0.05 : 0.03),
     itemEntryMb: `${itemEntryGapPx(jpLh, mainPx)}px`,
@@ -308,7 +321,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   roles.studyAux = baseToken({
     fontFamily: ZH_FONT_FAMILY,
     fontSize: auxPx,
-    /** 与歌词译文 lyricSecondary 同字重（日语稿 JP_ZH_LINE_WEIGHT=400） */
+    /** 与歌词译文 lyricSecondary 同字重（日语稿 JP_ZH_LINE_WEIGHT） */
     fontWeight: lang === 'jp' ? JP_ZH_LINE_WEIGHT : LYRIC_SECONDARY_WEIGHT,
     lineHeight: zhLyricsLh,
     color: isZhPipeline ? GLOSS_COLOR : BODY_TEXT_COLOR,

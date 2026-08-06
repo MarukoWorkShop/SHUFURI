@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
-const jpRegularPath = path.join(root, 'public/assets/KozMinPro-Light.otf');
+const jpRegularPath = path.join(root, 'public/assets/KozMinPro-Regular.otf');
 const koTtfPath = path.join(root, 'public/assets/HCRBatang.ttf');
 const enTtfPath = path.join(root, 'public/assets/Sansation-Light.ttf');
 const outPath = path.join(root, 'src/utils/vectorPrint/printFontBase64.generated.ts');
@@ -33,5 +33,5 @@ export const PRINT_FONT_BASE64_GENERATED = PRINT_JP_REGULAR_FONT_BASE64_GENERATE
 
 fs.writeFileSync(outPath, content, 'utf8');
 console.log(
-  `Wrote ${outPath} (JP Light ${(jpRegularBase64.length / 1024 / 1024).toFixed(2)} MB)`,
+  `Wrote ${outPath} (JP Regular ${(jpRegularBase64.length / 1024 / 1024).toFixed(2)} MB)`,
 );
