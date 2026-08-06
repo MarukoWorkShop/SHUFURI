@@ -2,6 +2,11 @@ import type { GlossSpec } from '../../services/languageMatrix/glossSpec';
 import type { InterfaceLanguage, LanguageMatrixContext } from '../../services/languageMatrix/types';
 import type { ClassifiedTextLine, OcrDetectedLanguage } from '../../services/ocrTypes';
 import type { PedagogicalLevel } from '../../services/pedagogicalLevel';
+import { splitStreamColumns } from '../splitStreamColumns';
+
+function joinStreamColumns(fields: string[]): string {
+  return fields.map((f) => f.replace(/\|/g, '\\|')).join('|');
+}
 
 /**
  * 两步式口令阶段：
@@ -308,6 +313,50 @@ export function buildConfirmedLyricsBlock(confirmedLyrics: string): string {
 <<<CONFIRMED
 ${stream}
 CONFIRMED>>>`;
+}
+
+/**
+ * 去掉 L 行 col4 译文，只保留原文表面。
+ * Step2 词解必须从 L col3 挖词；保留译文会诱导模型把「学习语释义」当成词头（尤其是中文界面学韩/日歌）。
+ */
+export function stripLyricTranslationColumn(confirmedLyrics: string): string {
+  if (!confirmedLyrics.trim()) return confirmedLyrics;
+  return confirmedLyrics
+    .split(/\r\n|\n|\r/)
+    .map((rawLine) => {
+      const line = rawLine.trimEnd();
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('L|')) return line;
+      const cols = splitStreamColumns(trimmed);
+      if (cols.length < 3) return line;
+      // L|index|surface|translation? → keep only first 3 cols (empty trailing translation)
+      return joinStreamColumns([cols[0]!, cols[1]!, cols[2]!, '']);
+    })
+    .join('\n');
+}
+
+/** Step2：词头必须跟源语脚本，禁止从译文挖中文词 / 拼音。 */
+export function buildStudyHeadwordScriptBlock(activeTarget: SampleLang): string {
+  const rules: Record<SampleLang, string> = {
+    ko: `- Active source language is KOREAN (ko).
+- V col3 headword MUST be Korean Hangul (and/or common Korean particles) taken from L col3 ONLY.
+- G col3 source term MUST be Korean grammar/pattern from L col3.
+- FORBIDDEN: Chinese characters as V headwords; FORBIDDEN: {Hanzi:pinyin} / {Hanzi|pinyin} / {Hanzipinyin} on any V/G field.
+- FORBIDDEN: mining vocabulary from learner translations (L col4) — translations are NOT study headwords.
+- meaning / pedagogical_translation may be Chinese or English per [Learner]; headwords themselves stay Korean.`,
+    jp: `- Active source language is JAPANESE (jp).
+- V col3 headword MUST be Japanese (kanji/kana, optional {base:reading}) from L col3 ONLY.
+- FORBIDDEN: Simplified-Chinese-only headwords; FORBIDDEN: Mandarin pinyin ruby {Hanzi:pinyin}.
+- FORBIDDEN: mining vocabulary from L col4 translations.`,
+    zh: `- Active source language is CHINESE (zh).
+- V col3 may use {Hanzi:pinyin} per [Zh_ruby]; mine headwords from L col3 Chinese lyrics.`,
+    en: `- Active source language is ENGLISH (en).
+- V col3 headword MUST be English from L col3 ONLY.
+- FORBIDDEN: Chinese headwords or pinyin ruby; FORBIDDEN: mining L col4 translations as headwords.`,
+  };
+  return `
+[Study_headword_script — CRITICAL]
+${rules[activeTarget]}`;
 }
 
 export function buildHeaderLyricsSeparationBlock(artist: string, title: string): string {

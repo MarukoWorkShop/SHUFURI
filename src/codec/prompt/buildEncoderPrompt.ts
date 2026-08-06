@@ -19,10 +19,12 @@ import {
   buildZhColumnMapBlock,
   buildZhGrammarLabelBlock,
   buildStudyCardsCitationBlock,
+  buildStudyHeadwordScriptBlock,
   buildPedagogicalExampleBlock,
   buildJpRubyBlock,
   buildZhRubyLyricsBlock,
   fillEncoderMeta,
+  stripLyricTranslationColumn,
   type EncoderPromptOptions,
 } from './encoderCommon';
 import { buildPedagogicalLevelBlock } from './pedagogicalLevel';
@@ -145,7 +147,12 @@ function buildStudyMaterialsPrompt(
       body = buildJpEncoderPrompt(a, t, gloss, bodyOptions);
   }
 
-  body += buildConfirmedLyricsBlock(confirmed);
+  // 非中文源语：Confirmed 块去掉 L col4，避免模型从译文挖中文词头
+  const confirmedForStudy =
+    lang === 'zh' ? confirmed : stripLyricTranslationColumn(confirmed);
+
+  body += buildConfirmedLyricsBlock(confirmedForStudy);
+  body += buildStudyHeadwordScriptBlock(lang);
   body += buildWireSchema(true, iface, lang, gloss);
   body += buildStrictRaw(true);
   body += buildPedagogicalLevelBlock(lang, pedagogicalLevel);

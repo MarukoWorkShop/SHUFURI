@@ -626,3 +626,40 @@ html:has(.app--edit) body,
   white-space: nowrap;
 }
 
+/* ---- 暗色模式：导出页面滚动条/退出按钮莹黄化 + 文字加粗增强可见性 ---- */
+
+/* 滚动条：莹黄滑块 */
+[data-theme='dark'] .export-area .export-pages-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-kinari) 55%, transparent);
+}
+
+[data-theme='dark'] .export-area .export-pages-scroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-kinari) 75%, transparent);
+}
+
+/* 退出按钮：莹黄边框 + 图标 */
+[data-theme='dark'] .preview-back-btn {
+  color: color-mix(in srgb, var(--color-kinari) 80%, #e8e8ec);
+  background: color-mix(in srgb, var(--color-kinari) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-kinari) 25%, transparent);
+}
+
+[data-theme='dark'] .preview-back-btn:hover {
+  color: var(--color-kinari);
+  background: color-mix(in srgb, var(--color-kinari) 18%, transparent);
+  border-color: color-mix(in srgb, var(--color-kinari) 40%, transparent);
+}
+
+/* 工具栏文字：增加字重以提升暗色模式可读性 */
+[data-theme='dark'] .preview-toolbar-actions,
+[data-theme='dark'] .page-count,
+[data-theme='dark'] .export-gallery-hint,
+[data-theme='dark'] .btn-export-save,
+[data-theme='dark'] .btn-export-pdf {
+  font-weight: 500;
+}
+
+[data-theme='dark'] .btn-export-pdf {
+  font-weight: 600;
+}
+

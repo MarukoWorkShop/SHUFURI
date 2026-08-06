@@ -490,29 +490,44 @@ exports.main = async function (event, context) {
   if (isLyricsStep && contentHash && !forceRefresh) {
     const cacheDoc = await queryLyricsCache(contentHash);
     if (cacheDoc) {
-      void incrementCacheHit(contentHash);
+      // 防御：文档上的语种字段与请求不一致时视为 MISS（旧毒数据 / 异常写入）
+      const cachedSrc = cacheDoc.source_lang || '';
+      const cachedIface = cacheDoc.target_lang || '';
+      const langMismatch =
+        (cachedSrc && cachedSrc !== targetLanguage) ||
+        (cachedIface && cachedIface !== interfaceLanguage);
+      if (langMismatch) {
+        console.warn(
+          '[arkProxy][cache] LANG_MISMATCH → MISS',
+          `hash=${contentHash.slice(0, 12)}...`,
+          `doc=${cachedSrc}/${cachedIface}`,
+          `req=${targetLanguage}/${interfaceLanguage}`,
+        );
+      } else {
+        void incrementCacheHit(contentHash);
 
-      // 估算本次命中节省的费用
-      const savedInputCost = (cacheDoc.input_tokens || 0) / 1000 * PRICING_LYRICS.inputPerK;
-      const savedOutputCost = (cacheDoc.output_tokens || 0) / 1000 * PRICING_LYRICS.outputPerK;
-      const savedSearchCost = PRICING_LYRICS.searchCost;
-      const costSaved = Math.round((savedInputCost + savedOutputCost + savedSearchCost) * 1e6) / 1e6;
+        // 估算本次命中节省的费用
+        const savedInputCost = (cacheDoc.input_tokens || 0) / 1000 * PRICING_LYRICS.inputPerK;
+        const savedOutputCost = (cacheDoc.output_tokens || 0) / 1000 * PRICING_LYRICS.outputPerK;
+        const savedSearchCost = PRICING_LYRICS.searchCost;
+        const costSaved = Math.round((savedInputCost + savedOutputCost + savedSearchCost) * 1e6) / 1e6;
 
-      console.log('[arkProxy][cache] HIT', `hash=${contentHash.slice(0, 12)}...`, `saved=¥${costSaved}`);
-      return {
-        ok: true,
-        requestId,
-        action,
-        model: cacheDoc.model_used || MODEL_ID_LYRICS,
-        content: cacheDoc.raw_response,
-        usage: {
-          inputTokens: cacheDoc.input_tokens || 0,
-          outputTokens: cacheDoc.output_tokens || 0,
-          totalTokens: (cacheDoc.input_tokens || 0) + (cacheDoc.output_tokens || 0),
-        },
-        fromCache: true,
-        costSaved,
-      };
+        console.log('[arkProxy][cache] HIT', `hash=${contentHash.slice(0, 12)}...`, `saved=¥${costSaved}`);
+        return {
+          ok: true,
+          requestId,
+          action,
+          model: cacheDoc.model_used || MODEL_ID_LYRICS,
+          content: cacheDoc.raw_response,
+          usage: {
+            inputTokens: cacheDoc.input_tokens || 0,
+            outputTokens: cacheDoc.output_tokens || 0,
+            totalTokens: (cacheDoc.input_tokens || 0) + (cacheDoc.output_tokens || 0),
+          },
+          fromCache: true,
+          costSaved,
+        };
+      }
     }
     console.log('[arkProxy][cache] MISS', `hash=${contentHash.slice(0, 12)}...`);
   }

@@ -16,5 +16,6 @@ ${buildLearnerGlossBlock(gloss, options.matrix)}
 [Lang: ko]
 - H col3 = song title from prompt; H col4 (lang code) MUST be ko
 - L col3: Korean only; NO reading annotations in parentheses
+- V col3 headwords: Korean Hangul from L col3 ONLY — NEVER Chinese, NEVER pinyin ruby
 ${buildVocabGrammarIncludeRule(include, iface)}`;
 }

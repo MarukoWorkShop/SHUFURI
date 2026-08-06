@@ -17,7 +17,7 @@
  */
 import cloudbase from '@cloudbase/js-sdk';
 
-const CLOUDBASE_ENV_ID = 'shufu-life-d8g9j8v5385543c1a';
+const CLOUDBASE_ENV_ID = 'ai-native-d5gtc59uc47601f23';
 const FEEDBACK_FUNCTION_NAME = 'aiFeedback';
 
 const SESSION_KEY = 'shufuri_session_id';

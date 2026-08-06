@@ -11,7 +11,7 @@ import type {
  * CloudBase 环境 ID。
  * 从腾讯云 CloudBase 控制台获取，当前为设计文档记录值。
  */
-const CLOUDBASE_ENV_ID = 'shufu-life-d8g9j8v5385543c1a';
+const CLOUDBASE_ENV_ID = 'ai-native-d5gtc59uc47601f23';
 
 /**
  * 云函数名称：arkProxy

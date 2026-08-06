@@ -2,7 +2,16 @@ import { useCallback, useRef, useState } from 'react';
 import type { PedagogicalLevel } from '../services/appSettings';
 import type { LanguageMatrixContext } from '../services/languageMatrix/types';
 import { buildEncoderPrompt } from '../codec/prompt/buildEncoderPrompt';
-import { detectLyricsLanguage, shouldOverrideActiveTarget } from '../codec/detectLyricsLanguage';
+import {
+  resolveStudySourceLanguage,
+  type DetectedLyricsLanguage,
+} from '../codec/detectLyricsLanguage';
+import {
+  buildStudyLangProbeBase,
+  logStudyLangProbe,
+  sampleVocabHeadwords,
+} from '../codec/studyLangProbe';
+import { isZhPinyinVocabPoison } from '../codec/studyVocabSanity';
 import { cleanDoubaoPaste } from '../utils/cleanDoubaoPaste';
 import { normalizeStreamInput } from '../codec/repairStreamEnvelope';
 import { compileDocument } from '../codec/compileDocument';
@@ -112,26 +121,25 @@ export function useEmbeddedAiGenerate() {
         } as const;
       }
 
-      // ====== 关键：歌词语种自动检测 ======
-      // 用户在「学习目标语言」拨轮上可能停留在 JP（默认），但粘贴进来的是中文 / 韩文
-      // / 英文歌曲。如果直接把 `matrix.activeTarget=jp` 喂给 Encoder prompt，
-      // AI 会被迫输出 `{漢字:かな}` 这种无意义的日语注音，并在中文歌词上伪造日语单词。
-      // 这里按歌词文本字符脚本识别真实来源语种，必要时覆盖 activeTarget，
-      // 让 prompt / 缓存键 / 网关 targetLanguage 都用真实语种。
-      const detectedLang = detectLyricsLanguage(params.confirmedLyrics);
-      const shouldOverride = shouldOverrideActiveTarget(detectedLang, params.matrix.activeTarget);
-      const effectiveMatrix: LanguageMatrixContext = shouldOverride
+      // ====== 源语决议：只检 L col3；仅原文强证据才覆盖拨轮 ======
+      const wheel = params.matrix.activeTarget as DetectedLyricsLanguage;
+      const sourceResolved = resolveStudySourceLanguage(params.confirmedLyrics, wheel);
+      const effectiveMatrix: LanguageMatrixContext = sourceResolved.overrideApplied
         ? {
             ...params.matrix,
-            activeTarget: detectedLang,
-            // 把检测到的语种加入学习目标列表，避免 Allowed_Langs 与 Active 不一致
-            learningTargetLanguages: params.matrix.learningTargetLanguages.includes(detectedLang)
+            activeTarget: sourceResolved.effective,
+            learningTargetLanguages: params.matrix.learningTargetLanguages.includes(
+              sourceResolved.effective,
+            )
               ? params.matrix.learningTargetLanguages
-              : ([...params.matrix.learningTargetLanguages, detectedLang] as typeof params.matrix.learningTargetLanguages),
+              : ([
+                  ...params.matrix.learningTargetLanguages,
+                  sourceResolved.effective,
+                ] as typeof params.matrix.learningTargetLanguages),
           }
         : params.matrix;
 
-      // 计算 6 维结构哈希（非 forceRefresh 场景，为缓存匹配做准备）
+      // 计算内容哈希（非 forceRefresh 场景，为缓存匹配做准备）
       let contentHash: string | undefined;
       if (params.includeVocabAndGrammar !== false) {
         try {
@@ -148,6 +156,18 @@ export function useEmbeddedAiGenerate() {
         }
       }
 
+      // 埋点：对照旧整段检测 vs 新 L-col3 决议。关闭：localStorage shufuri.studyLangProbe=0
+      const studyLangProbeBase = buildStudyLangProbeBase({
+        confirmedLyrics: params.confirmedLyrics,
+        wheel,
+        interfaceLanguage: params.matrix.interfaceLanguage,
+        pedagogicalLevel: params.pedagogicalLevel,
+        overrideApplied: sourceResolved.overrideApplied,
+        effectiveSource: effectiveMatrix.activeTarget,
+        contentHash,
+      });
+      logStudyLangProbe({ ...studyLangProbeBase, phase: 'pre-request' });
+
       const prompt = buildEncoderPrompt(params.artist ?? '', params.title ?? '', {
         matrix: effectiveMatrix,
         pedagogicalLevel: params.pedagogicalLevel,
@@ -157,22 +177,48 @@ export function useEmbeddedAiGenerate() {
         retry: params.retry,
       });
 
-      let resp: AiGatewayResponse;
-      try {
-        resp = await cloudbaseGateway.send(
+      const sendStudyRequest = async (forceRefresh: boolean, promptText: string) =>
+        cloudbaseGateway.send(
           {
             action: 'lyrics.step2',
             requestId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            prompt,
+            prompt: promptText,
             targetLanguage: effectiveMatrix.activeTarget,
             interfaceLanguage: effectiveMatrix.interfaceLanguage,
             contentHash,
             title: params.title,
             artist: params.artist,
-            forceRefresh: params.forceRefresh ?? false,
+            forceRefresh,
           },
           signal,
         );
+
+      let resp: AiGatewayResponse;
+      let poisonRejected = false;
+      try {
+        resp = await sendStudyRequest(params.forceRefresh ?? false, prompt);
+        // 毒结果（缓存或现场生成）：源语非 zh 却挖出中文/拼音词头 → 强制覆盖重生成一次
+        if (
+          resp.ok &&
+          isZhPinyinVocabPoison(resp.content ?? '', effectiveMatrix.activeTarget)
+        ) {
+          poisonRejected = true;
+          console.warn(
+            '[useEmbeddedAiGenerate] rejected wrong-script vocab',
+            `fromCache=${!!resp.fromCache}`,
+            '→ forceRefresh + retry prompt',
+          );
+          const retryPrompt = buildEncoderPrompt(params.artist ?? '', params.title ?? '', {
+            matrix: effectiveMatrix,
+            pedagogicalLevel: params.pedagogicalLevel,
+            includeVocabAndGrammar: params.includeVocabAndGrammar ?? true,
+            confirmedLyrics: params.confirmedLyrics,
+            phase: 'study',
+            retry: true,
+            retryReason: 'hallucination',
+          });
+          resp = await sendStudyRequest(true, retryPrompt);
+        }
       } catch (err) {
         if (signal.aborted) {
           return finishStudyAborted();
@@ -204,6 +250,14 @@ export function useEmbeddedAiGenerate() {
       }
 
       const rawContent = resp.content ?? '';
+
+      logStudyLangProbe({
+        ...studyLangProbeBase,
+        phase: 'post-response',
+        fromCache: !!resp.fromCache && !poisonRejected,
+        vgSample: sampleVocabHeadwords(rawContent),
+        poisonRejected,
+      });
 
       // 缓存命中的结果同样需要 parse / compile
       const cleaned = cleanDoubaoPaste(rawContent);

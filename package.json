@@ -34,8 +34,8 @@
     "cap:run:ios": "npm run build && npx cap run ios",
     "cap:run:ios:live": "npm run cap:sync:live && npx cap run ios",
     "cap:run:android": "npm run build && npx cap run android",
-    "deploy:ark-explain-stream": "npx tcb fn deploy arkExplainStream -e shufu-life-d8g9j8v5385543c1a --force",
-    "deploy:ark-proxy": "npx tcb fn deploy arkProxy -e shufu-life-d8g9j8v5385543c1a --force",
+    "deploy:ark-explain-stream": "npx tcb fn deploy arkExplainStream -e ai-native-d5gtc59uc47601f23 --force",
+    "deploy:ark-proxy": "npx tcb fn deploy arkProxy -e ai-native-d5gtc59uc47601f23 --force",
     "pack:ark-explain-stream": "node scripts/packArkExplainStream.mjs"
   },
   "dependencies": {

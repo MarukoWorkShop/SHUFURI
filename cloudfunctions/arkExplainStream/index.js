@@ -42,7 +42,7 @@ const RATE_MAX_PER_WINDOW = 3;
 
 /** 允许的 CORS 来源（新增域名后在此追加） */
 const ALLOWED_ORIGINS = [
-  'https://shufu-life-d8g9j8v5385543c1a-1435171508.tcloudbaseapp.com',
+  'https://ai-native-d5gtc59uc47601f23-1412422924.tcloudbaseapp.com',
   'http://localhost:5173',
   'http://localhost:4173',
   // ★ 新域名发布后追加：

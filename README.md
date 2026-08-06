@@ -35,32 +35,39 @@ Vite + React（Web）/ iOS WebView 壳（Capacitor 桥接）
 
 ### CloudBase（生产环境）
 
+> **当前生产环境：`ai-native-d5gtc59uc47601f23`**（上海 ap-shanghai）。旧环境 `shufu-life-d8g9j8v5385543c1a` 已弃用。
+
 | 资源 | 说明 |
 |------|------|
-| 静态托管 | `https://shufu-life-d8g9j8v5385543c1a-1435171508.tcloudbaseapp.com/` |
-| 云函数 arkProxy | `explain.selection`（划词/语法讲解）/ `lyrics.step2`（词解与语法生成，已开启 `web_search` 联网搜索）；已接入 `ai_usage` 结构化用量日志（input/output/total/cache/searchCount） |
-| 云函数 arkExplainStream | 流式讲解（主路径，已开启 `stream_options.include_usage` 并记录 `ai_usage` 用量日志）；HTTP 访问服务 `/api/explain-stream`（域名 `*-ap-shanghai.app.tcloudbase.com`） |
+| 静态托管 | `https://ai-native-d5gtc59uc47601f23-1412422924.tcloudbaseapp.com/` |
+| 云函数 arkProxy | `explain.selection`（划词/语法讲解）/ `lyrics.step2`（词解与语法生成，已开启 `web_search` 联网搜索）；已接入 `ai_usage` 结构化用量日志（input/output/total/cache/searchCount）。需配置环境变量 `ARK_API_KEY`（火山引擎方舟 API Key，在控制台函数配置页手动填写） |
+| 云函数 arkExplainStream | 流式讲解（主路径，已开启 `stream_options.include_usage` 并记录 `ai_usage` 用量日志）；兼容 arkProxy 的 HTTP 访问形态 |
 | 云函数 aiFeedback | 事件埋点 + 错误上报 + 用户反馈（`ai_feedback` NoSQL 集合），经 JS-SDK `callFunction` 调用 |
 | 云函数 costReport | Token 成本统计报表 |
-| 环境 ID | `shufu-life-d8g9j8v5385543c1a`（上海 ap-shanghai） |
+| 环境 ID | `ai-native-d5gtc59uc47601f23`（上海 ap-shanghai） |
 
-**最近部署**：2026-08-04（全量重部署，4 个云函数 + 前端）
+**最近部署**：2026-08-05（全量重部署，4 个云函数 `force` 更新 + 前端 `dist` 上传静态托管）
 
 **部署命令**：
 
 ```bash
-# 部署云函数（4 个）
-npx tcb fn deploy arkProxy -e shufu-life-d8g9j8v5385543c1a --force
-npx tcb fn deploy arkExplainStream -e shufu-life-d8g9j8v5385543c1a --force
-npx tcb fn deploy aiFeedback -e shufu-life-d8g9j8v5385543c1a --force
-npx tcb fn deploy costReport -e shufu-life-d8g9j8v5385543c1a --force
+# 部署云函数（4 个，force 覆盖更新）
+npx tcb fn deploy arkProxy -e ai-native-d5gtc59uc47601f23 --force
+npx tcb fn deploy arkExplainStream -e ai-native-d5gtc59uc47601f23 --force
+npx tcb fn deploy aiFeedback -e ai-native-d5gtc59uc47601f23 --force
+npx tcb fn deploy costReport -e ai-native-d5gtc59uc47601f23 --force
 
-# 构建（已排除测试文件，修复 2 处源码 TS 报错）
+# 构建（已排除测试文件）
 npm run build
 
 # 部署前端到静态托管
-npx tcb hosting deploy dist -e shufu-life-d8g9j8v5385543c1a
+npx tcb hosting deploy dist -e ai-native-d5gtc59uc47601f23
 ```
+
+**说明**：
+- `aiFeedback` / `arkProxy` 经 JS-SDK `callFunction` 调用，无需额外 HTTP 服务。
+- 前端初始化需开启 CloudBase **匿名登录**（控制台 → 登录授权 → 匿名登录），否则报 `signInAnonymously() 所需的登录方式尚未启用`。
+- `ARK_API_KEY` 在 arkProxy 函数配置页的环境变量中手动填写（不写入代码仓库）。
 
 **说明**：
 - `aiFeedback` / `arkProxy` 经 JS-SDK `callFunction` 调用，无需额外 HTTP 服务；
