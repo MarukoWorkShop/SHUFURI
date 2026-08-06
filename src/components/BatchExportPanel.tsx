@@ -36,6 +36,13 @@ const SIZE_OPTIONS: SizeOption[] = [
     desc: L('1080×1920 像素，适合手机竖屏查看', '1080×1920 px, for mobile screens'),
     dimLabel: '1080 × 1920 px',
   },
+  {
+    profile: 'socialPoster',
+    label: L('社媒首图', 'Social Post'),
+    activeLabel: L('社媒首图 (3:4)', 'Social Post (3:4)'),
+    desc: L('1080×1440 像素，适合社交平台竖版首图', '1080×1440 px, for social vertical posts'),
+    dimLabel: '1080 × 1440 px',
+  },
 ];
 
 /* ---------- Props ---------- */

@@ -55,6 +55,18 @@ const LAYOUT_OPTIONS: readonly LayoutOption[] = [
       </span>
     ),
   },
+  {
+    profile: 'socialPoster',
+    icon: (
+      <span className="layout-icon-social" aria-hidden="true">
+        <span className="layout-icon-social__lines">
+          <span className="layout-icon-social__line" />
+          <span className="layout-icon-social__line" />
+          <span className="layout-icon-social__line" />
+        </span>
+      </span>
+    ),
+  },
 ];
 
 function layoutIndex(profile: PosterLayoutProfile): number {
@@ -77,6 +89,12 @@ function resolveLayoutLabels(profile: PosterLayoutProfile): {
     return {
       caption: L('1:1 方形', '1:1 Square'),
       ariaLabel: L('1:1 方形', '1:1 Square'),
+    };
+  }
+  if (profile === 'socialPoster') {
+    return {
+      caption: L('社媒首图', 'Social Post'),
+      ariaLabel: L('社媒首图 3:4', 'Social Post 3:4'),
     };
   }
   return {
