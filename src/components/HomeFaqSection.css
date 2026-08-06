@@ -1,0 +1,263 @@
+/* ===== 首页 FAQ 区块 · 视觉令牌全部取自 theme.css，明暗自动反色 ===== */
+
+.home-faq {
+  max-width: 980px;
+  margin: 12px auto 0;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  font-family: var(--font-sans);
+}
+
+/* ---- 右下角 Q&A 胶囊容器（与 STUDY CARDS 右边缘对齐）---- */
+.home-faq__pill-wrapper {
+  max-width: 980px;
+  margin: 16px auto 0; /* 随机歌词与 footer 之间的间距 */
+  display: flex;
+  justify-content: flex-end;
+  padding-left: var(--ui-space-4);
+  padding-right: var(--ui-space-4);
+}
+
+/* 展开态：胶囊 + 折叠按钮同行 */
+.home-faq__pill-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 灰色药丸（浅灰底 + 深灰字） */
+.home-faq__pill {
+  display: inline-flex;
+  align-items: center;
+  background: #f2f2f7;
+  color: #555;
+  border: none;
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: opacity 0.18s ease, background-color 0.18s ease;
+  font-family: var(--font-sans);
+}
+
+.home-faq__pill:hover {
+  opacity: 0.75;
+  background: #eaeaf0;
+}
+
+/* 展开态标签药丸（不可点击，同灰色风格） */
+.home-faq__pill--label {
+  cursor: default;
+}
+
+.home-faq__pill--label:hover {
+  opacity: 1;
+  background: #f2f2f7;
+}
+
+/* 暗色模式：深灰底 + 浅灰字 */
+[data-theme='dark'] .home-faq__pill {
+  background: #2c2c34;
+  color: #aaa;
+}
+
+[data-theme='dark'] .home-faq__pill:hover {
+  background: #38383f;
+}
+
+[data-theme='dark'] .home-faq__pill--label,
+[data-theme='dark'] .home-faq__pill--label:hover {
+  background: #2c2c34;
+}
+
+/* 折叠按钮（同 HowItWorks 样式：透明背景 + 圆形 + hover 反转色） */
+.home-faq__toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.18s ease, background-color 0.18s ease;
+}
+
+.home-faq__toggle:hover {
+  color: #333;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme='dark'] .home-faq__toggle {
+  color: #aaa;
+}
+
+[data-theme='dark'] .home-faq__toggle:hover {
+  color: #f4f4f5;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.home-faq__toggle-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* 视觉隐藏标题：仅 SEO / 屏幕阅读器读取 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 副标题 — 与 HowItWorks 正文一致 */
+.home-faq__sub {
+  margin: 18px 0 20px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  color: var(--color-fg-secondary);
+}
+
+/* accordion 列表 */
+.home-faq__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.home-faq__item {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* 暗色：去阴影 */
+[data-theme='dark'] .home-faq__item {
+  box-shadow: none;
+}
+
+.home-faq__q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-fg);
+  cursor: pointer;
+  list-style: none;
+}
+
+/* 去除原生 marker（跨浏览器） */
+.home-faq__q::-webkit-details-marker {
+  display: none;
+}
+
+.home-faq__chevron {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: var(--color-fg-secondary);
+  transition: transform 0.22s ease;
+}
+
+.home-faq__item[open] .home-faq__chevron {
+  transform: rotate(180deg);
+}
+
+.home-faq__a {
+  margin: 0;
+  padding: 0 18px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  color: var(--color-fg-secondary);
+}
+
+.home-faq__a + .home-faq__a {
+  margin-top: 12px;
+}
+
+.home-faq__a:last-of-type {
+  padding-bottom: 18px;
+}
+
+/* 底部联系行 */
+.home-faq__contact {
+  margin: 20px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  color: var(--color-fg-secondary);
+}
+
+.home-faq__mail {
+  color: var(--color-brand);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.home-faq__mail:hover {
+  text-decoration: underline;
+}
+
+/* ===== 响应式（移动端优先） ===== */
+
+@media (max-width: 767px) {
+  .home-faq__sub {
+    font-size: 12px;
+    margin-bottom: 16px;
+  }
+
+  .home-faq__q {
+    font-size: 13px;
+    padding: 16px;
+  }
+
+  .home-faq__a {
+    font-size: 12px;
+    padding: 0 16px;
+  }
+
+  .home-faq__a:last-of-type {
+    padding-bottom: 16px;
+  }
+
+  .home-faq__contact {
+    font-size: 13px;
+  }
+}
+
+/* ===== 尊重减少动效偏好 ===== */
+@media (prefers-reduced-motion: reduce) {
+  .home-faq__toggle-icon,
+  .home-faq__chevron,
+  .home-faq__toggle,
+  .home-faq__kicker--btn,
+  .home-faq__pill {
+    transition: none;
+  }
+}
