@@ -81,10 +81,32 @@ export const SQUARE_DIM: FuriganaEngineDim = {
   compactZhLineHeightBase: 1.12,
 };
 
+/** 3:4 竖屏 1080×1440（社媒首图）— 参数折中于 square 与 mobile */
+export const SOCIAL_DIM: FuriganaEngineDim = {
+  profile: 'socialPoster',
+  canvasWidth: 1080,
+  canvasHeight: 1440,
+  padH: 140,
+  pagePadTopCont: 84,
+  pageBottomDefault: 120,
+  textBottomClearance: 48,
+  elasticFontBase: 30,
+  elasticFontMin: 26,
+  elasticLhBase: 1.5,
+  titleFontSize: 52,
+  titleLineHeightRatio: 1.2,
+  titleToBodyGap: 34,
+  jpLineHeightBase: 1.5,
+  zhLineHeightBase: 1.34,
+  compactLineHeightBase: 1.26,
+  compactZhLineHeightBase: 1.16,
+};
+
 /** 根据 profile 返回排版参数 */
 export function dimForProfile(profile?: PosterLayoutProfile): FuriganaEngineDim {
   if (profile === 'mobilePoster') return MOBILE_DIM;
   if (profile === 'squarePoster') return SQUARE_DIM;
+  if (profile === 'socialPoster') return SOCIAL_DIM;
   return B5_DIM;
 }
 

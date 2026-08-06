@@ -1,5 +1,5 @@
 /** 排版模式：打印 B5、手机竖屏 9:16、或 1:1 方形 */
-export type PosterLayoutProfile = 'clipPosterPrint' | 'mobilePoster' | 'squarePoster';
+export type PosterLayoutProfile = 'clipPosterPrint' | 'mobilePoster' | 'squarePoster' | 'socialPoster';
 
 /** 海报渲染/分页选项（注音可见性 + 用户密度倍率） */
 export type PosterRenderOptions = {

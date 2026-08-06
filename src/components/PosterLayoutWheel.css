@@ -87,7 +87,8 @@
 
 .paper-wheel__icon .layout-icon-paper,
 .paper-wheel__icon .layout-icon-square,
-.paper-wheel__icon .layout-icon-phone {
+.paper-wheel__icon .layout-icon-phone,
+.paper-wheel__icon .layout-icon-social {
   flex: 0 0 auto;
   flex-shrink: 0;
   box-sizing: border-box;
@@ -106,6 +107,11 @@
 
 .paper-wheel__icon .layout-icon-phone {
   width: 12px;
+  height: 22px;
+}
+
+.paper-wheel__icon .layout-icon-social {
+  width: 16px;
   height: 22px;
 }
 
@@ -228,6 +234,32 @@
 
 .layout-icon-square__line {
   display: block;
+  height: 0;
+  border-top: 0.5px solid currentColor;
+  opacity: 0.38;
+}
+
+.layout-icon-social {
+  display: block;
+  width: 16px;
+  height: 22px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  box-sizing: border-box;
+  padding: 5px 3px;
+}
+
+.layout-icon-social__lines {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  height: 100%;
+}
+
+.layout-icon-social__line {
+  display: block;
+  width: 70%;
   height: 0;
   border-top: 0.5px solid currentColor;
   opacity: 0.38;

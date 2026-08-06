@@ -363,8 +363,39 @@ html:has(.app--export) {
 
 .fv-poster-watermark {
   position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  background: transparent;
   pointer-events: none;
-  z-index: 2;
+  z-index: 3;
+}
+.fv-poster-watermark__brand,
+.fv-poster-watermark__domain {
+  font-family: "Sansation", sans-serif;
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  color: rgba(43, 43, 43, 0.45);
+}
+.fv-poster-watermark__page {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: "Sansation", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: 1px;
+  color: rgba(43, 43, 43, 0.3);
+}
+.fv-poster-watermark__domain {
+  margin-left: auto;
 }
 
 .app--home .app-header {

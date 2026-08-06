@@ -23,7 +23,12 @@ import { getAppSettings } from '../services/appSettings';
 import { useTimedMessage } from '../hooks/useTimedMessage';
 import { L } from '../utils/i18n';
 import AppToast from './AppToast';
-import { formatWatermarkPageLabel, WATERMARK_BRAND } from '../utils/shufuriPoster/posterWatermark';
+import {
+  formatWatermarkPageLabel,
+  WATERMARK_BRAND,
+  WATERMARK_BRAND_PREFIX,
+  WATERMARK_DOMAIN,
+} from '../utils/shufuriPoster/posterWatermark';
 
 /** 最小净化：防脚本注入 */
 export function sanitizeShufuriPosterHtml(html: string): string {
@@ -418,10 +423,13 @@ function ShufuriPosterSinglePage({
             dangerouslySetInnerHTML={{ __html: safeFragment }}
           />
           <div className="fv-poster-watermark" aria-hidden>
-            <div className="fv-poster-watermark__page">
+            <span className="fv-poster-watermark__brand">
+              {`${WATERMARK_BRAND_PREFIX}${WATERMARK_BRAND}`}
+            </span>
+            <span className="fv-poster-watermark__page">
               {formatWatermarkPageLabel(pageIndex + 1)}
-            </div>
-            <div className="fv-poster-watermark__brand">{WATERMARK_BRAND}</div>
+            </span>
+            <span className="fv-poster-watermark__domain">{WATERMARK_DOMAIN}</span>
           </div>
         </div>
       </div>
