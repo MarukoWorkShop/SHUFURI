@@ -1,0 +1,213 @@
+/* —— 编辑页全屏模式 / 极简分栏 / 聚光灯（一期）—— */
+
+.edit-area {
+  --edit-split-left: 50%;
+  --edit-present-font-scale-left: 1.5;
+  --edit-present-font-scale-right: 1.5;
+  --edit-spotlight-focus-scale: 1.5;
+}
+
+/* 全屏态：藏顶栏 */
+.edit-area--presentation .edit-toolbar {
+  display: none !important;
+}
+
+.edit-area--presentation {
+  position: relative;
+}
+
+/* 伪全屏：占满编辑区可视高度 */
+.edit-area--presentation.edit-area--presentation-fs {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 100);
+  width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  background: var(--color-edit-canvas-bg);
+  padding: var(--ui-space-2, 8px);
+  box-sizing: border-box;
+}
+
+.edit-present-exit {
+  position: absolute;
+  top: var(--ui-space-2, 8px);
+  right: var(--ui-space-2, 8px);
+  z-index: var(--z-4, 40);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--ui-fg) 16%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-edit-canvas-bg) 88%, transparent);
+  color: var(--ui-fg-secondary, #64748b);
+  font-size: var(--ui-text-sm, 13px);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  touch-action: manipulation;
+}
+
+.edit-present-exit:hover {
+  color: var(--ui-fg);
+  border-color: color-mix(in srgb, var(--color-kinari, #e8c84a) 45%, transparent);
+}
+
+.edit-toolbar__present-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edit-toolbar__present-btn svg {
+  flex-shrink: 0;
+}
+
+/* —— 极简竖线分栏 —— */
+.edit-split-handle {
+  flex: 0 0 10px;
+  position: relative;
+  width: 10px;
+  align-self: stretch;
+  z-index: 2;
+  touch-action: none;
+  cursor: col-resize;
+  flex-shrink: 0;
+}
+
+.edit-split-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--ui-fg) 14%, transparent);
+  pointer-events: none;
+  transition: background 0.12s ease, width 0.12s ease;
+}
+
+.edit-split-handle:hover::before,
+.edit-split-handle.is-dragging::before {
+  width: 2px;
+  background: color-mix(in srgb, var(--color-kinari, #e8c84a) 70%, transparent);
+}
+
+body.is-resizing-edit-split {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.is-resizing-edit-split * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+@media (min-width: 900px) {
+  .edit-area--desktop-split .edit-area__lyrics-pane {
+    flex: 1 1 var(--edit-split-left);
+    max-width: var(--edit-split-left);
+    min-width: 0;
+  }
+
+  .edit-area--desktop-split .edit-notebook {
+    flex: 1 1 calc(100% - var(--edit-split-left));
+    max-width: calc(100% - var(--edit-split-left));
+    min-width: 0;
+  }
+}
+
+/* —— 分栏字号（仅全屏态；不碰导出）。50:50 → 1.5×，栏越宽越大。
+ * 左栏倍率经 ShufuriPosterEditCanvas contentScale 叠乘到 canvas transform（top-center），
+ * 不再使用 zoom（zoom + top-left 会造成视觉右偏）。
+ */
+.edit-area--presentation .edit-notebook {
+  font-size: calc(1em * var(--edit-present-font-scale-right));
+  transition: font-size 0.12s linear;
+}
+
+.edit-area--presentation .edit-notebook__card-term {
+  font-size: 1.05em;
+}
+
+/* —— 聚光灯：对焦行相对未对焦行 1.5×；歌词相对小屏水平居中 —— */
+.edit-area--presentation .edit-canvas-scroll.is-present-spotlight .ink-fine-tune-root {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.edit-area--presentation .edit-canvas-scroll.is-present-spotlight .fv-body-h {
+  text-align: center;
+}
+
+.edit-area--presentation .edit-canvas-scroll.is-present-spotlight .fv-body-h .lyrics-group {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: top;
+  width: max-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  transition:
+    opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.32s ease,
+    box-shadow 0.32s ease,
+    background-color 0.32s ease,
+    padding 0.32s ease;
+  transform: scale(1);
+  transform-origin: center center;
+  cursor: pointer;
+  border-radius: 6px;
+  padding-block: 2px;
+  margin-block: 2px;
+  margin-inline: auto;
+  overflow: visible;
+  will-change: transform, opacity;
+}
+
+.edit-area--presentation .edit-canvas-scroll.is-present-spotlight .fv-body-h .lyrics-group .jp-line,
+.edit-area--presentation .edit-canvas-scroll.is-present-spotlight .fv-body-h .lyrics-group .ko-line,
+.edit-area--presentation .edit-canvas-scroll.is-present-spotlight .fv-body-h .lyrics-group .zh-line,
+.edit-area--presentation .edit-canvas-scroll.is-present-spotlight .fv-body-h .lyrics-group .cn-line,
+.edit-area--presentation .edit-canvas-scroll.is-present-spotlight .fv-body-h .lyrics-group .gloss-line {
+  text-align: center !important;
+  width: max-content;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+.edit-area--presentation .edit-canvas-scroll.is-present-spotlight .fv-body-h .lyrics-group.is-spotlight-dim {
+  opacity: 0.22;
+  filter: grayscale(0.35);
+  transform: scale(1);
+}
+
+.edit-area--presentation .edit-canvas-scroll.is-present-spotlight .fv-body-h .lyrics-group.is-spotlight-focus {
+  opacity: 1;
+  transform: scale(var(--edit-spotlight-focus-scale, 1.5));
+  filter: none;
+  position: relative;
+  z-index: 1;
+  /* 对称内边距保证句子几何居中；左侧加量用伪元素把黄底伸出句头 */
+  padding: 0.45em 1.05em;
+  background: transparent;
+  box-shadow: none;
+}
+
+.edit-area--presentation .edit-canvas-scroll.is-present-spotlight .fv-body-h .lyrics-group.is-spotlight-focus::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.55em;
+  right: 0;
+  z-index: -1;
+  border-radius: 6px;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--color-kinari, #e8c84a) 10%, transparent);
+  box-shadow: inset 3px 0 0 var(--color-kinari, #e8c84a);
+}

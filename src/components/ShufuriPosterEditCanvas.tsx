@@ -23,6 +23,11 @@ type Props = {
   bodyHtml: string;
   layoutProfile: PosterLayoutProfile;
   displayScale: number;
+  /**
+   * 额外内容倍率（全屏分栏字号）。叠乘到 canvas transform；
+   * ≠1 时改为 top-center 原点，避免 zoom/左原点造成视觉右偏。
+   */
+  contentScale?: number;
   titleMarkupHtml?: string;
   /** 大模型声明或解析得到的管线语言 */
   lang?: LangCode;
@@ -41,6 +46,7 @@ export default function ShufuriPosterEditCanvas({
   bodyHtml,
   layoutProfile,
   displayScale,
+  contentScale = 1,
   titleMarkupHtml,
   lang,
   language = 'jp',
@@ -76,6 +82,8 @@ export default function ShufuriPosterEditCanvas({
 
   const { width: w, height: h } = getShufuriPosterCanvasDimensions(layoutProfile);
   const targetW = w * displayScale;
+  const contentScaleSafe = Number.isFinite(contentScale) && contentScale > 0 ? contentScale : 1;
+  const presentScaled = Math.abs(contentScaleSafe - 1) > 0.001;
   const frameRef = useRef<HTMLDivElement>(null);
   const scaleWrapperRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -83,6 +91,7 @@ export default function ShufuriPosterEditCanvas({
   const allowHeightShrinkRef = useRef(true);
   const [renderScale, setRenderScale] = useState(displayScale);
   const [scaledH, setScaledH] = useState<number | undefined>();
+  const effectiveScale = renderScale * contentScaleSafe;
 
   const contentKey = `${safeBody}\0${title}\0${artist ?? ''}\0${safeTitleMarkup ?? ''}\0${showRuby}\0${layoutProfile}`;
 
@@ -114,22 +123,32 @@ export default function ShufuriPosterEditCanvas({
   useLayoutEffect(() => {
     const frame = frameRef.current;
     if (!frame) return;
+    /* 全屏放大时 frame 仍按适应宽度，多出的倍率由 center 缩放对称裁切，避免右偏 */
     frame.style.setProperty('--fv-edit-frame-w', `${targetW}px`);
     if (scaledH != null) {
       frame.style.setProperty('--fv-edit-frame-h', `${scaledH}px`);
       frame.style.setProperty('--fv-edit-frame-min-h', `${scaledH}px`);
     } else {
       frame.style.removeProperty('--fv-edit-frame-h');
-      frame.style.setProperty('--fv-edit-frame-min-h', `${h * renderScale}px`);
+      frame.style.setProperty('--fv-edit-frame-min-h', `${h * effectiveScale}px`);
     }
-  }, [targetW, scaledH, h, renderScale]);
+  }, [targetW, scaledH, h, effectiveScale]);
 
   useLayoutEffect(() => {
     const wrapper = scaleWrapperRef.current;
     if (!wrapper) return;
     wrapper.style.setProperty('--fv-edit-canvas-w', `${w}px`);
-    wrapper.style.setProperty('--fv-edit-render-scale', String(renderScale));
-  }, [w, renderScale]);
+    wrapper.style.setProperty('--fv-edit-render-scale', String(effectiveScale));
+    if (presentScaled) {
+      wrapper.style.transformOrigin = 'top center';
+      wrapper.style.left = '50%';
+      wrapper.style.marginLeft = `${-w / 2}px`;
+    } else {
+      wrapper.style.transformOrigin = 'top left';
+      wrapper.style.left = '0';
+      wrapper.style.marginLeft = '0';
+    }
+  }, [w, effectiveScale, presentScaled]);
 
   useLayoutEffect(() => {
     const el = rootRef.current;
@@ -149,7 +168,7 @@ export default function ShufuriPosterEditCanvas({
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const natural = Math.max(el.scrollHeight, el.offsetHeight);
-        const next = Math.ceil(natural * renderScale + 8);
+        const next = Math.ceil(natural * effectiveScale + 8);
         setScaledH((prev) => {
           if (prev == null) {
             allowHeightShrinkRef.current = false;
@@ -172,7 +191,7 @@ export default function ShufuriPosterEditCanvas({
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [renderScale, contentKey]);
+  }, [effectiveScale, contentKey]);
 
   return (
     <div ref={frameRef} className="fv-poster-preview-frame fv-edit-canvas-frame">

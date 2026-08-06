@@ -5,6 +5,7 @@ import ShufuriPosterEditCanvas from '../ShufuriPosterEditCanvas';
 import ExplainMicroscopePanel from '../ExplainMicroscopePanel';
 import EditNotebookPane from '../EditNotebookPane';
 import EditItemOverlay from '../EditItemOverlay';
+import MaximizeIcon from '../icons/MaximizeIcon';
 import {
   usePosterDocumentContext,
   usePosterInkContext,
@@ -12,6 +13,7 @@ import {
 } from '../../context/PosterWorkspaceContext';
 import { useEditCanvasScrollPerfProbe } from '../../hooks/useEditCanvasScrollPerfProbe';
 import { useEditCanvasScrollInteractionLock } from '../../hooks/useEditCanvasScrollInteractionLock';
+import { presentFontScaleForPane, useEditPresentation } from '../../hooks/useEditPresentation';
 import { useExplainSession } from '../../hooks/useExplainSession';
 import { useAppToast } from '../../context/AppToastContext';
 import { EDIT_DESKTOP_SPLIT_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
@@ -91,6 +93,11 @@ export default function EditScreen() {
   const ink = usePosterInkContext();
   const showToast = useAppToast();
   const isDesktopSplit = useMediaQuery(EDIT_DESKTOP_SPLIT_QUERY);
+  const present = useEditPresentation();
+  const editAreaRef = useRef<HTMLDivElement>(null);
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const explainPausedForPresentRef = useRef(false);
+  const splitDraggingRef = useRef(false);
   const notebookScrollRef = useRef<HTMLDivElement>(null);
   const appendExplainNoteAndScroll = useCallback(
     (payload: {
@@ -387,8 +394,8 @@ export default function EditScreen() {
     editingStudy,
   ]);
 
-  /** 划词开启时禁用铅笔点选；铅笔模式与侧栏开合解耦 */
-  const inkEditArmed = ink.inkEditMode && !explain.explainMode;
+  /** 划词开启或授课态时禁用铅笔点选；铅笔模式与侧栏开合解耦 */
+  const inkEditArmed = ink.inkEditMode && !explain.explainMode && !present.presentationOn;
   useEditCanvasScrollPerfProbe(editCanvasRef);
   const closeInkOnScrollStart = useCallback(() => {
     if (ink.inkEditTarget) ink.closeInkPopover();
@@ -402,6 +409,10 @@ export default function EditScreen() {
   }, [ink]);
 
   const enableExplainFromNotebook = useCallback(() => {
+    if (present.presentationOn) {
+      showToast(L('请先退出全屏再划词', 'Exit fullscreen before selection explain.'));
+      return;
+    }
     if (explain.explainMode) {
       showToast(L('划词已开启：在左侧选中词语', 'Selection mode on: select text on the left.'));
       return;
@@ -411,7 +422,7 @@ export default function EditScreen() {
     explain.arm();
     collapseToolbox();
     showToast(L('划词已开启：选中后先出本地释义，需要时再点 AI讲解', 'Selection mode on: shows local definition first, tap "AI Explain" for more.'));
-  }, [collapseToolbox, explain, ink, showToast]);
+  }, [collapseToolbox, explain, ink, present.presentationOn, showToast]);
 
   const toggleInkToolbox = useCallback(() => {
     if (ink.inkToolboxOpen) {
@@ -450,6 +461,73 @@ export default function EditScreen() {
     showToast(L('划词已开启：选中后先出本地释义，需要时再点 AI讲解', 'Selection mode on: shows local definition first, tap "AI Explain" for more.'));
   }, [collapseToolbox, explain, ink, showToast]);
 
+  const handleEnterPresentation = useCallback(() => {
+    if (explain.explainMode) {
+      explain.disarm();
+      explainPausedForPresentRef.current = true;
+    } else {
+      explainPausedForPresentRef.current = false;
+    }
+    ink.closeInkPopover();
+    ink.setInkEditMode(false);
+    ink.setInkToolboxOpen(false);
+    present.enter();
+    const el = editAreaRef.current;
+    if (el && typeof el.requestFullscreen === 'function') {
+      void el.requestFullscreen().catch(() => {
+        /* CSS 伪全屏兜底 */
+      });
+    }
+  }, [explain, ink, present]);
+
+  const handleExitPresentation = useCallback(() => {
+    present.exit();
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {});
+    }
+    if (explainPausedForPresentRef.current) {
+      explainPausedForPresentRef.current = false;
+      explain.arm();
+    }
+  }, [explain, present]);
+
+  const handleSplitPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isDesktopSplit) return;
+      e.preventDefault();
+      const handle = e.currentTarget;
+      handle.setPointerCapture(e.pointerId);
+      splitDraggingRef.current = true;
+      handle.classList.add('is-dragging');
+      document.body.classList.add('is-resizing-edit-split');
+
+      const onMove = (ev: PointerEvent) => {
+        const workspace = workspaceRef.current;
+        if (!workspace) return;
+        const rect = workspace.getBoundingClientRect();
+        if (rect.width < 1) return;
+        present.setRatio((ev.clientX - rect.left) / rect.width);
+      };
+      const onUp = (ev: PointerEvent) => {
+        splitDraggingRef.current = false;
+        handle.classList.remove('is-dragging');
+        document.body.classList.remove('is-resizing-edit-split');
+        try {
+          handle.releasePointerCapture(ev.pointerId);
+        } catch {
+          /* already released */
+        }
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', onUp);
+        handle.removeEventListener('pointercancel', onUp);
+      };
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp);
+      handle.addEventListener('pointercancel', onUp);
+    },
+    [isDesktopSplit, present],
+  );
+
   const handleRubyChangeAndCollapse = useCallback(
     (show: boolean) => {
       handleShowRubyChange(show);
@@ -462,6 +540,7 @@ export default function EditScreen() {
     'edit-canvas-scroll',
     inkEditArmed ? 'is-ink-edit-armed' : '',
     explain.explainMode ? 'is-explain-mode' : '',
+    present.presentationOn ? 'is-present-spotlight' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -478,10 +557,123 @@ export default function EditScreen() {
     [explain.explainMode, lyricsPaneBodyHtml],
   );
 
+  /** 授课态：点击 lyrics-group 聚光灯 */
+  useEffect(() => {
+    if (!present.presentationOn) return;
+    const root = editCanvasRef.current;
+    if (!root) return;
+
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const group = target.closest('.lyrics-group') as HTMLElement | null;
+      if (!group || !root.contains(group)) {
+        if (target.closest('.fv-body-h')) {
+          present.clearSpotlight();
+        }
+        return;
+      }
+      const body = root.querySelector('.fv-body-h');
+      const groups = body ? Array.from(body.querySelectorAll('.lyrics-group')) : [];
+      const idx = groups.indexOf(group);
+      const id = group.getAttribute('data-ink-g') ?? (idx >= 0 ? String(idx) : null);
+      if (id == null) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (present.spotlightGroupId === id) {
+        present.clearSpotlight();
+        return;
+      }
+      present.setSpotlight(id);
+      group.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    };
+
+    root.addEventListener('click', onClick, true);
+    return () => root.removeEventListener('click', onClick, true);
+  }, [present.presentationOn, present.spotlightGroupId, present, editCanvasRef]);
+
+  /** 同步聚光灯 class（HTML 重渲后重贴） */
+  useEffect(() => {
+    const root = editCanvasRef.current;
+    if (!root) return;
+    const body = root.querySelector('.fv-body-h');
+    if (!body) return;
+    const groups = body.querySelectorAll('.lyrics-group');
+    if (!present.presentationOn || present.spotlightGroupId == null) {
+      groups.forEach((g) => {
+        g.classList.remove('is-spotlight-focus', 'is-spotlight-dim');
+      });
+      return;
+    }
+    groups.forEach((g, idx) => {
+      const id = g.getAttribute('data-ink-g') ?? String(idx);
+      if (id === present.spotlightGroupId) {
+        g.classList.add('is-spotlight-focus');
+        g.classList.remove('is-spotlight-dim');
+      } else {
+        g.classList.add('is-spotlight-dim');
+        g.classList.remove('is-spotlight-focus');
+      }
+    });
+  }, [present.presentationOn, present.spotlightGroupId, brushBodyHtml, editCanvasRef]);
+
+  /** Esc：清聚光灯 / 退出全屏；↑↓：上一句 / 下一句对焦（滚轮只滚动，不换句） */
+  useEffect(() => {
+    if (!present.presentationOn) return;
+
+    const resolveGroups = () => {
+      const root = editCanvasRef.current;
+      const body = root?.querySelector('.fv-body-h');
+      if (!body) return [] as HTMLElement[];
+      return Array.from(body.querySelectorAll('.lyrics-group')) as HTMLElement[];
+    };
+
+    const groupIdAt = (groups: HTMLElement[], idx: number) =>
+      groups[idx]?.getAttribute('data-ink-g') ?? String(idx);
+
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.closest?.(
+        'input, textarea, select, [contenteditable="true"]',
+      );
+      if (tag) return;
+
+      if (e.key === 'Escape') {
+        if (present.spotlightGroupId) return; /* hook 已清聚光灯 */
+        e.preventDefault();
+        handleExitPresentation();
+        return;
+      }
+
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      const groups = resolveGroups();
+      if (groups.length === 0) return;
+      e.preventDefault();
+
+      let nextIdx: number;
+      if (present.spotlightGroupId == null) {
+        nextIdx = e.key === 'ArrowDown' ? 0 : groups.length - 1;
+      } else {
+        const cur = groups.findIndex((_, i) => groupIdAt(groups, i) === present.spotlightGroupId);
+        const from = cur >= 0 ? cur : 0;
+        nextIdx =
+          e.key === 'ArrowDown'
+            ? Math.min(groups.length - 1, from + 1)
+            : Math.max(0, from - 1);
+      }
+
+      const id = groupIdAt(groups, nextIdx);
+      present.setSpotlight(id);
+      groups[nextIdx]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    };
+
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [present.presentationOn, present.spotlightGroupId, present, handleExitPresentation, editCanvasRef]);
+
   // 讲解模式：用 Highlighter Brush（笔刷涂抹）彻底替代原生划词。
   // 笔刷计算出的选区文本 + 上下文原样喂给 analyzeSelection，不改 AI 管线。
   useEffect(() => {
-    if (!explain.explainMode) return;
+    if (!explain.explainMode || present.presentationOn) return;
     const root = editCanvasRef.current;
     const body = root?.querySelector<HTMLElement>('.fv-body-h') ?? null;
     if (!root || !body) return;
@@ -507,18 +699,46 @@ export default function EditScreen() {
   }, [
     editCanvasRef,
     explain.explainMode,
+    present.presentationOn,
     brushBodyHtml,
     explain.analyzeSelection,
     showToast,
     lang,
   ]);
 
+  const splitLeftPercent = `${Math.round(present.splitRatio * 1000) / 10}%`;
+  const leftFontScale = presentFontScaleForPane(present.splitRatio);
+  const rightFontScale = presentFontScaleForPane(1 - present.splitRatio);
+  const editAreaClass = [
+    'edit-area',
+    explain.panelOpen ? 'edit-area--explain' : '',
+    isDesktopSplit ? 'edit-area--desktop-split' : '',
+    present.presentationOn ? 'edit-area--presentation edit-area--presentation-fs' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div
-      className={`edit-area${explain.panelOpen ? ' edit-area--explain' : ''}${
-        isDesktopSplit ? ' edit-area--desktop-split' : ''
-      }`}
+      ref={editAreaRef}
+      className={editAreaClass}
+      style={
+        {
+          ['--edit-split-left' as string]: splitLeftPercent,
+          ['--edit-present-font-scale-left' as string]: String(leftFontScale),
+          ['--edit-present-font-scale-right' as string]: String(rightFontScale),
+        } as React.CSSProperties
+      }
     >
+      {present.presentationOn ? (
+        <button
+          type="button"
+          className="edit-present-exit"
+          onClick={handleExitPresentation}
+        >
+          {L('退出全屏', 'Exit fullscreen')}
+        </button>
+      ) : null}
       <div className="edit-toolbar">
         <button type="button" className="btn-secondary" onClick={handleReset}>
           ← {L('重新输入', 'Re-enter')}
@@ -527,6 +747,17 @@ export default function EditScreen() {
           {explain.explainMode && (
             <span className="preview-explain-hint">{L('划词解释中', 'Explaining Selection…')}</span>
           )}
+          <button
+            type="button"
+            className="btn-export btn-export-save edit-toolbar__present-btn"
+            onClick={handleEnterPresentation}
+            disabled={!bodyHtml.trim()}
+            title={L('全屏', 'Fullscreen')}
+            aria-label={L('全屏', 'Fullscreen')}
+          >
+            <MaximizeIcon size={16} />
+            {L('全屏', 'Fullscreen')}
+          </button>
           <button
             type="button"
             className="btn-export btn-export-save"
@@ -574,21 +805,23 @@ export default function EditScreen() {
           </div>
         </div>
       ) : (
-      <div className="edit-area__workspace">
+      <div className="edit-area__workspace" ref={workspaceRef}>
         <div className="edit-area__lyrics-pane">
-          <InkToolbox
-            open={ink.inkToolboxOpen}
-            canUndo={ink.canUndoInkEdit}
-            inkEditActive={ink.inkEditMode}
-            showRuby={showRubyAnnotations}
-            rubySupported={rubyToggleSupported}
-            explainActive={explain.explainMode}
-            onToggle={toggleInkToolbox}
-            onUndo={ink.handleInkUndo}
-            onShowRubyChange={handleRubyChangeAndCollapse}
-            onToggleInkEdit={handleToggleInkEdit}
-            onToggleExplain={handleToggleExplain}
-          />
+          {!present.presentationOn ? (
+            <InkToolbox
+              open={ink.inkToolboxOpen}
+              canUndo={ink.canUndoInkEdit}
+              inkEditActive={ink.inkEditMode}
+              showRuby={showRubyAnnotations}
+              rubySupported={rubyToggleSupported}
+              explainActive={explain.explainMode}
+              onToggle={toggleInkToolbox}
+              onUndo={ink.handleInkUndo}
+              onShowRubyChange={handleRubyChangeAndCollapse}
+              onToggleInkEdit={handleToggleInkEdit}
+              onToggleExplain={handleToggleExplain}
+            />
+          ) : null}
           <div ref={editCanvasRef} className={scrollClass}>
             <InkFineTuneEditor
               containerRef={editCanvasRef}
@@ -603,7 +836,7 @@ export default function EditScreen() {
               draftArtist={ink.inkDraftArtist}
               draftJp={ink.inkDraftJp}
               interaction="click"
-              interactionEnabled={inkEditArmed}
+              interactionEnabled={inkEditArmed && !present.presentationOn}
               onOpenTarget={ink.handleInkOpenTarget}
               onClose={ink.closeInkPopover}
               onKanjiChange={ink.setInkDraftKanji}
@@ -622,6 +855,7 @@ export default function EditScreen() {
                 bodyHtml={brushBodyHtml}
                 layoutProfile="mobilePoster"
                 displayScale={editScale}
+                contentScale={present.presentationOn ? leftFontScale : 1}
                 titleMarkupHtml={titleMarkupHtml}
                 lang={lang}
                 language={lyricsLanguage}
@@ -633,29 +867,38 @@ export default function EditScreen() {
         </div>
 
         {isDesktopSplit ? (
-          <EditNotebookPane
-            bodyHtml={bodyHtml}
-            explainMode={explain.explainMode}
-            aiOpen={explain.panelOpen}
-            onEnableExplain={enableExplainFromNotebook}
-            onOpenExplainNote={openEditForNoteId}
-            onOpenVocab={openEditForVocabId}
-            onOpenGrammar={openEditForGrammarId}
-            onDeleteExplainNote={(noteId) => {
-              removeExplainNote(noteId);
-              if (editingNoteId === noteId) setEditingNoteId(null);
-            }}
-            onDeleteStudy={(itemId) => {
-              removeStudyItem(itemId);
-              if (editingStudy?.id === itemId) setEditingStudy(null);
-            }}
-            scrollRef={notebookScrollRef}
-            microscope={
-              explain.panelOpen ? (
-                <ExplainMicroscopePanel session={explain} variant="embedded" />
-              ) : null
-            }
-          />
+          <>
+            <div
+              className="edit-split-handle"
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={L('调整分栏', 'Resize panels')}
+              onPointerDown={handleSplitPointerDown}
+            />
+            <EditNotebookPane
+              bodyHtml={bodyHtml}
+              explainMode={explain.explainMode}
+              aiOpen={explain.panelOpen && !present.presentationOn}
+              onEnableExplain={enableExplainFromNotebook}
+              onOpenExplainNote={openEditForNoteId}
+              onOpenVocab={openEditForVocabId}
+              onOpenGrammar={openEditForGrammarId}
+              onDeleteExplainNote={(noteId) => {
+                removeExplainNote(noteId);
+                if (editingNoteId === noteId) setEditingNoteId(null);
+              }}
+              onDeleteStudy={(itemId) => {
+                removeStudyItem(itemId);
+                if (editingStudy?.id === itemId) setEditingStudy(null);
+              }}
+              scrollRef={notebookScrollRef}
+              microscope={
+                explain.panelOpen && !present.presentationOn ? (
+                  <ExplainMicroscopePanel session={explain} variant="embedded" />
+                ) : null
+              }
+            />
+          </>
         ) : (
           <ExplainMicroscopePanel session={explain} />
         )}
