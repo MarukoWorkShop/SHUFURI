@@ -119,8 +119,8 @@ async function checkUserQuota(uid, actionType) {
         actionType,
         count: 1,
         limit,
-        createdAt: cbApp.serverDate(),
-        updatedAt: cbApp.serverDate(),
+        createdAt: db.serverDate(),
+        updatedAt: db.serverDate(),
       });
       return { allowed: true, remaining: limit - 1, dailyLimit: limit };
     }
@@ -134,7 +134,7 @@ async function checkUserQuota(uid, actionType) {
 
     await coll.doc(docId).update({
       count: currentCount + 1,
-      updatedAt: cbApp.serverDate(),
+      updatedAt: db.serverDate(),
     });
 
     return { allowed: true, remaining: limit - currentCount - 1, dailyLimit: limit };
@@ -161,7 +161,7 @@ async function recordCall({ uid, clientIp, action, model, inputTokens, outputTok
       uid: uid || 'unknown',
       ip: clientIp || 'unknown',
       date: todayStr(),
-      ts: cbApp.serverDate(),
+      ts: db.serverDate(),
       action,
       model: model || 'unknown',
       inputTokens: inputTokens || 0,

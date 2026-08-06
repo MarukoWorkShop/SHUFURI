@@ -16,7 +16,7 @@ import { cleanDoubaoPaste } from '../utils/cleanDoubaoPaste';
 import { normalizeStreamInput } from '../codec/repairStreamEnvelope';
 import { compileDocument } from '../codec/compileDocument';
 import type { ParsedStreamLyrics } from '../codec/types';
-import { cloudbaseGateway } from '../services/ai/cloudbaseGateway';
+import { cloudbaseGateway, formatCloudFunctionError } from '../services/ai/cloudbaseGateway';
 import type { AiGatewayResponse, ArkProxyUsage } from '../services/ai/types';
 import { useAiLimit } from '../components/AiLimitContext';
 
@@ -265,7 +265,7 @@ export function useEmbeddedAiGenerate() {
       function finishStudyNetworkError(err: unknown): GenerateStudyResult {
         setStatus('network_error');
         setProgressMessage('');
-        const message = err instanceof Error ? err.message : '网络错误，请稍后重试';
+        const message = formatCloudFunctionError(err).message;
         return {
           status: 'error',
           code: 'api_error',

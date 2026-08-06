@@ -21,9 +21,9 @@ const CLOUDBASE_FUNCTION_NAME = 'arkProxy';
 
 /**
  * 请求超时时间（毫秒）。
- * Pro 模型偶发较慢；需配合云函数超时 ≥ 60s。
+ * Pro + 词解生成偶发较慢；需配合云函数超时 ≥ 180s。
  */
-const REQUEST_TIMEOUT_MS = 90_000;
+const REQUEST_TIMEOUT_MS = 190_000;
 
 let app: cloudbase.app.App | null = null;
 let auth: cloudbase.auth.App | null = null;
@@ -60,11 +60,36 @@ export async function getCloudbaseUserId(): Promise<string | undefined> {
   return undefined;
 }
 
+/** 把 CloudBase / 网关抛出的非 Error 对象转成可读 Error（避免 UI 只显示「网络错误」） */
+export function formatCloudFunctionError(err: unknown): Error {
+  if (err instanceof Error) return err;
+  if (err && typeof err === 'object') {
+    const e = err as { message?: unknown; code?: unknown; msg?: unknown };
+    const code = typeof e.code === 'string' || typeof e.code === 'number' ? String(e.code) : '';
+    const msg =
+      (typeof e.message === 'string' && e.message) ||
+      (typeof e.msg === 'string' && e.msg) ||
+      '';
+    if (code || msg) {
+      const text = [code, msg].filter(Boolean).join(': ');
+      // 云函数超时在 SCF 侧常见为 -1 / timeout / Task timed out
+      if (/timeout|timed?\s*out|-504|504/i.test(text)) {
+        return new Error('云函数超时，词解生成时间较长，请稍后重试');
+      }
+      return new Error(text);
+    }
+  }
+  if (typeof err === 'string' && err.trim()) return new Error(err);
+  return new Error('网络错误，请稍后重试');
+}
+
 async function callCloudFunction(
   name: string,
   data: Record<string, unknown>,
   signal?: AbortSignal,
 ): Promise<unknown> {
+  // 调用前确保匿名登录；否则 callFunction 常以非 Error 对象失败
+  await ensureAuth();
   if (!app) {
     app = cloudbase.init({ env: CLOUDBASE_ENV_ID });
   }
@@ -107,7 +132,7 @@ async function callCloudFunction(
         if (settled) return;
         settled = true;
         clearTimeout(timer);
-        reject(err);
+        reject(formatCloudFunctionError(err));
       });
   });
 }
