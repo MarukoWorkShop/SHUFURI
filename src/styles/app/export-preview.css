@@ -262,25 +262,25 @@ html:has(.app--edit) body,
   background: var(--color-edit-canvas-bg);
 }
 
-/*
- * 浏览态（未点右侧三角展开文具盒）：正文不可点选编辑，利于日文长文滑动。
+/* 浏览态（未点右侧三角展开文具盒）：正文不可点选编辑，利于日文长文滑动。
  * 展开文具盒后加 .is-ink-edit-armed 才恢复命中；划词模式 .is-explain-mode 也可命中选区。
+ * 全屏聚光灯 .is-present-spotlight 也需命中歌词组。
  * 划词笔记 / 重点词汇 / 重点语法始终可点（删除 / 打开编辑），避免浏览态 pointer-events:none 挡掉交互。
  */
-.edit-canvas-scroll:not(.is-ink-edit-armed):not(.is-explain-mode) .ink-fine-tune-root {
+.edit-canvas-scroll:not(.is-ink-edit-armed):not(.is-explain-mode):not(.is-present-spotlight) .ink-fine-tune-root {
   pointer-events: none;
 }
 
-.edit-canvas-scroll:not(.is-ink-edit-armed):not(.is-explain-mode)
+.edit-canvas-scroll:not(.is-ink-edit-armed):not(.is-explain-mode):not(.is-present-spotlight)
   .ink-fine-tune-root
   .shufuri-explain-note,
-.edit-canvas-scroll:not(.is-ink-edit-armed):not(.is-explain-mode)
+.edit-canvas-scroll:not(.is-ink-edit-armed):not(.is-explain-mode):not(.is-present-spotlight)
   .ink-fine-tune-root
   .shufuri-explain-note *,
-.edit-canvas-scroll:not(.is-ink-edit-armed):not(.is-explain-mode)
+.edit-canvas-scroll:not(.is-ink-edit-armed):not(.is-explain-mode):not(.is-present-spotlight)
   .ink-fine-tune-root
   .shufuri-study-item,
-.edit-canvas-scroll:not(.is-ink-edit-armed):not(.is-explain-mode)
+.edit-canvas-scroll:not(.is-ink-edit-armed):not(.is-explain-mode):not(.is-present-spotlight)
   .ink-fine-tune-root
   .shufuri-study-item * {
   pointer-events: auto;
@@ -475,13 +475,15 @@ html:has(.app--edit) body,
   }
 
   .edit-area--desktop-split .edit-area__lyrics-pane {
-    flex: 1 1 50%;
-    max-width: 50%;
+    flex: 1 1 var(--edit-split-left, 50%);
+    max-width: var(--edit-split-left, 50%);
+    min-width: 0;
   }
 
   .edit-area--desktop-split .edit-notebook {
-    flex: 1 1 50%;
-    max-width: 50%;
+    flex: 1 1 calc(100% - var(--edit-split-left, 50%));
+    max-width: calc(100% - var(--edit-split-left, 50%));
+    min-width: 0;
     align-self: stretch;
   }
 
