@@ -43,7 +43,7 @@
 - **核心工具层（永久免费）**：口令生成 → 外部 AI → 粘贴排版 → 导出打印。没有 AI API 成本，没有服务器算力成本
 - **AI 学习增强层（当前内测反馈墙）**：划词 AI 讲解（FEAT-05）+ 内嵌语法/词解生成（FEAT-06）。每日免费额度（划词 20 次 + 词解 5 次），额度耗尽后弹出反馈墙，提交反馈赠送额外划词额度。无支付、无订阅、无账号体系
 - **歌词准确性由用户和外部 AI 负责**——SHUFURI 不对歌词内容准确性背书
-- **为什么这样分层**：歌词生成是最高频、最重 API 成本的环节，交给免费的外部 AI 完成；SHUFURI 的 AI 成本集中在低频的"讲解/语法补充"上，配合 6 维结构哈希缓存（相同歌词复用结果）+ 反馈墙调研机制，内测期成本可控且收集用户偏好数据为未来定价提供依据
+- **为什么这样分层**：歌词生成是最高频、最重 API 成本的环节，交给免费的外部 AI 完成；SHUFURI 的 AI 成本集中在低频的「讲解/语法补充」上，以**无状态云函数网关**代调大模型（结果只回传当前用户，**不做跨用户内容缓存/分发**），并用个人每日配额 + 反馈墙控制成本与收集偏好数据
 
 ### 1.3 产品类型
 
@@ -86,7 +86,7 @@ SHUFURI 采用两层定价架构，分三阶段演进：
 | 层 | 包含功能 | 当前定价 | 成本结构 |
 |----|---------|------|---------|
 | **核心工具层** | 口令生成、粘贴排版、墨微调、分页、导出（PDF/PNG/HTML）、歌词本、学习卡、Anki 导出 | **永久免费** | 零 API 成本（歌词由外部 AI 生成，排版导出纯客户端计算） |
-| **AI 学习增强层** | 划词 AI 讲解（FEAT-05）、内嵌语法/词解生成（FEAT-06） | **当前：内测反馈墙（无支付）** → 未来：freemium | 火山引擎豆包 API 成本，由 6 维结构哈希缓存（FEAT-16）大幅降低 |
+| **AI 学习增强层** | 划词 AI 讲解（FEAT-05）、内嵌语法/词解生成（FEAT-06） | **当前：内测反馈墙（无支付）** → 未来：freemium | 火山引擎豆包 API 成本，由个人每日配额约束（**无**跨用户词解内容缓存） |
 
 ---
 
@@ -114,9 +114,12 @@ SHUFURI 采用两层定价架构，分三阶段演进：
 - 每 IP 每 3 秒最多 3 次请求
 - prompt 长度上限 8000 / 16000 字符
 - 前端消费 `RATE_LIMITED` 错误码
+- 用量元数据可记入 `ai_usage`（token/action/uid，**不含**歌词正文或生成全文）
 
-**缓存命中退还：**
-- `refundAiUsage(action)` — 歌词语法缓存命中时撤销前端计数，减到 0 为止不负数，避免白扣额度
+**隐私与内容分发（MVP 硬约束）：**
+- 用户输入的歌词与 AI 生成的学习材料仅在用户设备保存（用户主动「保存到我的歌词库」或导出时）
+- 云端 AI 网关（`arkProxy`）为无状态透传：请求 → 官方 API Key 调大模型 → 结果只回传当前请求方
+- **不**把生成内容写入可供其他用户读取的数据库，**不**提供基于内容哈希的跨用户复用（FEAT-16 已退役）
 
 **埋点漏斗（AiLimitContext.tsx）：**
 - `trackFirstAiUse`（激活率）、`trackAiLimitHit`（触达率/Hook Rate）、`trackFeedbackShown`（反馈墙曝光）、`trackFeedbackSubmitted/trackFeedbackDismissed`（转化/跳过）
@@ -135,7 +138,7 @@ SHUFURI 采用两层定价架构，分三阶段演进：
 - 正式 freemium：免费层 + 高级订阅
 - 基于内测期收集的反馈数据和 API 成本曲线定价
 - 核心工具层（排版/导出）永久免费，AI 学习增强层（划词 + 语法）高级收费
-- 热门歌曲因缓存命中，边际成本趋近于零——freemium 模式可持续
+- 成本控制依赖配额与订阅，**不**依赖跨用户内容缓存命中
 
 ---
 
@@ -273,8 +276,8 @@ SHUFURI 占据**"高工具 + 高语言学习"**的空白象限——比 EZFuriga
 | FEAT-13 | 语法讲解 i18n | P2 | 已交付 | 跟随界面语言 |
 | FEAT-14 | 浏览器桌面端适配 | P2 | 已交付 | — |
 | FEAT-15 | 安全加固 | P0 | 已交付 | CSP/配额/上报/IP频率限流 |
-| FEAT-16 | 歌词语法缓存 | P1 | 已交付 | 6维结构哈希 |
-| FEAT-17 | 自我进化划词架构 | P1 | 待规划 | Phase A-E |
+| FEAT-16 | 歌词语法公共缓存 | P1 | **已退役（MVP 合规）** | 曾用内容哈希跨用户复用词解；已删除，不做内容分发 |
+| FEAT-17 | 自我进化划词架构 | P1 | **MVP 搁置** | 共享 explain 缓存/赞踩；与「不做内容分发」冲突，暂不实现 |
 | FEAT-18 | 全局 UI 优化 | P1 | 进行中 | 分支 feature/global-ui-optimization |
 | FEAT-19 | 混排拉丁语 | P3 | 待规划 | 技术 plan 已有，未排期 |
 | FEAT-20 | ui-tokens.css 接入 | P2 | 进行中 | 随 FEAT-18 推进 |
@@ -828,32 +831,34 @@ IndexedDB `saved-lyrics`：title, artist, bodyHtml, rawLyrics, pageHtmls, layout
 
 ### 10.12 自我进化划词架构
 
-> 分支 `feat/self-evolving-explain-pipeline`，详设见 [`docs/plan.md`](./plan.md) 和 [`docs/SELF_EVOLVING_EXPLAIN_ARCHITECTURE.md`](./SELF_EVOLVING_EXPLAIN_ARCHITECTURE.md)
+> **MVP 搁置（合规）**：共享热词讲解缓存 / 赞踩分发与「不做跨用户内容分发」冲突，暂不实现。历史设计见 [`docs/plan.md`](./plan.md)、[`docs/SELF_EVOLVING_EXPLAIN_ARCHITECTURE.md`](./SELF_EVOLVING_EXPLAIN_ARCHITECTURE.md)。
 
-### 12.1 目标
+### 12.1 目标（搁置）
 
-让划词 AI 讲解「越用越聪明、维护成本下降」，同时**不收集用户自创内容**。
+原目标「划词讲解越用越聪明」依赖云端共享 `explain_cache`。MVP 阶段**不做**该共享层。
 
-**数据分层**：
+**数据分层（现行 MVP）**：
 | 层 | 存储 | 内容 |
 |----|------|------|
 | 本地（不上云） | IndexedDB | 歌词本、学习卡、笔记、本地词典结果 |
-| 云端共享 | CloudBase `explain_cache` + COS | 热词讲解 JSON 缓存、Prompt 配置 |
-| 信号（不上云） | CloudBase `explain_votes` | 匿名赞/踩计数 |
+| 云端网关 | CloudBase 云函数 `arkProxy` | **无状态透传**大模型；可选 `ai_usage` 用量元数据（无正文） |
+| ~~云端共享内容~~ | ~~`explain_cache` / `lyrics_grammar_cache`~~ | **不启用** |
 
-### 12.2 MVP 五阶段
+### 12.2 原 MVP 五阶段（搁置）
 
 | 阶段 | 内容 | 状态 |
 |------|------|------|
-| Phase A | `ExplainPayload` 类型 + 适配器（零产品变化） | 待实现 |
-| Phase B | `explainLookup` 云函数 → 共享缓存命中/未命中 | 待实现 |
-| Phase C | 👍/👎 赞踩 UI + `explainVote` 云函数 | 待实现 |
-| Phase D | Prompt 配置外置 COS → 热更新 | 待实现 |
-| Phase E | 30 条黄金回归用例防 Prompt 改坏 | 待实现 |
+| Phase A–E | ExplainPayload / explainLookup 共享缓存 / 赞踩 / Prompt COS | **MVP 搁置** |
 
-### 12.3 歌词语法缓存（已实现）
+### 12.3 歌词词解公共缓存（已退役）
 
-分享歌词的**词汇/语法生成结果**通过 6 维结构哈希缓存（`feat/lyrics-grammar-cache`）：`songKey + termKey + lang + schemaVer`。相同歌词+词条复用缓存，减少豆包调用量。支持 `forceRefresh` 覆盖修复。
+**已退役。** 曾用内容哈希将词解结果写入 CloudBase 集合 `lyrics_grammar_cache` 供跨用户命中。MVP 合规要求：
+
+- `arkProxy` **不读不写**任何词解/歌词业务内容库
+- 词解结果仅回传当前用户；用户主动保存时只写入**本机**歌词库
+- 集合 `lyrics_grammar_cache` 已从腾讯云环境删除（或部署后立即删除）
+
+历史设计归档：[`docs/LYRICS_GRAMMAR_CACHE_DESIGN.md`](./LYRICS_GRAMMAR_CACHE_DESIGN.md)（DEPRECATED）。
 
 ---
 
@@ -901,7 +906,7 @@ IndexedDB `saved-lyrics`：title, artist, bodyHtml, rawLyrics, pageHtmls, layout
 | 海报 CSS 不随 App 主题变色 | 固定印刷色 |
 | `buildVectorPrintInnerCss` 未完全接入 `lang` | 部分滞后 |
 | ~~`ui-tokens.css` 未接入~~ | `feature/global-ui-optimization` 分支进行中 |
-| 自我进化划词架构 | Phase A-E 待实现（`feat/self-evolving-explain-pipeline`） |
+| 自我进化划词架构 | **MVP 搁置**（不做共享内容缓存） |
 | 桌面端编辑页滚动画布性能 | `useEditCanvasScrollPerfProbe` 探测中 |
 
 ---
@@ -929,8 +934,8 @@ IndexedDB `saved-lyrics`：title, artist, bodyHtml, rawLyrics, pageHtmls, layout
 | **划词 AI 讲解** | `src/components/ExplainMicroscopePanel.tsx`、`src/hooks/useExplainSession.ts`、`src/services/ai/` |
 | **内嵌 AI 生成** | `src/hooks/useEmbeddedAiGenerate.ts`、`docs/EMBEDDED_AI_GENERATION_PLAN.md` |
 | **高亮笔刷** | `src/utils/highlighterBrush.ts` |
-| **歌词语法缓存** | `docs/LYRICS_GRAMMAR_CACHE_DESIGN.md` |
-| **自我进化架构** | `docs/plan.md`、`docs/SELF_EVOLVING_EXPLAIN_ARCHITECTURE.md` |
+| **歌词语法公共缓存** | ~~已退役~~ → 见 §12.3；归档 `docs/LYRICS_GRAMMAR_CACHE_DESIGN.md` |
+| **自我进化架构** | MVP 搁置；`docs/plan.md`、`docs/SELF_EVOLVING_EXPLAIN_ARCHITECTURE.md` |
 | **安全 / CSP** | `vite.config.ts`（CSP）、`src/services/errorReport.ts` |
 | **桌面端适配** | `docs/BROWSER_UI_ADAPTATION_PLAN.md` |
 | **韩语词典** | `src/services/dict/krdictLite.ts`、`src/services/dict/garuKoTokenizer.ts` |
@@ -1011,7 +1016,6 @@ IndexedDB `saved-lyrics`：title, artist, bodyHtml, rawLyrics, pageHtmls, layout
 | 分页溢出告警率 | 趋近 0 |
 | 导出完成率（180s 超时内） | 95% |
 | 歌词本复用率 | 上升趋势 |
-| 划词缓存命中率（目标热词） | > 50% |
 | 安全事件数 | 0 |
 
 ---

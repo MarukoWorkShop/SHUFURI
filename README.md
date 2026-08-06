@@ -40,13 +40,13 @@ Vite + React（Web）/ iOS WebView 壳（Capacitor 桥接）
 | 资源 | 说明 |
 |------|------|
 | 静态托管 | `https://ai-native-d5gtc59uc47601f23-1412422924.tcloudbaseapp.com/` |
-| 云函数 arkProxy | `explain.selection`（划词/语法讲解）/ `lyrics.step2`（词解与语法生成，已开启 `web_search` 联网搜索）；已接入 `ai_usage` 结构化用量日志（input/output/total/cache/searchCount）。需配置环境变量 `ARK_API_KEY`（火山引擎方舟 API Key，在控制台函数配置页手动填写） |
+| 云函数 arkProxy | **无状态网关**：`explain.selection` / `lyrics.step2` → 代持 Key 调火山 → 结果只回传当前用户。**不**读写词解内容库（已退役 `lyrics_grammar_cache`）。可记 `ai_usage` 用量元数据（无正文）。需环境变量 `ARK_API_KEY` |
 | 云函数 arkExplainStream | 流式讲解（主路径，已开启 `stream_options.include_usage` 并记录 `ai_usage` 用量日志）；兼容 arkProxy 的 HTTP 访问形态 |
 | 云函数 aiFeedback | 事件埋点 + 错误上报 + 用户反馈（`ai_feedback` NoSQL 集合），经 JS-SDK `callFunction` 调用 |
 | 云函数 costReport | Token 成本统计报表 |
 | 环境 ID | `ai-native-d5gtc59uc47601f23`（上海 ap-shanghai） |
 
-**最近部署**：2026-08-05（全量重部署，4 个云函数 `force` 更新 + 前端 `dist` 上传静态托管）
+**最近部署**：2026-08-06（退役歌词词解公共缓存：arkProxy 无状态透传 + 删除集合 `lyrics_grammar_cache` + 前端托管）
 
 **部署命令**：
 
@@ -64,16 +64,13 @@ npm run build
 npx tcb hosting deploy dist -e ai-native-d5gtc59uc47601f23
 ```
 
+**合规运维**：部署无缓存版 `arkProxy` 后，在 CloudBase 控制台**删除文档型数据库集合** `lyrics_grammar_cache`（历史跨用户词解内容残留）。
+
 **说明**：
 - `aiFeedback` / `arkProxy` 经 JS-SDK `callFunction` 调用，无需额外 HTTP 服务。
 - 前端初始化需开启 CloudBase **匿名登录**（控制台 → 登录授权 → 匿名登录），否则报 `signInAnonymously() 所需的登录方式尚未启用`。
 - `ARK_API_KEY` 在 arkProxy 函数配置页的环境变量中手动填写（不写入代码仓库）。
-
-**说明**：
-- `aiFeedback` / `arkProxy` 经 JS-SDK `callFunction` 调用，无需额外 HTTP 服务；
-  正式包通过 `VITE_EXPLAIN_STREAM_URL` 指向 `arkExplainStream` 的 HTTP 服务实现 SSE 流式降级。
-- CDN 刷新：访问前端 URL 时追加随机 query（如 `?v=20260804`）以避免缓存。
-
+- CDN 刷新：访问前端 URL 时追加随机 query（如 `?v=20260806`）以避免缓存。
 
 ### 本地开发
 

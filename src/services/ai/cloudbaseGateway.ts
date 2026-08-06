@@ -129,11 +129,8 @@ export const cloudbaseGateway: AiGateway = {
       targetLanguage: req.targetLanguage,
       interfaceLanguage: req.interfaceLanguage,
       userId,
-      // 透传歌词缓存字段
-      contentHash: req.contentHash,
       title: req.title,
       artist: req.artist,
-      forceRefresh: req.forceRefresh,
     };
 
     const raw = (await callCloudFunction(

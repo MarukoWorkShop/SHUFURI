@@ -94,8 +94,6 @@ export function useStructuredLyricsClipboardCard({
   const [confirmStreaming, setConfirmStreaming] = useState(false);
   const [isGeneratingStudy, setIsGeneratingStudy] = useState(false);
   const [studyError, setStudyError] = useState<string | null>(null);
-  /** 最近一次词解与语法是否命中缓存 */
-  const [studyFromCache, setStudyFromCache] = useState(false);
   const [confirmTitle, setConfirmTitle] = useState('');
   const [confirmArtist, setConfirmArtist] = useState('');
   const [confirmLang, setConfirmLang] = useState<LangCode | undefined>(undefined);
@@ -347,7 +345,6 @@ export function useStructuredLyricsClipboardCard({
 
     // 优先走内部 AI 生成学习材料；失败时留在弹窗内显示错误，不自动跳到外部粘贴
     setStudyError(null);
-    setStudyFromCache(false);
     setIsGeneratingStudy(true);
     try {
       const result = await studyAi.generateStudy({
@@ -372,8 +369,6 @@ export function useStructuredLyricsClipboardCard({
               : L('已按确认歌词排版', 'Formatted using confirmed lyrics.'),
           );
           hapticSuccess();
-          // 命中缓存标记（用于 UI 展示「重新进行 AI 分析」按钮）
-          if (result.fromCache) setStudyFromCache(true);
           return;
         } catch (e) {
           const msg = e instanceof Error ? e.message : L('合并失败', 'Failed to merge.');
@@ -402,61 +397,6 @@ export function useStructuredLyricsClipboardCard({
     pedagogicalLevel,
     matrix,
     L,
-  ]);
-
-  /** 重新进行 AI 分析：使用与首次完全相同的参数 + forceRefresh，覆盖错误缓存 */
-  const handleConfirmReanalyze = useCallback(async () => {
-    setStudyError(null);
-    setStudyFromCache(false);
-    setIsGeneratingStudy(true);
-    try {
-      const result = await studyAi.reanalyze();
-      if (!result || result.status !== 'ok') {
-        const msg = result?.status === 'error' ? result.message : L('重新生成失败', 'Failed to regenerate.');
-        setStudyError(msg);
-        showToast(`${L('重新生成失败：', 'Regeneration failed:')}${msg}`);
-        return;
-      }
-
-      const stream = confirmedStreamRef.current;
-      if (!stream) return;
-
-      try {
-        const { merged, vocabCount, grammarCount } = mergeConfirmedLyricsWithStudy(
-          stream,
-          result.rawText,
-        );
-        awaitingStudyPasteRef.current = false;
-        setConfirmVisible(false);
-        await layoutFromRaw(merged, onRenderLayout, showToast);
-        showToast(
-          vocabCount + grammarCount > 0
-            ? `${L('已重新生成并合并词解（V', 'Re-generated & merged vocab (V')}${vocabCount}/G${grammarCount})${L('并排版', 'and formatted layout.')}`
-            : L('已重新生成并排版', 'Regenerated & formatted layout.'),
-        );
-        hapticSuccess();
-        setStudyFromCache(false);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : L('合并失败', 'Failed to merge.');
-        setStudyError(`${L('合并失败：', 'Merge failed:')}${msg}`);
-        showToast(`${L('合并失败：', 'Merge failed:')}${msg}`);
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : L('网络错误', 'Network error.');
-      setStudyError(`${L('重新生成失败：', 'Regeneration failed:')}${msg}`);
-      showToast(`${L('重新生成失败：', 'Regeneration failed:')}${msg}`);
-    } finally {
-      setIsGeneratingStudy(false);
-    }
-  }, [
-    confirmTitle,
-    confirmArtist,
-    confirmLang,
-    matrix,
-    pedagogicalLevel,
-    studyAi,
-    onRenderLayout,
-    showToast,
   ]);
 
   // 用户显式选择改用外部 AI 口令时，再回退到剪贴板口令
@@ -516,7 +456,6 @@ export function useStructuredLyricsClipboardCard({
     confirmStreaming,
     isGeneratingStudy,
     studyError,
-    studyFromCache,
     confirmTitle,
     confirmArtist,
     confirmLang,
@@ -524,7 +463,6 @@ export function useStructuredLyricsClipboardCard({
     confirmPreviewLines,
     handleConfirmLayout,
     handleConfirmStudy,
-    handleConfirmReanalyze,
     handleConfirmStudyFallback,
     handleConfirmRetry,
     handleConfirmDismiss,

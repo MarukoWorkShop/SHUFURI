@@ -50,7 +50,6 @@ export default function AppLayout({
     confirmStreaming,
     isGeneratingStudy,
     studyError,
-    studyFromCache,
     confirmTitle,
     confirmArtist,
     confirmLang,
@@ -58,7 +57,6 @@ export default function AppLayout({
     confirmPreviewLines,
     handleConfirmLayout,
     handleConfirmStudy,
-    handleConfirmReanalyze,
     handleConfirmStudyFallback,
     handleConfirmRetry,
     handleConfirmDismiss,
@@ -106,8 +104,6 @@ export default function AppLayout({
         streamingDelayMs={confirmStreaming ? 85 : 0}
         isGeneratingStudy={isGeneratingStudy}
         studyError={studyError}
-        studyFromCache={studyFromCache}
-        onReanalyze={handleConfirmReanalyze}
         onConfirmLayout={handleConfirmLayout}
         onConfirmStudy={handleConfirmStudy}
         onFallbackExternal={handleConfirmStudyFallback}

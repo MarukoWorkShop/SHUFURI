@@ -20,11 +20,9 @@ export type StudyLangProbePayload = {
   detectMismatch: boolean;
   overrideApplied: boolean;
   effectiveSource: string;
-  contentHashPrefix?: string;
   surfaceCharCount: number;
   countsRaw: LyricsScriptCounts;
   countsSurface: LyricsScriptCounts;
-  fromCache?: boolean;
   vgSample?: string[];
   poisonRejected?: boolean;
 };
@@ -47,8 +45,7 @@ export function buildStudyLangProbeBase(params: {
   pedagogicalLevel?: string;
   overrideApplied: boolean;
   effectiveSource: string;
-  contentHash?: string;
-}): Omit<StudyLangProbePayload, 'phase' | 'fromCache' | 'vgSample' | 'poisonRejected'> {
+}): Omit<StudyLangProbePayload, 'phase' | 'vgSample' | 'poisonRejected'> {
   const surface = extractLyricSurfaceForDetect(params.confirmedLyrics);
   const detectedRaw = detectLyricsLanguage(params.confirmedLyrics);
   const resolved = resolveStudySourceLanguage(
@@ -64,7 +61,6 @@ export function buildStudyLangProbeBase(params: {
     detectMismatch: detectedRaw !== resolved.detected,
     overrideApplied: params.overrideApplied,
     effectiveSource: params.effectiveSource,
-    contentHashPrefix: params.contentHash?.slice(0, 8),
     surfaceCharCount: surface.length,
     countsRaw: countLyricsScriptSignals(params.confirmedLyrics),
     countsSurface: countLyricsScriptSignals(surface),
