@@ -9,7 +9,8 @@ import SavedLyricsLibrary from '../SavedLyricsLibrary';
 import StudyCardsLibrary from '../StudyCardsLibrary';
 import HomeDailyLyricQuote from '../HomeDailyLyricQuote';
 import HowItWorks from '../HowItWorks';
-import { useLayoutEffect, type RefObject, type Dispatch, type SetStateAction } from 'react';
+import HomeFaqSection from '../HomeFaqSection';
+import { useLayoutEffect, useState, type RefObject, type Dispatch, type SetStateAction } from 'react';
 import type { SavedLyricsProject } from '../../services/savedLyricsStore';
 import { ensurePosterFontsLoaded } from '../../utils/shufuriPoster/fonts';
 import { hideAppBootLoader } from '../../utils/hideAppBootLoader';
@@ -64,6 +65,8 @@ export default function HomeScreen({
   externalPrompt,
   onExternalPromptHandled,
 }: Props) {
+  const [faqOpen, setFaqOpen] = useState(false);
+
   useLayoutEffect(() => {
     let cancelled = false;
     void ensurePosterFontsLoaded().then(() => {
@@ -146,6 +149,36 @@ export default function HomeScreen({
         <StudyCardsLibrary />
       </div>
       <HomeDailyLyricQuote refreshKey={libraryRefreshKey} onOpenProject={onOpenProject} />
+      <div className="home-faq__pill-wrapper">
+        {faqOpen ? (
+          <div className="home-faq__pill-row">
+            <span className="home-faq__pill home-faq__pill--label">SHUFURI · Q&A</span>
+            <button
+              type="button"
+              className="home-faq__toggle"
+              onClick={() => setFaqOpen(false)}
+              aria-expanded={true}
+              aria-label="收起常见答疑"
+              title="收起"
+            >
+              <svg className="home-faq__toggle-icon" viewBox="0 0 24 24" aria-hidden>
+                <path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="home-faq__pill"
+            onClick={() => setFaqOpen(true)}
+            aria-expanded={false}
+            title="展开常见答疑"
+          >
+            Q&A
+          </button>
+        )}
+      </div>
+      {faqOpen && <HomeFaqSection />}
       <footer className="home-footer">
         <div className="home-footer__left">
           <span className="home-footer__copy">
