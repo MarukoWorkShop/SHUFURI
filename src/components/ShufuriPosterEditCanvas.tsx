@@ -54,6 +54,17 @@ export default function ShufuriPosterEditCanvas({
   showRuby = true,
 }: Props) {
   const safeBody = useMemo(() => sanitizeShufuriPosterHtml(bodyHtml), [bodyHtml]);
+  /**
+   * P4：对 body innerHTML 做内容相等性短路。
+   * React 的 dangerouslySetInnerHTML 在 __html 引用变化时即重建 DOM，
+   * 即使字符串内容相同也会抹掉运行时贴上去的聚光灯 class。
+   * 这里用 state 托管实际渲染的 HTML，仅当字符串内容真正变化时才更新，
+   * 避免父级因其他 state 重渲染导致 body DOM 被无谓重建。
+   */
+  const [renderedBody, setRenderedBody] = useState(safeBody);
+  useLayoutEffect(() => {
+    setRenderedBody((prev) => (prev === safeBody ? prev : safeBody));
+  }, [safeBody]);
   const pipelineLang = useMemo(
     () => resolvePosterPipelineLang(lang, safeBody, language),
     [lang, safeBody, language],
@@ -216,7 +227,7 @@ export default function ShufuriPosterEditCanvas({
           )}
           <div
             className="fv-body-h"
-            dangerouslySetInnerHTML={{ __html: safeBody }}
+            dangerouslySetInnerHTML={{ __html: renderedBody }}
           />
         </div>
       </div>

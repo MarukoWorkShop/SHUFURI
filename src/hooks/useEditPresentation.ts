@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const SPLIT_RATIO_KEY = 'shufuri_edit_split_ratio';
 const SPLIT_MIN = 0.28;
@@ -100,19 +100,34 @@ export function useEditPresentation(): UseEditPresentationResult {
     return () => window.removeEventListener('keydown', onKey);
   }, [presentationOn, spotlightGroupId]);
 
-  return {
-    presentationOn,
-    splitRatio,
-    spotlightGroupId,
-    hoverTermSurface,
-    enter,
-    exit,
-    toggle,
-    setRatio,
-    setSpotlight,
-    clearSpotlight,
-    setHoverTermSurface,
-  };
+  return useMemo<UseEditPresentationResult>(
+    () => ({
+      presentationOn,
+      splitRatio,
+      spotlightGroupId,
+      hoverTermSurface,
+      enter,
+      exit,
+      toggle,
+      setRatio,
+      setSpotlight,
+      clearSpotlight,
+      setHoverTermSurface,
+    }),
+    [
+      presentationOn,
+      splitRatio,
+      spotlightGroupId,
+      hoverTermSurface,
+      enter,
+      exit,
+      toggle,
+      setRatio,
+      setSpotlight,
+      clearSpotlight,
+      setHoverTermSurface,
+    ],
+  );
 }
 
 /** 全屏态 50:50 时的基准字号倍率 */

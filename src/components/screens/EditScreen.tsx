@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import InkFineTuneEditor from '../InkFineTuneEditor';
 import InkToolbox from '../InkToolbox';
 import ShufuriPosterEditCanvas from '../ShufuriPosterEditCanvas';
@@ -590,10 +590,10 @@ export default function EditScreen() {
 
     root.addEventListener('click', onClick, true);
     return () => root.removeEventListener('click', onClick, true);
-  }, [present.presentationOn, present.spotlightGroupId, present, editCanvasRef]);
+  }, [present.presentationOn, present.spotlightGroupId, present.setSpotlight, present.clearSpotlight, editCanvasRef]);
 
-  /** 同步聚光灯 class（HTML 重渲后重贴） */
-  useEffect(() => {
+  /** 同步聚光灯 class（HTML 重渲后同帧重贴，避免闪烁丢失） */
+  useLayoutEffect(() => {
     const root = editCanvasRef.current;
     if (!root) return;
     const body = root.querySelector('.fv-body-h');

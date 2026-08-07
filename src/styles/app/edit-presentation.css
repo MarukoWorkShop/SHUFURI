@@ -152,12 +152,12 @@ body.is-resizing-edit-split * {
   box-sizing: border-box;
   text-align: center;
   transition:
-    opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    filter 0.32s ease,
-    box-shadow 0.32s ease,
-    background-color 0.32s ease,
-    padding 0.32s ease;
+    opacity 0.12s ease,
+    transform 0.12s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.12s ease,
+    box-shadow 0.12s ease,
+    background-color 0.12s ease,
+    padding 0.12s ease;
   transform: scale(1);
   transform-origin: center center;
   cursor: pointer;
