@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import InkFineTuneEditor from '../InkFineTuneEditor';
 import InkToolbox from '../InkToolbox';
 import ShufuriPosterEditCanvas from '../ShufuriPosterEditCanvas';
@@ -567,10 +567,10 @@ export default function EditScreen() {
       const target = e.target as HTMLElement | null;
       if (!target) return;
       const group = target.closest('.lyrics-group') as HTMLElement | null;
+      // 授课态下 .lyrics-group 为 inline-flex + margin:auto，行间/行内留有大量空白。
+      // 点中空白(命中 .fv-body-h 但不命中 .lyrics-group)时绝不清空聚光灯，否则极易误触清空。
+      // 取消聚焦仅通过：再次点同一行(toggle) 或 Esc 键。
       if (!group || !root.contains(group)) {
-        if (target.closest('.fv-body-h')) {
-          present.clearSpotlight();
-        }
         return;
       }
       const body = root.querySelector('.fv-body-h');
@@ -590,10 +590,10 @@ export default function EditScreen() {
 
     root.addEventListener('click', onClick, true);
     return () => root.removeEventListener('click', onClick, true);
-  }, [present.presentationOn, present.spotlightGroupId, present, editCanvasRef]);
+  }, [present.presentationOn, present.spotlightGroupId, present.setSpotlight, present.clearSpotlight, editCanvasRef]);
 
-  /** 同步聚光灯 class（HTML 重渲后重贴） */
-  useEffect(() => {
+  /** 同步聚光灯 class（HTML 重渲后同帧重贴，避免闪烁丢失） */
+  useLayoutEffect(() => {
     const root = editCanvasRef.current;
     if (!root) return;
     const body = root.querySelector('.fv-body-h');

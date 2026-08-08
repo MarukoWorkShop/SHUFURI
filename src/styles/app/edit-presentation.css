@@ -152,15 +152,15 @@ body.is-resizing-edit-split * {
   box-sizing: border-box;
   text-align: center;
   transition:
-    opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    filter 0.32s ease,
-    box-shadow 0.32s ease,
-    background-color 0.32s ease,
-    padding 0.32s ease;
+    opacity 0.12s ease,
+    transform 0.12s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.12s ease,
+    box-shadow 0.12s ease,
+    background-color 0.12s ease,
+    padding 0.12s ease;
   transform: scale(1);
   transform-origin: center center;
-  cursor: pointer;
+  cursor: zoom-in;
   border-radius: 6px;
   padding-block: 2px;
   margin-block: 2px;
@@ -178,6 +178,8 @@ body.is-resizing-edit-split * {
   width: max-content;
   max-width: 100%;
   margin-inline: auto;
+  /* 授课聚光灯态下整行可点击放大，强制覆盖编辑器默认 text 光标 */
+  cursor: zoom-in;
 }
 
 .edit-area--presentation .edit-canvas-scroll.is-present-spotlight .fv-body-h .lyrics-group.is-spotlight-dim {
@@ -196,6 +198,7 @@ body.is-resizing-edit-split * {
   padding: 0.45em 1.05em;
   background: transparent;
   box-shadow: none;
+  cursor: zoom-out;
 }
 
 .edit-area--presentation .edit-canvas-scroll.is-present-spotlight .fv-body-h .lyrics-group.is-spotlight-focus::before {
