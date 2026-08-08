@@ -557,11 +557,6 @@ export default function EditScreen() {
     [explain.explainMode, lyricsPaneBodyHtml],
   );
 
-  // 用 ref 保存最新 spotlightGroupId，供 onClick 闭包读取，避免 stale closure
-  // （点击 effect 依赖故意不含 spotlightGroupId，以减少重绑；但闭包需拿到最新值）
-  const spotlightIdRef = useRef(present.spotlightGroupId);
-  spotlightIdRef.current = present.spotlightGroupId;
-
   /** 授课态：点击 lyrics-group 聚光灯 */
   useEffect(() => {
     if (!present.presentationOn) return;
@@ -572,10 +567,10 @@ export default function EditScreen() {
       const target = e.target as HTMLElement | null;
       if (!target) return;
       const group = target.closest('.lyrics-group') as HTMLElement | null;
+      // 授课态下 .lyrics-group 为 inline-flex + margin:auto，行间/行内留有大量空白。
+      // 点中空白(命中 .fv-body-h 但不命中 .lyrics-group)时绝不清空聚光灯，否则极易误触清空。
+      // 取消聚焦仅通过：再次点同一行(toggle) 或 Esc 键。
       if (!group || !root.contains(group)) {
-        if (target.closest('.fv-body-h')) {
-          present.clearSpotlight();
-        }
         return;
       }
       const body = root.querySelector('.fv-body-h');
@@ -585,7 +580,7 @@ export default function EditScreen() {
       if (id == null) return;
       e.preventDefault();
       e.stopPropagation();
-      if (spotlightIdRef.current === id) {
+      if (present.spotlightGroupId === id) {
         present.clearSpotlight();
         return;
       }
