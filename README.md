@@ -46,7 +46,7 @@ Vite + React（Web）/ iOS WebView 壳（Capacitor 桥接）
 | 云函数 costReport | Token 成本统计报表 |
 | 环境 ID | `ai-native-d5gtc59uc47601f23`（上海 ap-shanghai） |
 
-**最近部署**：2026-08-07（全量重部署：4 个云函数 force 覆盖 + 前端构建产物 53 文件部署至静态托管）
+**最近部署**：2026-08-08（全量重部署：4 个云函数 force 覆盖 + 前端构建产物 53 文件部署至静态托管）
 
 **部署命令**：
 
@@ -70,10 +70,10 @@ npx tcb hosting deploy dist -e ai-native-d5gtc59uc47601f23
 - `aiFeedback` / `arkProxy` 经 JS-SDK `callFunction` 调用，无需额外 HTTP 服务。
 - 前端初始化需开启 CloudBase **匿名登录**（控制台 → 登录授权 → 匿名登录），否则报 `signInAnonymously() 所需的登录方式尚未启用`。
 - `ARK_API_KEY` 在 arkProxy 函数配置页的环境变量中手动填写（不写入代码仓库）。
-- CDN 刷新：访问前端 URL 时追加随机 query（如 `?v=20260807`）以避免缓存。
+- CDN 刷新：访问前端 URL 时追加随机 query（如 `?v=20260808`）以避免缓存。
 
 **前端访问地址（含 CDN 刷新参数）**：
-`https://ai-native-d5gtc59uc47601f23-1412422924.tcloudbaseapp.com/?v=20260807`
+`https://ai-native-d5gtc59uc47601f23-1412422924.tcloudbaseapp.com/?v=20260808`
 
 ### 本地开发
 
