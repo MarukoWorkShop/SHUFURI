@@ -39,7 +39,12 @@ const MAX_PROMPT_LENGTH_EXPLAIN = 8000;
 const MAX_PROMPT_LENGTH_LYRICS = 16000;
 
 // ===== 每日费用硬上限（全局熔断，单位：元） =====
-const DAILY_COST_CAP_YUAN = 50;
+// 可通过云函数环境变量 DAILY_COST_CAP_YUAN 随时调整（默认 50）
+const DAILY_COST_CAP_YUAN = (() => {
+  const raw = process.env.DAILY_COST_CAP_YUAN;
+  const n = raw !== undefined ? Number(raw) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : 50;
+})();
 const COST_ALERT_RATIO = 0.8;
 const DAILY_COST_COLLECTION = 'ai_daily_cost';
 

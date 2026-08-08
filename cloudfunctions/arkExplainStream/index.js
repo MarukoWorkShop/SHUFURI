@@ -18,8 +18,12 @@ const RATE_LIMIT_COLLECTION = 'ai_rate_limit';
 // ===== IP 维度兜底配额（无 UID 时启用） =====
 const IP_EXPLAIN_DAILY_LIMIT = 20;
 
-// ===== 每日费用硬上限 =====
-const DAILY_COST_CAP_YUAN = 50;
+// ===== 每日费用硬上限（可通过环境变量 DAILY_COST_CAP_YUAN 调整，默认 50） =====
+const DAILY_COST_CAP_YUAN = (() => {
+  const raw = process.env.DAILY_COST_CAP_YUAN;
+  const n = raw !== undefined ? Number(raw) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : 50;
+})();
 const COST_ALERT_RATIO = 0.8;
 const DAILY_COST_COLLECTION = 'ai_daily_cost';
 const EST_COST_PER_1K_TOKENS = 0.0004;
