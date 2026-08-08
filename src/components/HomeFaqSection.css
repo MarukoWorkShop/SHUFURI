@@ -9,14 +9,17 @@
   font-family: var(--font-sans);
 }
 
-/* ---- 右下角 Q&A 胶囊容器（与 STUDY CARDS 右边缘对齐）---- */
+/* ---- Q&A 胶囊：与「SHUFURI · 使用流程」同宽容器、左对齐 ---- */
 .home-faq__pill-wrapper {
   max-width: 980px;
-  margin: 16px auto 0; /* 随机歌词与 footer 之间的间距 */
+  margin: 20px auto 0; /* 与上方歌词栏保持约 20px 间距 */
   display: flex;
-  justify-content: flex-end;
-  padding-left: var(--ui-space-4);
-  padding-right: var(--ui-space-4);
+  justify-content: flex-start;
+  box-sizing: border-box;
+  width: 100%;
+  /* 与 .hiw.is-collapsed 的水平内边距一致，保证左缘对齐 */
+  padding-left: 16px;
+  padding-right: 16px;
 }
 
 /* 展开态：胶囊 + 折叠按钮同行 */
@@ -227,6 +230,12 @@
 /* ===== 响应式（移动端优先） ===== */
 
 @media (max-width: 767px) {
+  .home-faq__pill-wrapper {
+    /* 与 .hiw.is-collapsed 移动端 padding: 0 14px 对齐 */
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
   .home-faq__sub {
     font-size: 12px;
     margin-bottom: 16px;

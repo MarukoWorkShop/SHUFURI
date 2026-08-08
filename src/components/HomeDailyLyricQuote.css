@@ -6,8 +6,9 @@
   align-items: center;
   min-height: 0;
   width: 100%;
-  padding-top: var(--ui-space-4);
-  padding-bottom: calc(var(--ui-space-5) + var(--safe-bottom));
+  padding-top: var(--ui-space-12);
+  /* 底部间距交给下方 Q&A（.home-faq__pill-wrapper margin-top: 20px） */
+  padding-bottom: 0;
   -webkit-user-select: none;
   user-select: none;
   touch-action: manipulation;
@@ -67,7 +68,7 @@
   max-width: 100%;
   text-align: center;
   font-family: var(--font-sans);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: var(--weight-medium);
   line-height: var(--leading-relaxed);
   letter-spacing: 0.06em;
@@ -83,7 +84,7 @@
   display: block;
   margin-top: var(--ui-space-1);
   font-family: var(--ui-font-sans);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.1em;
   color: var(--color-home-quote-source-fg);
