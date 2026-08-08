@@ -20,7 +20,9 @@ export type ArkProxyErrorCode =
   | 'UPSTREAM_TIMEOUT'
   | 'UPSTREAM_ERROR'
   | 'EMPTY_OUTPUT'
-  | 'INVALID_REQUEST';
+  | 'INVALID_REQUEST'
+  | 'QUOTA_EXCEEDED'
+  | 'DAILY_COST_LIMIT';
 
 /** 后端错误详情 */
 export type ArkProxyError = {
