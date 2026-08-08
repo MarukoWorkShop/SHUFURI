@@ -557,6 +557,11 @@ export default function EditScreen() {
     [explain.explainMode, lyricsPaneBodyHtml],
   );
 
+  // 用 ref 保存最新 spotlightGroupId，供 onClick 闭包读取，避免 stale closure
+  // （点击 effect 依赖故意不含 spotlightGroupId，以减少重绑；但闭包需拿到最新值）
+  const spotlightIdRef = useRef(present.spotlightGroupId);
+  spotlightIdRef.current = present.spotlightGroupId;
+
   /** 授课态：点击 lyrics-group 聚光灯 */
   useEffect(() => {
     if (!present.presentationOn) return;
@@ -580,7 +585,7 @@ export default function EditScreen() {
       if (id == null) return;
       e.preventDefault();
       e.stopPropagation();
-      if (present.spotlightGroupId === id) {
+      if (spotlightIdRef.current === id) {
         present.clearSpotlight();
         return;
       }
