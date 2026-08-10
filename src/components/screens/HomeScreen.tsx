@@ -12,7 +12,6 @@ import HowItWorks from '../HowItWorks';
 import HomeFaqSection from '../HomeFaqSection';
 import { useLayoutEffect, useState, type RefObject, type Dispatch, type SetStateAction } from 'react';
 import type { SavedLyricsProject } from '../../services/savedLyricsStore';
-import { ensurePosterFontsLoaded } from '../../utils/shufuriPoster/fonts';
 import { hideAppBootLoader } from '../../utils/hideAppBootLoader';
 import type { ExternalPromptRequest } from '../../hooks/useStructuredLyricsClipboardCard';
 import type { ShareOcrData } from '../../context/HomeSessionContext';
@@ -68,16 +67,10 @@ export default function HomeScreen({
   const [faqOpen, setFaqOpen] = useState(false);
 
   useLayoutEffect(() => {
-    let cancelled = false;
-    void ensurePosterFontsLoaded().then(() => {
-      if (cancelled) return;
-      requestAnimationFrame(() => {
-        if (!cancelled) hideAppBootLoader();
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
+    // 首页 UI 只用系统字体（PingFang / Hiragino），不等待海报专用字体
+    // （KozMin / HCRBatang / SourceHanSerif 共 ~54MB，仅海报排版/导出时才按需加载）。
+    // 直接淡出 boot loader，避免首屏被字体请求阻塞。
+    requestAnimationFrame(() => hideAppBootLoader());
   }, []);
 
   useClipboardDetection({
