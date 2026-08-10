@@ -430,6 +430,8 @@ html:has(.app--export) {
 }
 
 .app--home .app-screen__body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding-top: calc(52px + var(--safe-top));
   overflow: hidden;
   /* 不设置 touch-action，让子元素（如波轮）自由控制 */
