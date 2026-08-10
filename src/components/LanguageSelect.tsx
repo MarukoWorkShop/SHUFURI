@@ -13,16 +13,6 @@ function langLabel(code: LyricsLanguage): string {
   return base[code] ?? code;
 }
 
-function langSub(code: LyricsLanguage): string {
-  const base: Record<LyricsLanguage, string> = {
-    jp: '日语',
-    ko: '韩语',
-    en: '英语',
-    zh: '中文',
-  };
-  return base[code] ?? '';
-}
-
 type Props = {
   label: string;
   hint: string;
@@ -67,7 +57,6 @@ export default function LanguageSelect({ label, hint, value, languages, onChange
               onClick={() => onChange(code)}
             >
               <span className="lang-select__pill-main">{langLabel(code)}</span>
-              <span className="lang-select__pill-sub">{langSub(code)}</span>
             </button>
           );
         })}
