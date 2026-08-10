@@ -9,7 +9,7 @@ import type { AiAppInfo } from '../bridge/deepLinkPlugin';
 import { useAppToast } from '../context/AppToastContext';
 import { L } from '../utils/i18n';
 import AiAppActionSheet from './AiAppActionSheet';
-import LanguageWheel from './LanguageWheel';
+import LanguageSelect from './LanguageSelect';
 import type { ExternalPromptRequest } from '../hooks/useStructuredLyricsClipboardCard';
 
 /** 歌名比对用：去空白、小写，忽略标点差异 */
@@ -373,22 +373,16 @@ export default function HtmlPasteInput({
         </div>
 
         {onLanguageChange && (
-          <div className="lang-wheel-with-hint">
-            <span className="lang-wheel-with-hint__label">
-              {L('选择歌曲的主要语言', 'Choose the main language of the song')}
-            </span>
-            <LanguageWheel
-              value={language ?? matrix.activeTarget}
-              languages={wheelLanguages}
-              onChange={onLanguageChange}
-            />
-            <span className="lang-wheel-with-hint__hint">
-              {L(
-                '选择正确的语言类型增加 AI 搜索的准确性',
-                'Choosing the correct language improves the accuracy of AI lookup.',
-              )}
-            </span>
-          </div>
+          <LanguageSelect
+            label={L('选择歌曲的主要语言', 'Choose the main language of the song')}
+            hint={L(
+              '选择正确的语言类型增加 AI 搜索的准确性',
+              'Choosing the correct language improves the accuracy of AI lookup.',
+            )}
+            value={language ?? matrix.activeTarget}
+            languages={wheelLanguages}
+            onChange={onLanguageChange}
+          />
         )}
 
         <div className="ext-pipeline__prompt-row">

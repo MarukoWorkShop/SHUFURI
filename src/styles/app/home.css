@@ -349,6 +349,109 @@
   padding: 0 16px;
 }
 
+/* ===========================================
+   语言单选点击框（LanguageSelect 组件）
+   =========================================== */
+
+.lang-select {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.lang-select__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lang-select__title {
+  font-family: var(--ui-font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-fg);
+}
+
+.lang-select__help {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--color-border, #d8dee9);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-fg-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.lang-select__help:hover {
+  background: var(--color-fg-secondary);
+  color: #fff;
+}
+
+.lang-select__hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-fg-muted, #94a3b8);
+  padding: 8px 10px;
+  background: var(--ui-bg-elevated, #f1f5f9);
+  border-radius: 8px;
+}
+
+.lang-select__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lang-select__pill {
+  flex: 1 1 auto;
+  min-width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--color-border, #d8dee9);
+  border-radius: 12px;
+  background: var(--ui-bg);
+  color: var(--color-fg-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.lang-select__pill:active {
+  transform: scale(0.97);
+}
+
+.lang-select__pill-main {
+  font-family: var(--ui-font-sans);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.lang-select__pill-sub {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.lang-select__pill.is-active {
+  border-color: var(--color-accent, #2563eb);
+  background: var(--color-accent-soft, #eff6ff);
+  color: var(--color-accent, #2563eb);
+}
+
 
 
 .ext-pipeline__prompt-row {
