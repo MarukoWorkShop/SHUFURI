@@ -172,12 +172,13 @@ export default function LanguageWheel({ value, onChange, languages, soundEnabled
 
     const onScrollEnd = () => settleScroll(true);
 
-    /** 将鼠标滚轮的纵向滚动（deltaY）转为横向滚动 */
+    /** 仅在明显横向手势（触控板双指横向 / shift+滚轮）时接管横向滚动；
+     *  其余（鼠标纵向滚轮、触控板纵向）一律放行，避免吞掉整页纵向滚动。 */
     const onWheel = (e: WheelEvent) => {
-      // 不拦截触控板双指横向滑动（deltaX 为主时让原生行为处理）
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      const horizontalIntent = Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey;
+      if (!horizontalIntent) return;
       e.preventDefault();
-      scroller.scrollLeft += e.deltaY;
+      scroller.scrollLeft += e.deltaX !== 0 ? e.deltaX : e.deltaY;
     };
 
     scroller.addEventListener('scroll', onScroll, { passive: true });
