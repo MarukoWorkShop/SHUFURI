@@ -589,11 +589,11 @@
 }
 
 :is(
-  button,
+  button:not(.ext-pipeline__share-fill-btn),
   [role="button"],
   a,
   input:not(.ext-pipeline__input),
-  textarea,
+  textarea:not(.ext-pipeline__share-fill-input),
   select,
   .lang-wheel__scroller,
   .paper-wheel__scroller

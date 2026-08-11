@@ -7,7 +7,6 @@
   min-height: 0;
   width: 100%;
   padding-top: var(--ui-space-12);
-  /* 底部间距交给下方 Q&A（.home-faq__pill-wrapper margin-top: 20px） */
   padding-bottom: 0;
   -webkit-user-select: none;
   user-select: none;

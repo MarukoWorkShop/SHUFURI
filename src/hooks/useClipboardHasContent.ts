@@ -6,6 +6,9 @@ import {
   isStructuredLyricsClipboardText,
   prepareStructuredLyricsClipboardText,
 } from '../utils/clipboardStructuredLyrics';
+import { onAppBecameActive } from '../utils/nativeBridge';
+
+const POLL_MS = 1500;
 
 export type ClipboardStructuredLyricsState = {
   /** 剪贴板含可排版流（完整记录流或含 V/G 的学习材料） */
@@ -28,9 +31,7 @@ async function inspectClipboardStructuredLyrics(): Promise<ClipboardStructuredLy
   try {
     const text = await readClipboardText();
     const trimmed = text.trim();
-    if (!trimmed) {
-      return EMPTY;
-    }
+    if (!trimmed) return EMPTY;
 
     const cleaned = prepareStructuredLyricsClipboardText(trimmed);
     const isFull = isStructuredLyricsClipboardText(trimmed);
@@ -49,12 +50,7 @@ async function inspectClipboardStructuredLyrics(): Promise<ClipboardStructuredLy
   }
 }
 
-/**
- * 监听剪贴板是否含可排版的结构化歌词，并带上流内歌名供主次 CTA 暗示。
- *
- * 仅在用户交互事件（窗口聚焦、页面可见性恢复、bfcache 恢复）时触发检测，
- * 不使用后台轮询，避免触发浏览器剪贴板权限限制导致的 NotAllowedError。
- */
+/** 监听剪贴板是否含可排版的结构化歌词，并带上流内歌名供主次 CTA 暗示 */
 export function useClipboardStructuredLyrics(): ClipboardStructuredLyricsState {
   const [state, setState] = useState<ClipboardStructuredLyricsState>(EMPTY);
 
@@ -76,14 +72,17 @@ export function useClipboardStructuredLyrics(): ClipboardStructuredLyricsState {
     window.addEventListener('focus', check);
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', check);
-    // 不在挂载时立即 check：此时无 user activation（用户未与页面交互），
-    // navigator.clipboard.readText() 会抛 NotAllowedError，导致误报"权限被阻止"。
+    const unsubscribeForeground = onAppBecameActive(check);
+    const pollTimer = window.setInterval(check, POLL_MS);
+    check();
 
     return () => {
       cancelled = true;
       window.removeEventListener('focus', check);
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('pageshow', check);
+      unsubscribeForeground();
+      window.clearInterval(pollTimer);
     };
   }, []);
 

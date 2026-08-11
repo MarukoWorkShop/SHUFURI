@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import '../styles/app/howItWorks.css';
 import { L } from '../utils/i18n';
 import { getAppSettings } from '../services/appSettings';
-import { listSavedLyricsProjects } from '../services/savedLyricsStore';
 
 /**
- * HowItWorks · 首页「4 步说明带」
- * 放置位：输入卡下方、歌词库上方。
- * 明色：白底 + 深灰线条 + Kinari；暗色随 data-theme 翻转，对齐首页输入卡灰阶。
- * 暖用户（本地已有歌词本）默认收起；偏好写入 localStorage。
+ * HowItWorks · 首页常驻「4 步流程条」
+ * 放置位：表单上方，全程可见。
+ * 折叠态：摘要条（① 输入歌曲 → ② 生成口令→AI → ③ 进入学习 → ④ 导出）。
+ * 展开态：带图标 + 详细说明的卡片组。
+ * 首次访问默认展开，偏好写入 localStorage；之后按用户选择记忆。
  */
 
 type HowItWorksProps = {
@@ -98,38 +98,54 @@ function IconExport() {
   );
 }
 
-function Arrow() {
-  return (
-    <div className="hiw__arrow" aria-hidden="true">
-      <svg viewBox="0 0 24 24" {...STROKE}>
-        <path d="M5 12h14M13 6l6 6-6 6" />
-      </svg>
-    </div>
-  );
-}
+const STEPS = [
+  {
+    n: 1,
+    icon: <IconNote />,
+    badge: '1',
+    titleZh: '输入歌曲',
+    titleEn: 'Input song',
+    descZh: '填入歌名 / 歌手，选择主要语言；\n或直接从音乐 APP 分享——复制链接——粘贴到输入框自动识别歌曲信息',
+    descEn: 'Enter title / artist, or share → copy link → paste into the home form.',
+  },
+  {
+    n: 2,
+    icon: <IconAiSpark />,
+    badge: '2',
+    titleZh: '生成口令 → AI',
+    titleEn: 'Prompt → AI',
+    descZh: '点「一键生成口令」复制 Prompt，粘贴到你信任的 AI，将AI返回的结果复制到剪贴板，点击「生成学习材料」。',
+    descEn: 'Tap "Generate Prompt", paste into your AI, then paste the result back here.',
+  },
+  {
+    n: 3,
+    icon: <IconStudy />,
+    badge: '3',
+    titleZh: '进入学习',
+    titleEn: 'Enter & learn',
+    descZh: '修正歌词、标注注音、划词 AI 解析、保存笔记到本地库。',
+    descEn: 'Fix lyrics, toggle readings, AI-explain, save to local library.',
+  },
+  {
+    n: 4,
+    icon: <IconExport />,
+    badge: '4',
+    titleZh: '导出分享',
+    titleEn: 'Export / Share',
+    descZh: '一键导出可打印 PDF，或生成适配社媒的分享图。',
+    descEn: 'Export a printable PDF, or create share images.',
+  },
+];
 
-export default function HowItWorks({ variant = 'full', className }: HowItWorksProps) {
-  const compact = variant === 'compact';
+export default function HowItWorks({ className }: HowItWorksProps) {
   const showEnSubtitle = getAppSettings().interfaceLanguage !== 'en';
+  const [mounted, setMounted] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     const pref = readCollapsePref();
-    if (pref !== null) {
-      setCollapsed(pref);
-      return;
-    }
-    let cancelled = false;
-    listSavedLyricsProjects()
-      .then((items) => {
-        if (!cancelled) setCollapsed(items.length > 0);
-      })
-      .catch(() => {
-        /* cold default: expanded */
-      });
-    return () => {
-      cancelled = true;
-    };
+    setCollapsed(pref === null ? false : pref);
+    setMounted(true);
   }, []);
 
   const toggleCollapsed = useCallback(() => {
@@ -142,144 +158,34 @@ export default function HowItWorks({ variant = 'full', className }: HowItWorksPr
 
   return (
     <section
-      className={`hiw${collapsed ? ' is-collapsed' : ''}${className ? ` ${className}` : ''}`}
+      className={`hiw${collapsed ? ' is-collapsed' : ''}${mounted ? ' is-mounted' : ''}${
+        className ? ` ${className}` : ''
+      }`}
       aria-label={L('SHUFURI 使用流程', 'How SHUFURI works')}
     >
-      <div className="hiw__head">
-        {collapsed ? (
-          <button
-            type="button"
-            className="hiw__kicker hiw__kicker--btn"
-            onClick={toggleCollapsed}
-            aria-expanded={false}
-            title={L('展开使用流程', 'Expand how it works')}
-          >
-            {L('SHUFURI · 使用流程', 'SHUFURI · How it works')}
-          </button>
-        ) : (
-          <>
-            <div className="hiw__head-main">
-              <span className="hiw__kicker">
-                {L('SHUFURI · 使用流程', 'SHUFURI · How it works')}
-              </span>
-              <h2 className="hiw__title">
-                {L(
-                  '4 步，把外语歌变成可打印的学习笔记',
-                  '4 steps to turn a foreign song into printable study notes',
-                )}
-              </h2>
-              {!compact && (
-                <p className="hiw__sub">
-                  {L(
-                    '外部 AI 生成歌词 → SHUFURI 排版 · 修正 · 学习 · 导出',
-                    'Generate lyrics with an external AI → layout, fix, learn & export in SHUFURI',
-                  )}
-                </p>
-              )}
-            </div>
-            <button
-              type="button"
-              className="hiw__toggle"
-              onClick={toggleCollapsed}
-              aria-expanded={true}
-              aria-label={L('收起使用流程', 'Collapse how it works')}
-              title={L('收起', 'Collapse')}
-            >
-              <svg className="hiw__toggle-icon" viewBox="0 0 24 24" aria-hidden>
-                <path
-                  d="M6 15l6-6 6 6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </>
-        )}
-      </div>
+      {/* 荧光黄胶囊按钮 */}
+      <button
+        type="button"
+        className="hiw__pill"
+        onClick={toggleCollapsed}
+        aria-expanded={!collapsed}
+      >
+        <span className="hiw__pill-label">SHUFURI · 使用流程 4 步</span>
+        <span className={`hiw__chevron hiw__chevron--${collapsed ? 'down' : 'up'}`} aria-hidden />
+      </button>
 
+      {/* 4步流程卡片（展开时显示） */}
       {!collapsed && (
-        <div className="hiw__strip">
-          <article className="hiw__card">
-            <div className="hiw__badge">1</div>
-            <div className="hiw__icon">
-              <IconNote />
+        <div className="hiw__steps-row">
+          {STEPS.map((s, i) => (
+            <div className="hiw__step-card" key={s.n}>
+              <div className="hiw__step-badge">{s.badge}</div>
+              <h3 className="hiw__step-title">{showEnSubtitle ? s.titleZh : s.titleEn}</h3>
+              <p className="hiw__step-sub">{showEnSubtitle ? s.titleEn : s.titleZh}</p>
+              <p className="hiw__step-desc">{showEnSubtitle ? s.descZh : s.descEn}</p>
+              {i < STEPS.length - 1 && <span className="hiw__step-arrow">→</span>}
             </div>
-            <h3 className="hiw__card-title">{L('获得歌曲', 'Find a song')}</h3>
-            {showEnSubtitle ? <div className="hiw__card-en">Find a song</div> : null}
-            <p className="hiw__card-desc">
-              {L(
-                '输入歌名 / 歌手，或从音乐 App 分享 → 复制链接 → 粘贴到首页输入框。',
-                'Enter title / artist, or share → copy link from a music app → paste into the home form.',
-              )}
-            </p>
-          </article>
-
-          <Arrow />
-
-          <article className="hiw__card">
-            <div className="hiw__badge">2</div>
-            <div className="hiw__icon">
-              <IconAiSpark />
-            </div>
-            <h3 className="hiw__card-title">
-              {L('生成 Prompt，回传粘贴 AI 结果', 'Generate prompt, paste AI result')}
-            </h3>
-            {showEnSubtitle ? <div className="hiw__card-en">Prompt → AI result</div> : null}
-            <p className="hiw__card-desc">
-              {L(
-                '点击「一键生成口令」复制 Prompt，粘贴到你信任的 AI 对话框，再把返回结果粘贴回本页排版。',
-                'Tap “Generate AI Prompt”, paste it into your trusted AI chat, then paste the result back here to layout.',
-              )}
-            </p>
-            <p className="hiw__card-desc">
-              {L(
-                '按需勾选「AI 生成语法」或「仅看歌词」。',
-                'Optionally check “AI grammar” or “lyrics only”.',
-              )}
-            </p>
-          </article>
-
-          <Arrow />
-
-          <article className="hiw__card">
-            <div className="hiw__badge">3</div>
-            <div className="hiw__icon">
-              <IconStudy />
-            </div>
-            <h3 className="hiw__card-title">{L('进入学习页面', 'Enter & learn')}</h3>
-            {showEnSubtitle ? <div className="hiw__card-en">Enter &amp; learn</div> : null}
-            <p className="hiw__card-desc">
-              {L('进入学习页后你可以：', 'On the study page you can:')}
-            </p>
-            <ul className="hiw__bullets">
-              <li>
-                {L('修正 AI 幻觉带来的歌词错误', 'Fix AI hallucination errors in lyrics')}
-              </li>
-              <li>{L('标注 / 去掉注音', 'Show / hide readings')}</li>
-              <li>{L('划词 AI 解析', 'AI explain selection')}</li>
-              <li>{L('保存笔记到本地库', 'Save notes to local library')}</li>
-            </ul>
-          </article>
-
-          <Arrow />
-
-          <article className="hiw__card">
-            <div className="hiw__badge">4</div>
-            <div className="hiw__icon">
-              <IconExport />
-            </div>
-            <h3 className="hiw__card-title">{L('导出 / 分享', 'Export / Share')}</h3>
-            {showEnSubtitle ? <div className="hiw__card-en">Export / Share</div> : null}
-            <p className="hiw__card-desc">
-              {L(
-                '一键导出可打印 PDF，或生成适配社媒的分享图。',
-                'Export a printable PDF, or create share images for social.',
-              )}
-            </p>
-          </article>
+          ))}
         </div>
       )}
     </section>

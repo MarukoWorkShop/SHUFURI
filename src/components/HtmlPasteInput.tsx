@@ -9,7 +9,6 @@ import type { AiAppInfo } from '../bridge/deepLinkPlugin';
 import { useAppToast } from '../context/AppToastContext';
 import { L } from '../utils/i18n';
 import AiAppActionSheet from './AiAppActionSheet';
-import LanguageSelect from './LanguageSelect';
 import type { ExternalPromptRequest } from '../hooks/useStructuredLyricsClipboardCard';
 
 /** 歌名比对用：去空白、小写，忽略标点差异 */
@@ -26,7 +25,6 @@ type Props = {
   includeVocabAndGrammar: boolean;
   pedagogicalLevel: PedagogicalLevel;
   language?: LyricsLanguage;
-  wheelLanguages?: LyricsLanguage[];
   matrix: LanguageMatrixContext;
   onLanguageChange?: (lang: LyricsLanguage) => void;
   initialTitle?: string;
@@ -58,7 +56,6 @@ export default function HtmlPasteInput({
   includeVocabAndGrammar: _includeVocabAndGrammar,
   pedagogicalLevel: _pedagogicalLevel,
   language,
-  wheelLanguages,
   matrix,
   onLanguageChange,
   initialTitle,
@@ -81,6 +78,8 @@ export default function HtmlPasteInput({
   const [copiedPrompt, setCopiedPrompt] = useState('');
   /** 外部注入口令（学习材料 / 再试）时锁定，打开 AI 不再重建口令 */
   const [promptLocked, setPromptLocked] = useState(false);
+  /** Step2 A/B/C 引导区展开/收起状态（默认展开） */
+  const [guideExpanded, setGuideExpanded] = useState(true);
 
   /**
    * 主次暗示（同一时间最多一个主按钮）：
@@ -111,6 +110,7 @@ export default function HtmlPasteInput({
   // ---- 粘贴分享链接输入框 ----
   const [pasteActive, setPasteActive] = useState(false);
   const [pasteValue, setPasteValue] = useState('');
+  const [langHelpVisible, setLangHelpVisible] = useState(false);
   const pasteInputRef = useRef<HTMLTextAreaElement>(null);
   const pasteActiveRef = useRef(false);
   pasteActiveRef.current = pasteActive;
@@ -172,12 +172,13 @@ export default function HtmlPasteInput({
     prevParseBusyRef.current = parseMusicShareBusy;
   }, [parseMusicShareBusy, resetPaste]);
 
-  // textarea 自动调整高度
+  // textarea 自动调整高度（单行时保持固定高度，避免点击后外框变高）
   const autoResizeTextarea = useCallback(() => {
     const ta = pasteInputRef.current;
     if (!ta) return;
     ta.style.height = 'auto';
-    ta.style.height = `${ta.scrollHeight}px`;
+    const next = Math.max(ta.scrollHeight, 30);
+    ta.style.height = `${Math.min(next, 120)}px`;
   }, []);
 
   useEffect(() => {
@@ -289,104 +290,200 @@ export default function HtmlPasteInput({
     [buildPrompt, writePromptToClipboard, copiedPrompt, promptLocked],
   );
 
+  const promptGenerated = copiedPrompt.length > 0;
+
   return (
     <div className="html-paste ext-pipeline">
-      <div className="ext-pipeline__head">
-        <div className="ext-pipeline__meta">
-          <label className="ext-pipeline__field ext-pipeline__field--title">
-            <span className="ext-pipeline__label">TITLE</span>
-            <input
-              type="text"
-              className="ext-pipeline__input"
-              id="title-input"
-              value={songTitle}
-              onChange={(e) => setSongTitle(e.target.value)}
-              placeholder={L('歌曲名称', 'Song Title')}
-              required
-              aria-required="true"
-            />
-          </label>
-          <label className="ext-pipeline__field ext-pipeline__field--artist">
-            <span className="ext-pipeline__label">ARTIST</span>
-            <input
-              type="text"
-              className="ext-pipeline__input"
-              id="artist-input"
-              value={artist}
-              onChange={(e) => setArtist(e.target.value)}
-              placeholder={L('歌手信息', 'Artist')}
-            />
-          </label>
-          {onParseMusicShareText ? (
-            <div className={`ext-pipeline__share-fill ${pasteActive ? 'is-active' : ''}`}>
-              {pasteActive ? (
-                <div className="ext-pipeline__share-fill-field">
-                  <textarea
-                    ref={pasteInputRef}
-                    className="ext-pipeline__share-fill-input"
-                    placeholder={L(
-                      '点击腾讯音乐、网易云音乐等的分享-复制链接，粘贴在这里自动解析',
-                      "Paste a share link from QQ Music, NetEase, etc. — title & artist will be filled in automatically.",
-                    )}
-                    rows={1}
-                    value={pasteValue}
-                    onChange={(e) => setPasteValue(e.target.value)}
-                    onPaste={handlePaste}
-                    onBlur={handlePasteBlur}
-                    onKeyDown={handlePasteKeyDown}
-                    disabled={parseMusicShareBusy}
-                    autoFocus
-                  />
-                  {pasteValue.trim() && !parseMusicShareBusy ? (
-                    <button
-                      type="button"
-                      className="ext-pipeline__share-fill-submit"
-                      onClick={submitPaste}
-                      onPointerDown={(e) => e.preventDefault()}
-                      title={L('解析歌名与歌手', 'Auto-fill Title & Artist')}
-                    >
-                      {L('解析', 'Analyze')}
-                    </button>
-                  ) : null}
+      {/* Step 1 · 输入歌曲 */}
+      <section className="ext-pipeline__step ext-pipeline__step--input">
+        <div className="ext-pipeline__step-head">
+          <span className="ext-pipeline__step-badge">1</span>
+          <span className="ext-pipeline__step-title">{L('输入歌曲', 'Input song')}</span>
+        </div>
+        <div className="ext-pipeline__head">
+          {/* 三栏横排：TITLE / ARTIST / LANG（Figma 复刻） */}
+          <div className="ext-pipeline__fields-row">
+            <label className="ext-pipeline__field ext-pipeline__field--title">
+              <span className="ext-pipeline__label">TITLE</span>
+              <input
+                type="text"
+                className="ext-pipeline__input"
+                id="title-input"
+                value={songTitle}
+                onChange={(e) => setSongTitle(e.target.value)}
+                placeholder={L('歌曲名称', 'Song Title')}
+                required
+                aria-required="true"
+              />
+            </label>
+
+            <label className="ext-pipeline__field ext-pipeline__field--artist">
+              <span className="ext-pipeline__label">ARTIST</span>
+              <input
+                type="text"
+                className="ext-pipeline__input"
+                id="artist-input"
+                value={artist}
+                onChange={(e) => setArtist(e.target.value)}
+                placeholder={L('歌手信息', 'Artist')}
+              />
+            </label>
+
+            {onLanguageChange && (
+              <div className="ext-pipeline__field ext-pipeline__field--lang">
+                <div className="ext-pipeline__lang-header">
+                  <span className="ext-pipeline__label">LANG</span>
+                  <button
+                    type="button"
+                    className={`ext-pipeline__lang-help${langHelpVisible ? ' is-active' : ''}`}
+                    aria-label={L('语言说明', 'Language help')}
+                    onClick={() => setLangHelpVisible((v) => !v)}
+                  >
+                    ?
+                  </button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  className="ext-pipeline__share-fill-btn"
-                  onClick={handlePasteAreaClick}
-                  disabled={parseMusicShareBusy}
-                  title={L('点击后粘贴 QQ / 网易云分享链接，自动解析歌名与歌手', 'Tap to paste a QQ/NetEase share link — title and artist will be parsed automatically.')}
-                >
-                  {parseMusicShareBusy
-                    ? L('识别中…', 'Recognizing…')
-                    : L('🔗粘贴音乐软件的分享链接', '🔗 Paste a music app share link')}
-                </button>
-              )}
-              <span className="ext-pipeline__share-fill-hint">
-                {L(
-                  '点击腾讯音乐、网易云音乐等的“分享-复制链接”，粘贴在这里自动解析',
-                  'Tap “Share → Copy link” in QQ Music / NetEase and paste here — it will be parsed automatically.',
+                {langHelpVisible && (
+                  <p className="ext-pipeline__lang-hint">
+                    {L(
+                      '选择正确的语言类型增加 AI 搜索的准确性',
+                      'Choosing the correct language improves the accuracy of AI lookup.',
+                    )}
+                  </p>
                 )}
-              </span>
-            </div>
-          ) : null}
+                <select
+                  className="ext-pipeline__select"
+                  value={language ?? matrix.activeTarget}
+                  onChange={(e) => onLanguageChange(e.target.value as LyricsLanguage)}
+                >
+                  <option value="jp">日本語</option>
+                  <option value="ko">한국어</option>
+                  <option value="en">ENG</option>
+                  <option value="zh">中文</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* 链接粘贴输入框 */}
+          {onParseMusicShareText ? (
+              <div className={`ext-pipeline__share-fill ${pasteActive ? 'is-active' : ''}`}>
+                {pasteActive ? (
+                  <div className="ext-pipeline__share-fill-field">
+                    <textarea
+                      ref={pasteInputRef}
+                      className="ext-pipeline__share-fill-input"
+                      placeholder={L(
+                        '粘贴分享链接，自动解析标题和歌手',
+                        "Paste a share link — title & artist will be filled in automatically.",
+                      )}
+                      rows={1}
+                      value={pasteValue}
+                      onChange={(e) => setPasteValue(e.target.value)}
+                      onPaste={handlePaste}
+                      onBlur={handlePasteBlur}
+                      onKeyDown={handlePasteKeyDown}
+                      disabled={parseMusicShareBusy}
+                      autoFocus
+                    />
+                    {pasteValue.trim() && !parseMusicShareBusy ? (
+                      <button
+                        type="button"
+                        className="ext-pipeline__share-fill-submit"
+                        onClick={submitPaste}
+                        onPointerDown={(e) => e.preventDefault()}
+                        title={L('解析歌名与歌手', 'Auto-fill Title & Artist')}
+                      >
+                        {L('解析', 'Analyze')}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="ext-pipeline__share-fill-btn"
+                    onClick={handlePasteAreaClick}
+                    disabled={parseMusicShareBusy}
+                    title={L('点击后粘贴 QQ / 网易云分享链接，自动解析歌名与歌手', 'Tap to paste a QQ/NetEase share link — title and artist will be parsed automatically.')}
+                  >
+                    <span className="ext-pipeline__share-fill-btn-icon">🔗</span>
+                    <span className="ext-pipeline__share-fill-btn-text">
+                      {parseMusicShareBusy
+                        ? L('识别中…', 'Recognizing…')
+                        : L('粘贴分享链接，自动解析标题和歌手', 'Paste a share link — auto-parse title & artist')}
+                    </span>
+                    <span className="ext-pipeline__share-fill-btn-badge">{L('QQ音乐 / 网易云', 'QQ Music / NetEase')}</span>
+                  </button>
+                )}
+              </div>
+            ) : null}
+          </div>
+      </section>
+
+      {/* Step 2 · 生成口令 → 粘贴 AI 结果 */}
+      <section className="ext-pipeline__step ext-pipeline__step--generate">
+        <div className="ext-pipeline__step-head">
+          <span className="ext-pipeline__step-badge">2</span>
+          <span className="ext-pipeline__step-title">
+            {L('生成 Prompt → AI → 粘回', 'Generate Prompt → AI → Paste back')}
+          </span>
+          <button
+            type="button"
+            className="ext-pipeline__guide-toggle"
+            onClick={() => setGuideExpanded((v) => !v)}
+            aria-label={guideExpanded ? L('收起说明', 'Collapse guide') : L('展开说明', 'Expand guide')}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transform: guideExpanded ? '' : 'rotate(180deg)', transition: 'transform 0.2s ease' }}>
+              <path d="M2 4.5L6 8L10 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         </div>
 
-        {onLanguageChange && (
-          <LanguageSelect
-            label={L('选择歌曲的主要语言', 'Choose the main language of the song')}
-            hint={L(
-              '选择正确的语言类型增加 AI 搜索的准确性',
-              'Choosing the correct language improves the accuracy of AI lookup.',
-            )}
-            value={language ?? matrix.activeTarget}
-            languages={wheelLanguages}
-            onChange={onLanguageChange}
-          />
+        {/* A / B / C 三步引导：可展开/收起 */}
+        {guideExpanded && (
+        <ol className="ext-pipeline__guide">
+          <li className="ext-pipeline__guide-item">
+            <span className="ext-pipeline__guide-tag">A</span>
+            <span className="ext-pipeline__guide-text">
+              {L('点左侧「一键生成口令」，Prompt 已复制到剪贴板', 'Tap “Generate Prompt” (left) — the prompt is copied to your clipboard')}
+            </span>
+          </li>
+          <li className="ext-pipeline__guide-item">
+            <span className="ext-pipeline__guide-tag">B</span>
+            <span className="ext-pipeline__guide-text">
+              {L('打开任意 AI（豆包 / ChatGPT / DeepSeek 等）粘贴并发送', 'Open any AI (Doubao / ChatGPT / DeepSeek …) and paste & send it')}
+            </span>
+          </li>
+          <li className="ext-pipeline__guide-item">
+            <span className="ext-pipeline__guide-tag">C</span>
+            <span className="ext-pipeline__guide-text">
+              {L('把 AI 返回的内容粘回右侧，自动排版', 'Paste the AI response into the right box — auto-layout')}
+            </span>
+          </li>
+        </ol>
         )}
 
         <div className="ext-pipeline__prompt-row">
           <div className="ext-pipeline__action-row">
+            <button
+              type="button"
+              className={`ext-pipeline__action-btn ext-pipeline__gen-btn ${
+                !canGenerate
+                  ? 'btn-tonal is-dormant'
+                  : promptGenerated
+                    ? 'btn-success'
+                    : genPrimary
+                      ? 'btn-filled'
+                      : 'btn-tonal'
+              }`}
+              onClick={handleCopyPrompt}
+              disabled={!canGenerate}
+            >
+              {promptGenerated ? (
+                <span>{L('✓ 口令已复制', '✓ Prompt copied')}</span>
+              ) : (
+                <span>{L('一键生成口令', 'Generate AI Prompt')}</span>
+              )}
+            </button>
             {onActivatePasteLayout && (
               <button
                 type="button"
@@ -401,39 +498,23 @@ export default function HtmlPasteInput({
                   })
                 }
               >
-                {L('粘贴剪贴板歌词', 'Paste Lyrics from Clipboard')}
+                {L('生成学习材料 →', 'Generate Study Material →')}
               </button>
             )}
-            <button
-              type="button"
-              className={`ext-pipeline__action-btn ext-pipeline__gen-btn ${
-                !canGenerate
-                  ? 'btn-tonal is-dormant'
-                  : genPrimary
-                    ? 'btn-filled'
-                    : 'btn-tonal'
-              }`}
-              onClick={handleCopyPrompt}
-              disabled={!canGenerate}
-            >
-              <span>{L('一键生成口令', 'Generate AI Prompt')}</span>
-            </button>
           </div>
 
-          {/* 模式的说明文案 */}
-          {canGenerate && (
-            <p className="ext-pipeline__mode-hint">
-              <span className="ext-pipeline__hint-line">
-                <strong>{L('一键生成口令', 'Generate AI Prompt')}</strong>
-                {L(
-                  '：复制详细 Prompt，粘贴到任意 AI（Doubao / ChatGPT / DeepSeek 等）后把结果粘贴回此页排版',
-                  ': copies a detailed prompt — paste it into any AI (Doubao / ChatGPT / DeepSeek, etc.), then paste the response back here to layout.',
-                )}
-              </span>
+          {/* 生成口令后的反馈闭环：常驻直到用户进入下一步 */}
+          {promptGenerated && (
+            <p className="ext-pipeline__copied-feedback">
+              <span className="ext-pipeline__copied-check">✓</span>
+              {L(
+                '口令已复制 → 请打开任意 AI 粘贴发送，再把结果粘回右侧',
+                'Prompt copied → open any AI, paste & send, then paste the result back on the right.',
+              )}
             </p>
           )}
         </div>
-      </div>
+      </section>
 
       <AiAppActionSheet
         visible={actionSheetVisible}

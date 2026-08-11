@@ -1,19 +1,16 @@
 /* ============================================================
-   HowItWorks · 首页「4 步说明带」
-   明色：白底 + 深灰线条 + 荧光黄(--color-kinari)点缀
-   暗色：随 [data-theme='dark'] 翻转，对齐首页输入卡灰阶
+   HowItWorks · 首页常驻「4 步流程条」
+   Figma 复刻：荧光黄胶囊 + 4步白色卡片 + 浅米色表单容器
    ============================================================ */
 
 .hiw {
-  /* 与首页输入卡等宽 */
   max-width: 980px;
-  margin: 30px auto 0;
+  margin: 0 auto;
   width: 100%;
-  padding: 28px 16px 30px;
   box-sizing: border-box;
 
   --hiw-ink: #1c1c22;
-  --hiw-line: #3f3f46;          /* 深灰线条/图标 */
+  --hiw-line: #3f3f46;
   --hiw-muted: #52525b;
   --hiw-border: var(--color-border-subtle);
   --hiw-surface: var(--color-bg-surface);
@@ -22,165 +19,113 @@
   --hiw-toggle-hover: #f4f4f5;
   --hiw-accent: var(--color-kinari);
   --hiw-accent-ink: var(--color-kinari-text);
-
-  /* 明色：与首页输入卡（.ext-pipeline）保持一致的卡片风格 */
-  background: var(--hiw-surface);
-  border: 1px solid var(--hiw-border);
-  border-radius: 16px;
 }
 
-.hiw.is-collapsed {
-  /* 收起：去掉说明带底板，只留左侧莹黄标签 */
-  margin-top: 16px;
-  padding: 0 16px;
-  background: transparent;
-  border: none;
-}
-
-.hiw__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 26px;
-}
-
-.hiw.is-collapsed .hiw__head {
-  margin-bottom: 0;
-  justify-content: flex-start;
-}
-
-.hiw__head-main {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.hiw__toggle {
-  flex: 0 0 auto;
+/* ---- 荧光黄胶囊按钮（Figma 折叠/展开态统一） ---- */
+.hiw__pill {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  margin: 2px 0 0;
-  width: 32px;
-  height: 32px;
-  padding: 0;
+  gap: 6px;
+  width: auto;
+  margin: 0;
+  padding: 8px 16px;
+  box-sizing: border-box;
   border: none;
   border-radius: 999px;
-  background: transparent;
-  color: var(--hiw-muted);
-  cursor: pointer;
-  line-height: 1;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.hiw__toggle:hover {
-  color: var(--hiw-ink);
-  background: var(--hiw-toggle-hover);
-}
-
-.hiw__toggle-icon {
-  width: 18px;
-  height: 18px;
-  display: block;
-}
-
-.hiw__kicker {
-  display: inline-block;
   background: var(--hiw-accent);
   color: var(--hiw-accent-ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  font-family: inherit;
+  transform: scale(0.85); /* 整体缩小 15% */
+}
+
+.hiw__pill:hover {
+  opacity: 0.9;
+}
+
+.hiw__pill:active {
+  transform: scale(0.98);
+}
+
+.hiw__pill-label {
   font-family: var(--ui-font-sans);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  padding: 4px 10px;
-  border-radius: 999px;
-  margin-bottom: 14px;
-  border: none;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
-.hiw__kicker--btn {
-  margin-bottom: 0;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
+/* ---- Chevron 箭头 ---- */
+.hiw__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
 }
 
-.hiw__kicker--btn:hover {
-  filter: brightness(0.97);
+.hiw__chevron::before {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-right: 2.5px solid currentColor;
+  border-bottom: 2.5px solid currentColor;
+  transform: rotate(45deg);
+  margin-top: -2px;
 }
 
-.hiw__title {
-  margin: 0;
-  font-family: var(--ui-font-sans);
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: var(--hiw-ink);
-  line-height: 1.3;
+.hiw__chevron--up::before {
+  transform: rotate(-135deg);
+  margin-top: 2px;
 }
 
-.hiw__sub {
-  margin: 8px 0 0;
-  font-family: var(--ui-font-sans);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--hiw-muted);
+/* ---- 4步流程卡片行（展开态） ---- */
+.hiw__steps-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 20px;
+  position: relative;
 }
 
-/* ---- 步骤条（桌面：4 列 + 箭头；移动：2×2） ---- */
-.hiw__strip {
-  display: flex;
-  align-items: stretch;
-  gap: 0;
-  flex-wrap: nowrap;
-}
-
-.hiw__card {
-  flex: 1 1 0;
-  min-width: 0;
+.hiw__step-card {
   background: var(--hiw-card);
   border: 1px solid var(--hiw-border);
   border-radius: 18px;
-  padding: 24px 18px 20px;
+  padding: 24px 14px 18px;
   display: flex;
   flex-direction: column;
   position: relative;
 }
 
-.hiw__badge {
+/* 黄色圆圈 + 阿拉伯数字（Figma 复刻） */
+.hiw__step-badge {
   position: absolute;
   top: -14px;
-  left: 18px;
-  width: 30px;
-  height: 30px;
+  left: 16px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
+  border: none;
   background: var(--hiw-accent);
   color: var(--hiw-accent-ink);
   font-family: var(--ui-font-sans);
   font-weight: 800;
-  font-size: 14px;
-  display: flex;
+  font-size: 13px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 0 4px var(--hiw-badge-ring);
-}
-
-.hiw__icon {
-  width: 52px;
-  height: 52px;
-  color: var(--hiw-line);
-  margin: 6px 0 16px;
   flex-shrink: 0;
 }
 
-.hiw__icon svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.hiw__card-title {
-  margin: 0;
+/* 中文标题 */
+.hiw__step-title {
+  margin: 8px 0 2px;
   font-family: var(--ui-font-sans);
   font-size: 15px;
   font-weight: 700;
@@ -188,18 +133,20 @@
   line-height: 1.35;
 }
 
-.hiw__card-en {
+/* 英文副标题（灰色小字） */
+.hiw__step-sub {
+  margin: 0 0 8px;
   font-family: var(--ui-font-sans);
   font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--hiw-muted);
-  margin-top: 3px;
   font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--hiw-muted);
+  text-transform: uppercase;
 }
 
-.hiw__card-desc {
-  margin: 12px 0 0;
+/* 描述文字 */
+.hiw__step-desc {
+  margin: 0;
   font-family: var(--ui-font-sans);
   font-size: 12.5px;
   font-weight: 500;
@@ -208,77 +155,53 @@
   flex: 1 1 auto;
 }
 
-.hiw__bullets {
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.hiw__bullets li {
-  position: relative;
-  padding-left: 14px;
-  font-family: var(--ui-font-sans);
-  font-size: 12.5px;
-  font-weight: 500;
-  line-height: 1.65;
-  color: var(--hiw-line);
-}
-
-.hiw__bullets li::before {
-  content: '';
+/* 卡片间箭头 → */
+.hiw__step-arrow {
   position: absolute;
-  left: 2px;
-  top: 9px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--hiw-accent);
+  right: -12px;
+  top: 32px;
+  color: var(--hiw-muted);
+  font-size: 16px;
+  font-weight: 600;
+  z-index: 2;
+  width: 20px;
+  text-align: center;
 }
 
-.hiw__arrow {
-  flex: 0 0 34px;
-  align-self: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hiw__arrow svg {
-  width: 22px;
-  height: 22px;
-  color: var(--hiw-line);
+/* 最后一个卡片不需要箭头 */
+.hiw__step-card:last-child .hiw__step-arrow {
+  display: none;
 }
 
 /* ---- 移动端：2×2 网格 ---- */
 @media (max-width: 760px) {
-  .hiw {
-    padding: 24px 14px 26px;
+  .hiw__steps-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 
-  .hiw.is-collapsed {
-    padding: 0 14px;
-  }
-
-  .hiw__strip {
-    flex-wrap: wrap;
-    gap: 14px;
-  }
-
-  .hiw__arrow {
+  /* 隐藏移动端箭头，避免拥挤 */
+  .hiw__step-arrow {
     display: none;
   }
 
-  .hiw__card {
-    flex: 1 1 calc(50% - 7px);
-    max-width: calc(50% - 7px);
+  .hiw__step-card {
+    padding: 22px 12px 16px;
+  }
+
+  .hiw__step-title {
+    font-size: 14px;
   }
 }
 
-/* 超窄屏：单列堆叠，保证极小屏可读 */
-@media (max-width: 420px) {
-  .hiw__card {
-    flex: 1 1 100%;
-    max-width: 100%;
+/* 超窄屏：单列堆叠 */
+@media (max-width: 440px) {
+  .hiw__steps-row {
+    grid-template-columns: 1fr;
+  }
+
+  .hiw__pill-label {
+    font-size: 13px;
   }
 }
 
@@ -296,20 +219,4 @@
   --hiw-toggle-hover: rgba(255, 255, 255, 0.08);
   --hiw-accent: var(--color-kinari);
   --hiw-accent-ink: var(--color-kinari-text);
-
-  background: var(--hiw-surface);
-  border: 1px solid #2c2c30;
-  border-radius: 24px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-}
-
-[data-theme='dark'] .hiw.is-collapsed {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-[data-theme='dark'] .hiw__kicker--btn:hover {
-  filter: brightness(1.05);
 }

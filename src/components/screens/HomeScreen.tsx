@@ -104,7 +104,7 @@ export default function HomeScreen({
         <h1 className="home-hero__headline">
           {appSettings.interfaceLanguage === 'en'
             ? 'Pause the melody, dive into the words.'
-            : '让旋律暂停，让文字浮现'}
+            : '把歌词一键变成外语学习材料'}
         </h1>
         <p
           className="home-hero__subtitle"
@@ -115,7 +115,9 @@ export default function HomeScreen({
             : '外语歌词标注排版工具 · 快速生成Prompt，去免费 AI Chat 搜索歌词，SHUFURI帮你一键转化成结构化学习文本，涵盖注音、生词与语法剖析，并快速导出 PDF，制作独家歌词学习集。'}
         </p>
       </div>
-      <HtmlPasteInput
+      <HowItWorks />
+      <div className="home-form-card">
+        <HtmlPasteInput
         key={inputResetKey}
         includeVocabAndGrammar={appSettings.defaultIncludeVocabAndGrammar}
         pedagogicalLevel={appSettings.defaultPedagogicalLevel}
@@ -136,7 +138,7 @@ export default function HomeScreen({
         externalPrompt={externalPrompt}
         onExternalPromptHandled={onExternalPromptHandled}
       />
-      <HowItWorks />
+      </div>
       <div className="home-libraries-grid">
         <SavedLyricsLibrary onOpen={onOpenProject} refreshKey={libraryRefreshKey} />
         <StudyCardsLibrary />

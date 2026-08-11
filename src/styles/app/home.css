@@ -63,6 +63,118 @@
   width: 100%;
 }
 
+/* ---- 三栏横排：TITLE / ARTIST / LANG（Figma 复刻） ---- */
+.ext-pipeline__fields-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 12px;
+  width: 100%;
+}
+
+/* TITLE / ARTIST 各占弹性空间 */
+.ext-pipeline__field--title,
+.ext-pipeline__field--artist {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+/* LANG 下拉框固定宽度 */
+.ext-pipeline__field--lang {
+  flex: 0 0 auto;
+  width: 120px;
+  min-width: 0;
+}
+
+/* LANG 头部：label + ? 按钮横向排列 */
+.ext-pipeline__lang-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+/* LANG ? 纯文字问号，无边框圆圈，浮在画面中 */
+.ext-pipeline__lang-help {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-fg-muted, #94a3b8);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.ext-pipeline__lang-help:hover,
+.ext-pipeline__lang-help.is-active {
+  color: var(--color-fg-secondary, #6b7280);
+}
+
+/* LANG 提示文案（点击 ? 后显示在 select 上方） */
+.ext-pipeline__lang-hint {
+  margin: 0 0 6px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fffbeb; /* 浅黄背景 */
+  font-size: 12px;
+  line-height: 1.5;
+  color: #92400e;
+}
+
+[data-theme='dark'] .ext-pipeline__lang-hint {
+  background: #3b2e00;
+  color: #fbbf24;
+}
+
+/* LANG 原生 select 下拉框 — 高度与 input 完全对齐 */
+.ext-pipeline__select {
+  width: 100%;
+  min-width: 0;
+  height: 46px; /* 与 input 等高：13px*2 padding + ~20px 行高 */
+  border: 1px solid #E7E5E4;
+  border-radius: 10px;
+  background: #FAFAF9;
+  box-shadow: none;
+  padding: 13px 14px;
+  padding-right: 32px; /* 留出箭头空间 */
+  font-family: var(--ui-font-sans);
+  font-size: 16px !important; /* 与 input 统一 16px */
+  font-weight: 400;
+  line-height: 1.25; /* 与 input 统一 */
+  letter-spacing: 0.01em;
+  color: var(--ui-fg);
+  text-align: left;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px 12px;
+  transition: border-color 0.18s ease, background 0.18s ease;
+
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.ext-pipeline__select:focus {
+  outline: none !important;
+  border-color: var(--color-border);
+  background-color: #FAFAF9;
+  box-shadow: none !important;
+}
+
+
 .ext-pipeline__share-fill {
   display: flex;
   flex-direction: column;
@@ -71,38 +183,78 @@
   margin-top: -8px;
 }
 
+/* 粘贴分享链接：浅灰底圆角框（与输入框风格一致） */
 .ext-pipeline__share-fill-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  padding: 8px 12px;
-  border: 1px dashed var(--color-border-subtle, #cbd5e1);
-  border-radius: 8px;
-  background: var(--color-bg-subtle, #f8fafc);
+  padding: 13px 14px;
+  border: 1px solid #E7E5E4;
+  border-radius: 10px;
+  background: #FAFAF9;
   font-family: var(--ui-font-sans);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
-  letter-spacing: 0.02em;
-  color: var(--color-fg-muted, #94a3b8);
+  letter-spacing: 0.01em;
+  color: var(--ui-fg);
   text-align: left;
   cursor: text;
   -webkit-tap-highlight-color: transparent;
-  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  outline: none !important; /* 移除 button 默认 focus outline */
 }
 
-.ext-pipeline__share-fill-btn:hover:not(:disabled) {
-  border-color: var(--color-brand);
-  background: var(--color-bg-raised, #fff);
-  color: var(--color-fg-secondary, #475569);
+/* 链接框交互态：保持边框和背景不变，消除跳闪 */
+.ext-pipeline__share-fill-btn:hover:not(:disabled),
+.ext-pipeline__share-fill-btn:focus,
+.ext-pipeline__share-fill-btn:focus-visible,
+.ext-pipeline__share-fill-btn:focus-within,
+.ext-pipeline__share-fill-btn:active {
+  border-color: #E7E5E4;
+  background: #FAFAF9;
 }
 
 .ext-pipeline__share-fill-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ext-pipeline__share-fill-btn-icon {
+  flex-shrink: 0;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.ext-pipeline__share-fill-btn-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-fg-secondary, #6b7280);
+}
+
+.ext-pipeline__share-fill-btn-badge {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--color-fg-muted, #94a3b8);
+  background: var(--color-bg-elevated, #fff);
+  border: 1px solid var(--color-border-subtle, #f1f5f9);
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 .ext-pipeline__share-fill-field {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #E7E5E4;
+  border-radius: 10px;
+  background: #FAFAF9;
 }
 
 /* 粘贴输入框 */
@@ -110,36 +262,40 @@
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
-  padding: 8px 12px;
-  border: 1px solid var(--color-brand);
+  padding: 7px 10px;
+  height: 30px;
+  box-sizing: border-box;
+  border: 1px solid transparent; /* 边框由外层 btn 提供 */
   border-radius: 8px;
-  background: var(--color-bg-surface, #fff);
+  background: transparent; /* 背景由外层 btn 提供 */
   font-family: var(--ui-font-sans);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 400;
-  letter-spacing: 0.02em;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
   color: var(--ui-fg);
   resize: none;
   overflow: hidden;
   outline: none;
   -webkit-appearance: none;
   appearance: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-brand) 16%, transparent);
-  transition: box-shadow 0.2s;
+  box-shadow: none;
+}
+
+.ext-pipeline__share-fill-input:focus,
+.ext-pipeline__share-fill-input:focus-visible {
+  outline: none;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .ext-pipeline__share-fill-input::placeholder {
-  color: var(--color-fg-faint, #cbd5e1);
+  color: var(--color-fg-muted, #94a3b8);
   opacity: 1;
 }
 
 .ext-pipeline__share-fill-input:focus {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-brand) 24%, transparent);
-}
-
-.ext-pipeline__share-fill-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  outline: none;
   box-shadow: none;
 }
 
@@ -167,38 +323,27 @@
   transform: scale(0.98);
 }
 
-.ext-pipeline__share-fill-hint {
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--color-fg-muted, #94a3b8);
-}
-
+/* 输入框：浅灰底圆角框（与暗色模式对称），label 置于框内顶部 */
 .ext-pipeline__field {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   width: 100%;
   cursor: text;
 }
 
+/* 浅色模式取消下划线（改用填充框） */
 .ext-pipeline__field::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-  background-color: var(--color-border);
-  pointer-events: none;
-}
-
-.ext-pipeline__field:focus-within::after {
-  background-color: var(--color-accent);
+  display: none;
 }
 
 .ext-pipeline__label {
-  position: absolute;
-  bottom: 12px;
-  left: 0;
-  right: 0;
+  position: static;
+  bottom: auto;
+  left: auto;
+  right: auto;
   text-align: left;
   font-size: 10px !important;
   font-weight: 500;
@@ -236,21 +381,23 @@
   font-weight: 400;
 }
 
-/* 极简底部边框输入 — 下划线由 .ext-pipeline__field::after 绘制，避免 iOS 双线 */
+/* 浅色模式：浅灰底圆角框突出输入区域（与暗色模式对称） */
 .ext-pipeline__input {
   width: 100%;
   min-width: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
+  height: 46px; /* 与 select 等高 */
+  border: 1px solid #E7E5E4;
+  border-radius: 10px;
+  background: #FAFAF9;
   box-shadow: none;
-  padding: 16px 0 12px;
+  padding: 13px 14px;
   font-family: var(--ui-font-sans);
   font-size: 16px !important;
-  font-weight: 300;
+  font-weight: 400;
+  line-height: 1.25;
   letter-spacing: 0.01em;
   color: var(--ui-fg);
-  text-align: center;
+  text-align: left;
   outline: none;
   -webkit-appearance: none;
   appearance: none;
@@ -258,6 +405,7 @@
   user-select: text;
   touch-action: manipulation;
   cursor: text;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -274,8 +422,9 @@
 .ext-pipeline__input:focus,
 .ext-pipeline__input:focus-visible {
   outline: none !important;
+  border-color: var(--color-border);
+  background: #FAFAF9;
   box-shadow: none !important;
-  border: none !important;
 }
 
 /* 保留浏览器自动完成建议，但盖掉 UA autofill 黄/蓝底 */
@@ -285,10 +434,16 @@
 .ext-pipeline__input:-webkit-autofill:focus-visible {
   -webkit-text-fill-color: var(--ui-fg);
   caret-color: var(--ui-fg);
-  border: none !important;
-  /* 与明色输入区视觉一致（透明底 ≈ 表面色） */
-  box-shadow: inset 0 0 0 1000px var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border-subtle) !important;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1000px var(--color-bg-muted) !important;
   transition: background-color 99999s ease-out;
+}
+
+.ext-pipeline__input:-webkit-autofill:focus,
+.ext-pipeline__input:-webkit-autofill:focus-visible {
+  border-color: var(--color-border) !important;
+  box-shadow: inset 0 0 0 1000px var(--color-bg-muted-active) !important;
 }
 
 .ext-pipeline__actions {
@@ -441,9 +596,9 @@
 }
 
 .lang-select__pill.is-active {
-  border-color: var(--color-accent, #2563eb);
-  background: var(--color-accent-soft, #eff6ff);
-  color: var(--color-accent, #2563eb);
+  border: 1px solid #555;
+  background: var(--color-kinari);
+  color: #3a3828;
 }
 
 
@@ -495,6 +650,209 @@
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
+}
+
+/* 生成口令成功：品牌深灰反馈闭环 */
+.ext-pipeline__action-btn.btn-success {
+  background: var(--color-fg);
+  border: 1px solid var(--color-fg);
+  color: var(--color-accent-on);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+
+.ext-pipeline__action-btn.btn-success:hover:not(:disabled) {
+  background: var(--color-fg-secondary);
+  border-color: var(--color-fg-secondary);
+}
+
+/* ---- Step 分区（Figma：无边框，直接在大卡片内） ---- */
+.ext-pipeline__step {
+  position: relative;
+  padding: 0 0 18px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  margin-bottom: 0;
+}
+
+/* Step 1 标题区域增加顶部间距 */
+.ext-pipeline__step--input {
+  padding-top: 4px;
+}
+
+/* Step 2 分割线上下间距 */
+.ext-pipeline__step--generate {
+  padding-top: 22px;
+  margin-top: 4px;
+}
+
+/* Step 2 标题居中 + 两侧水平分割线（Figma：贯穿全宽） */
+.ext-pipeline__step--generate .ext-pipeline__step-head {
+  justify-content: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 16px;
+}
+
+/* 分割线贯穿整个卡片宽度 */
+.ext-pipeline__step--generate .ext-pipeline__step-head::before,
+.ext-pipeline__step--generate .ext-pipeline__step-head::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-subtle, #e5e5e5);
+  min-width: 20px;
+}
+
+.ext-pipeline__step-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+/* Step 2 序号圆圈：亮色黑色，暗色改为莹黄色 */
+.ext-pipeline__step--generate .ext-pipeline__step-badge {
+  background: #1c1c22;
+  color: #ffffff;
+}
+
+[data-theme='dark'] .ext-pipeline__step--generate .ext-pipeline__step-badge {
+  background: var(--color-kinari);
+  color: var(--color-kinari-text);
+}
+
+.ext-pipeline__step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-kinari);
+  color: var(--color-kinari-text);
+  font-family: var(--ui-font-sans);
+  font-weight: 800;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.ext-pipeline__step-title {
+  font-family: var(--ui-font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ui-fg, #1c1c22);
+}
+
+/* Step 2 标题特殊样式（Figma：生成 PROMPT → AI → 粘回） */
+.ext-pipeline__step--generate .ext-pipeline__step-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ---- A / B / C 三步引导（固定在 CTA 上方） ---- */
+.ext-pipeline__guide {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 16px 14px 16px 12px;
+  border: 1px dashed #E7E5E4;
+  border-radius: 12px;
+  background: #FAFAF9;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+/* Step2 标题旁展开/收起按钮 */
+.ext-pipeline__guide-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-muted, #999);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+
+.ext-pipeline__guide-toggle:hover {
+  color: var(--color-text-primary, #1c1c22);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='dark'] .ext-pipeline__guide-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ext-pipeline__guide-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ext-pipeline__guide-tag {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #4a4a4a;
+  color: #cccccc;
+  font-family: var(--ui-font-sans);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.ext-pipeline__guide-text {
+  font-family: var(--ui-font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ui-fg-secondary);
+}
+
+/* ---- 生成口令后的反馈提示（浅灰底 + 深灰文本）---- */
+.ext-pipeline__copied-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: #f7f6f3;
+  border: 1px solid #e7e5e4;
+  font-family: var(--ui-font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #555;
+}
+
+.ext-pipeline__copied-check {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-fg);
+  color: var(--color-accent-on);
+  font-size: 11px;
+  font-weight: 800;
+  margin-top: 1px;
 }
 
 .ext-pipeline__hint {
@@ -617,6 +975,15 @@
 /* ---- 内嵌直连生成按钮 ---- */
 .ext-pipeline__embed-gen-btn {
   gap: 6px !important;
+}
+
+/* 主 CTA：粘贴按钮 — KINARI 边框 */
+.app--home .ext-pipeline__paste-btn.btn-filled {
+  border: 1.5px solid var(--color-kinari) !important;
+}
+
+.app--home .ext-pipeline__paste-btn.btn-filled:hover:not(:disabled) {
+  border-color: var(--color-kinari-hover) !important;
 }
 
 .ext-pipeline__embed-gen-btn.btn-filled {
@@ -1335,14 +1702,14 @@
     letter-spacing: 0.01em;
   }
 
-  /* 输入卡片 - 拉长拉瘪, 水平居中 */
+  /* 输入卡片 - 已由 .home-form-card 外层包裹，此处透明 */
   .app--home .ext-pipeline {
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border-subtle);
-    border-radius: 16px;
-    padding: 24px 56px 22px;
-    max-width: 980px;
-    margin: 0 auto;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    max-width: 100%;
+    margin: 0;
   }
 
   .app--home .ext-pipeline__meta {
@@ -1351,7 +1718,7 @@
 
   .app--home .ext-pipeline__input {
     font-size: 17px !important;
-    padding: 12px 0 10px;
+    padding: 14px 16px;
   }
 
   .app--home .ext-pipeline__input::placeholder {
@@ -1400,9 +1767,9 @@
     min-height: 96px;
     margin: 0 !important;
     padding: 0 !important;
-    border: 1px solid var(--color-border-subtle);
+    border: 1px solid var(--color-border-subtle, #e5e5e5);
     border-radius: 16px;
-    background: var(--color-bg-surface);
+    background: #ffffff;
     transition: box-shadow 0.2s ease, transform 0.2s ease;
     cursor: pointer;
   }
@@ -1688,9 +2055,7 @@
 }
 
 [data-theme='dark'] .app--home .ext-pipeline__share-fill-input:focus {
-  border-color: color-mix(in srgb, var(--color-kinari) 45%, #3a3a3a);
-  box-shadow: none;
-  background: color-mix(in srgb, var(--color-kinari) 10%, #1a1a1a);
+  border-color: #4a4a5c;
 }
 
 [data-theme='dark'] .app--home .lang-wheel-with-hint__label {
@@ -1779,6 +2144,37 @@
   color: #666666;
 }
 
+/* 暗色：Step 分区 / A·B·C 引导 / 绿色反馈 */
+[data-theme='dark'] .app--home .ext-pipeline__step {
+  background: #2a2a2a;
+  border-color: #3f3f46;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__step-badge {
+  color: var(--color-kinari-text);
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__guide {
+  background: #1a1a1a;
+  border-color: #3f3f46;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__guide-text {
+  color: #c4c4c4;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__copied-feedback {
+  background: #2a2a2e;
+  border-color: #3a3a40;
+  color: #b0b0b8;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__action-btn.btn-success {
+  background: var(--color-fg);
+  border-color: var(--color-fg);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
 /* 统计卡 */
 [data-theme='dark'] .app--home .saved-library-title {
   font-weight: 500;
@@ -1823,5 +2219,65 @@
     background: #2a2a2a;
     border: 1px solid #2c2c30;
     border-radius: 16px;
+  }
+}
+
+/* ============================================================
+   浅米色大卡片（Figma：包裹输入表单区域）
+   与底色区分但无阴影
+   ============================================================ */
+.home-form-card {
+  background: #ffffff;
+  border: 1px solid var(--color-border-subtle, #e5e5e5);
+  border-radius: 20px;
+  padding: 28px 24px 28px;
+  margin: 14px auto 0;
+  max-width: 980px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 暗色模式：浅米色卡片改为深灰 */
+[data-theme='dark'] .home-form-card {
+  background: #1a1a1a;
+}
+
+/* ---- 暗色模式：三栏横排 + LANG 下拉框 ---- */
+[data-theme='dark'] .app--home .ext-pipeline__select {
+  background: #2a2a2a;
+  border-color: transparent;
+  color: #ffffff;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__select:focus {
+  border-color: #3a3a3a;
+  background: #2f2f2f;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__lang-help {
+  color: #666666;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__lang-help:hover,
+[data-theme='dark'] .app--home .ext-pipeline__lang-help.is-active {
+  color: #999999;
+}
+
+/* 桌面端：三栏间距加大，LANG 宽度略增 */
+@media (min-width: 768px) {
+  .ext-pipeline__fields-row {
+    gap: 16px;
+  }
+
+  .ext-pipeline__field--lang {
+    width: 140px;
+  }
+
+  .app--home .ext-pipeline__fields-row {
+    gap: 16px;
+  }
+
+  .app--home .ext-pipeline__field--lang {
+    width: 150px;
   }
 }
