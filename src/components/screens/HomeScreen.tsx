@@ -45,7 +45,6 @@ type Props = {
 export default function HomeScreen({
   inputResetKey,
   appSettings,
-  wheelLanguages,
   languageMatrixContext,
   shareOcrData,
   pasteLayoutReady,
@@ -122,7 +121,6 @@ export default function HomeScreen({
         includeVocabAndGrammar={appSettings.defaultIncludeVocabAndGrammar}
         pedagogicalLevel={appSettings.defaultPedagogicalLevel}
         language={appSettings.lyricsLanguage}
-        wheelLanguages={wheelLanguages}
         matrix={languageMatrixContext}
         onLanguageChange={onLanguageChange}
         initialTitle={shareOcrData?.title}
