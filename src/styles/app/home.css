@@ -86,6 +86,25 @@
   min-width: 0;
 }
 
+/* ---- 窄屏（手机）适配：三栏横排改为纵向堆叠，避免输入框挤在一起 ---- */
+@media (max-width: 560px) {
+  .ext-pipeline__fields-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .ext-pipeline__field--title,
+  .ext-pipeline__field--artist,
+  .ext-pipeline__field--lang {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+  }
+  .ext-pipeline__field--lang {
+    width: 100%;
+  }
+}
+
 /* LANG 头部：label + ? 按钮横向排列 */
 .ext-pipeline__lang-header {
   display: flex;

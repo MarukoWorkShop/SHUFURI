@@ -289,7 +289,7 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
           onClick={handleToggle}
           expanded={drawerOpen}
         >
-          <span className="saved-library-title">Archive</span>
+          <span className="saved-library-title">{L('我的歌词库', 'Archive')}</span>
           <span className="saved-library-toggle__aside">
             {!loading && (
               <span className="saved-library-count">

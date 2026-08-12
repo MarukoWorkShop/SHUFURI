@@ -20,6 +20,8 @@ const TARGET_PRINT_DPI = 300;
 const MIN_PDF_RASTER_SCALE = Math.ceil(TARGET_PRINT_DPI / 96);
 /** 单页栅格像素上限，防止 iOS WebView OOM */
 const MAX_RASTER_PIXELS = 24_000_000;
+/** 移动端 Web 的栅格倍率上限：降低单页像素，规避大画布 OOM/静默失败 */
+const MAX_WEB_RASTER_SCALE = 2;
 /** JPEG 写入 PDF：NONE 减少块压缩带来的文字锯齿 */
 const JPEG_ADD_COMPRESSION: 'FAST' | 'NONE' = 'NONE';
 /** JPEG 质量 */
@@ -111,7 +113,14 @@ export async function preloadImagesInElementForPdf(el: HTMLElement): Promise<voi
 function pickRasterScale(width: number, height: number): number {
   const pagePixels = width * height;
   const maxScaleByMemory = Math.floor(Math.sqrt(MAX_RASTER_PIXELS / pagePixels));
-  return Math.max(1, Math.min(MIN_PDF_RASTER_SCALE, maxScaleByMemory));
+  let scale = Math.max(1, Math.min(MIN_PDF_RASTER_SCALE, maxScaleByMemory));
+  // 移动端 Web（非原生壳且视口窄）：把栅格倍率封顶到 2，避免 mobilePoster
+  // 1080×1920 在 scale=3 时单页逼近 24M 像素上限导致 iOS Safari OOM 崩溃
+  // （崩溃表现为「导出无任何反应」）。App 内不降级以保持打印清晰度。
+  if (!isNativeWebView() && typeof window !== 'undefined' && window.innerWidth < 768) {
+    scale = Math.min(scale, MAX_WEB_RASTER_SCALE);
+  }
+  return scale;
 }
 
 /**
@@ -249,6 +258,15 @@ async function canvasToBlob(
 /** 将单页根节点栅格化为 Canvas（导出 mount 已在离屏 1:1，直接栅格化） */
 export async function rasterizePosterLayoutPageRoot(el: HTMLElement): Promise<HTMLCanvasElement> {
   await ensurePosterFontsLoaded();
+  // 内嵌 @font-face 字体在首次栅格时可能尚未解码完成，等待文档字体就绪，
+  // 避免部分移动浏览器栅格出空白/字体错位进而静默失败。
+  if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+    try {
+      await document.fonts.ready;
+    } catch {
+      /* 字体就绪等待失败不影响栅格，继续使用已加载字体 */
+    }
+  }
   await waitForLayoutStable(el);
   await waitForImagesInElement(el);
   await preloadImagesInElementForPdf(el);

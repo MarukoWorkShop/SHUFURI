@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import './App.css';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/app/AppLayout';
+import { PulsatingDots } from './components/PulsatingDots';
 import HomeScreen from './components/screens/HomeScreen';
 import EditScreen from './components/screens/EditScreen';
 import ExportScreen from './components/screens/ExportScreen';
@@ -39,7 +40,7 @@ function AppShell({
   onLibraryImported,
   toastMessage,
 }: AppShellProps) {
-  const { mode, openProject } = usePosterDocumentContext();
+  const { mode, openProject, isOpeningProject } = usePosterDocumentContext();
   const homeSession = useHomeSessionContext();
   const {
     appSettings,
@@ -145,6 +146,28 @@ function AppShell({
         </ErrorBoundary>
       )}
       {mode === 'export' && <ExportScreen />}
+
+      {mode === 'input' && homeSession.isLayouting && (
+        <div className="global-layout-loading" role="status" aria-live="polite">
+          <div className="global-layout-loading__inner">
+            <PulsatingDots size={12} />
+            <p className="global-layout-loading__text">
+              {L('正在生成歌词学习页面…', 'Generating lyrics study page…')}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {isOpeningProject && (
+        <div className="global-layout-loading" role="status" aria-live="polite">
+          <div className="global-layout-loading__inner">
+            <PulsatingDots size={12} />
+            <p className="global-layout-loading__text">
+              {L('正在打开歌词…', 'Opening lyrics…')}
+            </p>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }

@@ -23,8 +23,8 @@ import {
   type ExplainPickContext,
 } from './readSelectionForExplain';
 
-/** 一次涂抹允许的最大字符数，超出则钳止末端并提示 */
-export const BRUSH_MAX_CHARS = 60;
+/** 一次涂抹允许的最大字符数，超出则钳止末端并提示；放宽到整句级别 */
+export const BRUSH_MAX_CHARS = 120;
 export const BRUSH_TOKEN_CLASS = 'brush-token';
 export const BRUSH_HIGHLIGHT_CLASS = 'brush-highlighted';
 
@@ -243,10 +243,14 @@ export function createBrushController(
   };
 
   // 桌面鼠标拖拽：ev.target 即当前指针下的字，直接用；
-  // 触摸指针：target 被钉在落点元素，改用坐标命中（elementFromPoint）
-  const resolveToken = (ev: PointerEvent): HTMLElement | null =>
-    walkToToken(ev.target as HTMLElement | null) ??
-    tokenAtPoint(ev.clientX, ev.clientY);
+  // 触摸指针：target 被 pointer capture 钉在落点元素（滑动时永远返回起点字），
+  // 必须用坐标命中（elementFromPoint）才能识别划过整句。故触摸优先走坐标。
+  const resolveToken = (ev: PointerEvent): HTMLElement | null => {
+    if (ev.pointerType === 'touch') {
+      return tokenAtPoint(ev.clientX, ev.clientY);
+    }
+    return walkToToken(ev.target as HTMLElement | null) ?? tokenAtPoint(ev.clientX, ev.clientY);
+  };
 
   const indexOf = (el: HTMLElement): number => {
     // 直接用 token 自带的 data-brush-index 作为下标（token 化时按文档顺序编号，
@@ -308,7 +312,10 @@ export function createBrushController(
     applyRange(startIdx, startIdx);
   };
 
-  const onPointerMove = (ev: PointerEvent) => {
+  // 处理单条指针移动事件：解析命中的字并更新高亮区间。
+  // 抽成独立函数以便对高速滑动的「合并指针事件」逐个重放，
+  // 补全移动端因采样率低而漏掉的中间字。
+  const handleMove = (ev: PointerEvent) => {
     if (!painting) return;
     ev.preventDefault();
     const token = resolveToken(ev);
@@ -333,6 +340,16 @@ export function createBrushController(
       }
     }
     applyRange(s, e);
+  };
+
+  const onPointerMove = (ev: PointerEvent) => {
+    // 移动端手指高速滑动时浏览器会合并事件，getCoalescedEvents 取出
+    // 被合并的中间采样点，逐个重放以补全漏字，保证整句连续命中。
+    const coalesced =
+      typeof ev.getCoalescedEvents === 'function' && ev.getCoalescedEvents().length
+        ? ev.getCoalescedEvents()
+        : [ev];
+    for (const e of coalesced) handleMove(e as PointerEvent);
   };
 
   const finish = () => {

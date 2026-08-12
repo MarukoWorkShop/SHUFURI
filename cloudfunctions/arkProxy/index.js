@@ -1,8 +1,8 @@
-const cloud = require('wx-server-sdk');
+const cloudbase = require('@cloudbase/node-sdk');
 const fetch = require('node-fetch');
 const crypto = require('crypto');
 
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+const cloud = cloudbase.init({ env: cloudbase.SYMBOL_CURRENT_ENV });
 
 /**
  * arkProxy —— 无状态 AI 网关（生产主力入口）
@@ -50,8 +50,14 @@ const DAILY_COST_COLLECTION = 'ai_daily_cost';
 
 // ===== 模型映射 =====
 const MODELS = {
-  'explain.selection': 'doubao-seed-2-0-mini',
-  'lyrics.step2': 'doubao-seed-2-1-pro',
+  'explain.selection': 'doubao-seed-2-0-mini-260428',
+  'lyrics.step2': 'doubao-seed-2-1-pro-260628',
+};
+// 新版 doubao-seed-2-x-260xxx 系列都是深度思考模型；
+// 划词/词解都不需要深度思考，关闭以加速（实测 enabled 慢 2-7 倍，质量提升有限）
+const DISABLE_THINKING = {
+  'explain.selection': true,
+  'lyrics.step2': true,
 };
 const MAX_TOKENS = {
   'explain.selection': 360,
@@ -59,7 +65,10 @@ const MAX_TOKENS = {
 };
 const ALLOW_WEB_SEARCH = {
   'explain.selection': false,
-  'lyrics.step2': true,
+  // 火山引擎 2026-06-22 起 Chat Completions API 收紧 tools.type 校验，
+  // 仅接受 'function'；web_search 内置工具需走 Responses API。
+  // Step2 生成学习材料是知识推理任务，联网为可选增强，去掉不影响主流程。
+  'lyrics.step2': false,
 };
 
 // ===== 估算单价（元 / 千 tokens，输入+输出粗略混合，偏保守高估） =====
@@ -368,15 +377,20 @@ exports.main = async (event, context) => {
   const body = {
     model,
     messages,
-    max_tokens: maxTokens,
+    max_completion_tokens: maxTokens,
     temperature: 0.3,
   };
+  if (DISABLE_THINKING[action]) {
+    body.thinking = { type: 'disabled' };
+  }
   if (useWeb) {
     body.tools = [{ type: 'web_search', web_search: { search_result: true }, web_search_options: { search_count: 3 } }];
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
+  // Pro 关闭深度思考后生成 4096 tokens 仍较慢；给到 150s
+  // （云函数 timeout=180s，留 30s 给前后置逻辑）
+  const timeout = setTimeout(() => controller.abort(), 150000);
   let upstream;
   try {
     upstream = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {

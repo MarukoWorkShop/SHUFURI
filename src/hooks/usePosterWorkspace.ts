@@ -150,26 +150,33 @@ export function usePosterWorkspace({
     pageRefs,
   ]);
 
+  const [isOpeningProject, setIsOpeningProject] = useState(false);
+
   const openProject = useCallback(
     async (project: SavedLyricsProject) => {
       const profile = project.layoutProfile ?? editLayoutProfile;
       studyCardsBundleIdRef.current = project.id;
-      await syncStudyCardsFromRaw(project.rawLyrics, project.id, {
-        title: project.title,
-        artist: project.artist,
-        lang: project.lang,
-        includeVocabAndGrammar: project.includeVocabAndGrammar,
-      });
-      await enterEditWithLayout(
-        project.bodyHtml,
-        project.title,
-        project.rawLyrics,
-        profile,
-        project.id,
-        project.artist,
-        project.lang,
-        project.titleMarkupHtml,
-      );
+      setIsOpeningProject(true);
+      try {
+        await syncStudyCardsFromRaw(project.rawLyrics, project.id, {
+          title: project.title,
+          artist: project.artist,
+          lang: project.lang,
+          includeVocabAndGrammar: project.includeVocabAndGrammar,
+        });
+        await enterEditWithLayout(
+          project.bodyHtml,
+          project.title,
+          project.rawLyrics,
+          profile,
+          project.id,
+          project.artist,
+          project.lang,
+          project.titleMarkupHtml,
+        );
+      } finally {
+        setIsOpeningProject(false);
+      }
     },
     [enterEditWithLayout, syncStudyCardsFromRaw, studyCardsBundleIdRef, editLayoutProfile],
   );
@@ -340,6 +347,7 @@ export function usePosterWorkspace({
     enterWorkspaceFromBridge,
     enterExportFlow,
     openProject,
+    isOpeningProject,
     handleLayoutFromHtml,
     handleLayoutChange,
     handleBackToEdit,

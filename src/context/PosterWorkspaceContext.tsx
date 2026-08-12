@@ -76,6 +76,8 @@ export type PosterDocumentContextValue = {
     lang?: LangCode,
   ) => Promise<void>;
   openProject: (project: SavedLyricsProject) => Promise<void>;
+  /** 打开歌词库项目并载入编辑页的过渡期 loading 状态（移动端大项目加载较慢时显示） */
+  isOpeningProject: boolean;
   handleSave: () => Promise<void>;
   handleExportPdf: () => Promise<void>;
   /** 将划词 AI 笔记条追加到歌词正文末尾（词汇条样式） */

@@ -395,7 +395,13 @@ export function buildSourceIntegrityBlock(
   return `
 [Source_Integrity]
 - Target: "${artist} - ${title}" — studio OFFICIAL published lyrics ONLY (not memory, paraphrase, fan lyric)
-- BEFORE encoding: search web for ${searchQuery}; transcribe verbatim from ≥2 matching lyric pages; turn on 联网/搜索 if the app supports it
+- MANDATORY EXECUTION ORDER (follow literally, do not skip any step):
+  1. BEFORE writing ANY L row: turn ON web search / 联网搜索. Search EXACTLY: ${searchQuery}.
+  2. Open at least 2 independent lyric pages (Uta-Net / Mojim / J-Lyric.net / Genius / official artist site). Skim until you find the actual "${title}" lyrics.
+  3. Cross-reference the first 2 lines of the song across those pages. If the first 2 lines do not match across ≥2 sources, you have the WRONG song — keep searching. Do NOT proceed on a single source.
+  4. ONLY AFTER step 3 confirms the match: transcribe the published lines verbatim into L rows.
+- ANTI-CONFIDENCE RULE: the FIRST lyrics that pop into your head are almost always WRONG (memory blends homonym songs, covers, remixes, TV-size edits). Treat your own recall as UNTRUSTED — it must be verified by web search before any L row is written. If you feel "I know this song, no need to search" — STOP. That feeling is the hallucination trigger. Search anyway.
+- HALLUCINATION RED LINE: fabricating lyrics (writing L rows from memory/imagination without source verification) is the #1 failure mode of this task. Outputting "no lyrics found" via a minimal H row + @9 is ALWAYS preferable to guessing even a single line. Wrong lyrics destroy the user's poster; a verified-incomplete output does not.
 - L col3 = published lines only; if sources conflict or search fails: output verified L rows + @9 — NEVER pad gaps with guesses${anchor}
 - Do NOT invent, merge other songs, or split/merge official lines
 - L indices contiguous 1..N; omit uncertain lines rather than fabricate (incomplete + @9 beats wrong lyrics)${completeness}${retryBlock}`;
@@ -456,11 +462,15 @@ export function buildSelfCheckBlock(
     interfaceLanguage === 'en' && activeTarget !== 'en'
       ? `\n${langNum}. ALL L col4 / meaning / detail / pedagogical_translation fields MUST be natural English — zero Chinese characters in translation fields`
       : '';
+  const sourceGateNum = (includeVocab ? (pedagogicalLevel ? 8 : 7) : 6);
+  const sourceGateLine = `\n${sourceGateNum}. SOURCE GATE: did you actually search the web and find ≥2 lyric pages BEFORE writing the first L row? If "no" or "I recalled from memory" → your L rows are hallucinated. Discard and redo from step 1 of [Source_Integrity].`;
+  const noPrematureLineNum = sourceGateNum + 1;
+  const noPrematureLine = `\n${noPrematureLineNum}. NO L row was written before the search of step 1 finished. Memory recall is NOT a source.`;
   return `
 [Self_Check — before send]
 1. Last non-empty line is exactly @9
 2. L line numbers contiguous 1..N
-3. H col3 = prompt title; L|1 exists; L lyrics transcribed from web search — not memory recall${col6Line}${levelLine}${zhLine}${jpLine}${langCheck}`;
+3. H col3 = prompt title; L|1 exists; L lyrics transcribed from web search — not memory recall${col6Line}${levelLine}${zhLine}${jpLine}${langCheck}${sourceGateLine}${noPrematureLine}`;
 }
 
 export function buildModelComplianceBlock(
@@ -470,13 +480,13 @@ export function buildModelComplianceBlock(
   let extra = '';
   if (modelHint === 'qwen') {
     extra =
-      '\n- Tongyi/Qwen: enable 联网搜索 first; verify lyrics against web — never {A:py}B{B:py} on zh L col3; verify @9';
+      '\n- Tongyi/Qwen: enable 联网搜索 first; verify lyrics against web — do NOT add pinyin ruby annotations to zh L col3; verify @9';
   } else if (modelHint === 'deepseek') {
     extra =
       '\n- DeepSeek: search official lyrics before @0; no preamble/reasoning; no ``` fences; after @9 output NOTHING';
   } else if (modelHint === 'doubao') {
     extra =
-      '\n- Doubao: backend enforces web_search via Responses API for Step1; transcribe ONLY from search results — never guess from memory';
+      '\n- Doubao: strongly recommended to turn ON 联网搜索/web search first and transcribe ONLY from search results — never guess from memory';
   }
   const langRule =
     interfaceLanguage === 'en'

@@ -239,7 +239,7 @@ export default function StudyCardsLibrary(_props: Props) {
         </div>
         <header className="study-cards-drawer__header">
           <div className="study-cards-drawer__header-title">
-            <span className="saved-library-title">Study Cards</span>
+            <span className="saved-library-title">{L('我的学习卡', 'Study Cards')}</span>
             {items.length > 0 && (
               <button
                 type="button"
@@ -374,7 +374,7 @@ export default function StudyCardsLibrary(_props: Props) {
           aria-expanded={drawerOpen}
           aria-controls="study-cards-drawer"
         >
-          <span className="saved-library-title">Study Cards</span>
+          <span className="saved-library-title">{L('我的学习卡', 'Study Cards')}</span>
           <span className="saved-library-toggle__aside">
             {!loading && (
               <span className="saved-library-count">

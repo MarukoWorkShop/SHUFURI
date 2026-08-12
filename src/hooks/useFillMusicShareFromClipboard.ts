@@ -66,11 +66,14 @@ export function useFillMusicShareFromClipboard({
         }));
 
         const detectedLang = musicShare.detectedLanguage;
-        if (detectedLang === 'jp' || detectedLang === 'ko') {
-          setAppSettings((prev) => ({
-            ...prev,
-            lyricsLanguage: detectedLang as LyricsLanguage,
-          }));
+        if (detectedLang === 'jp' || detectedLang === 'ko' || detectedLang === 'zh' || detectedLang === 'en') {
+          setAppSettings((prev) => {
+            if (!prev.learningTargetLanguages.includes(detectedLang)) return prev;
+            return {
+              ...prev,
+              lyricsLanguage: detectedLang as LyricsLanguage,
+            };
+          });
           saveAppSettings({ lyricsLanguage: detectedLang });
         }
 

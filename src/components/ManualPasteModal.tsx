@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { L } from '../utils/i18n';
 import { useHomeSessionContext } from '../context/HomeSessionContext';
 
@@ -20,15 +20,9 @@ export default function ManualPasteModal() {
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // 打开时聚焦 textarea，让用户立即可以 Cmd+V / 长按粘贴
-  useEffect(() => {
-    if (!manualPasteOpen) return;
-    const t = window.setTimeout(() => {
-      textareaRef.current?.focus();
-    }, 60);
-    return () => window.clearTimeout(t);
-  }, [manualPasteOpen]);
-
+  // 注意：打开时**不**自动聚焦 textarea，否则 iOS Safari 会因 textarea 获得焦点
+  // 立刻弹出系统「粘贴」浮层（与点击「去生成口令」不弹浮层的行为不一致）。
+  // 改为用户自行点击 textarea 时才聚焦（此时弹浮层是预期的手动粘贴动作）。
   if (!manualPasteOpen) return null;
 
   return (

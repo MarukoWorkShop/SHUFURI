@@ -91,11 +91,14 @@ export function useDesktopMusicShareDetection({
         }));
 
         const detectedLang = musicShare.detectedLanguage;
-        if (detectedLang === 'jp' || detectedLang === 'ko') {
-          setAppSettingsRef.current((prev) => ({
-            ...prev,
-            lyricsLanguage: detectedLang as LyricsLanguage,
-          }));
+        if (detectedLang) {
+          setAppSettingsRef.current((prev) => {
+            if (!prev.learningTargetLanguages.includes(detectedLang)) return prev;
+            return {
+              ...prev,
+              lyricsLanguage: detectedLang as LyricsLanguage,
+            };
+          });
           saveAppSettings({ lyricsLanguage: detectedLang });
         }
 

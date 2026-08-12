@@ -28,10 +28,11 @@
   display: block;
   width: 0;
   height: 0;
-  border-top: 7px solid transparent;
-  border-bottom: 7px solid transparent;
-  border-right: 9px solid var(--color-kinari);
-  opacity: 0.75;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 10px solid #000;
+  opacity: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
   animation: ink-toolbox-chevron-nudge 2s ease-in-out infinite;
   transition:
     transform 0.28s ease,
@@ -40,13 +41,13 @@
 }
 
 .ink-toolbox__trigger:hover .ink-toolbox__chevron {
-  border-right-color: color-mix(in srgb, var(--color-kinari) 82%, #000);
+  border-right-color: #000;
   opacity: 1;
 }
 
 .ink-toolbox.is-open .ink-toolbox__chevron {
   transform: rotate(180deg);
-  border-right-color: var(--color-accent);
+  border-right-color: #000;
   opacity: 1;
   animation: none;
 }
@@ -112,6 +113,16 @@
   color: var(--ui-bg);
   background: var(--color-accent);
   box-shadow: none;
+}
+
+/* 问号取词按钮激活态：KINARI 莹黄底 + 深色文字 */
+.ink-toolbox__tool--explain.is-active {
+  color: var(--color-kinari-text);
+  background: var(--color-kinari);
+}
+
+.ink-toolbox__tool--explain.is-active:hover {
+  background: var(--color-kinari-hover);
 }
 
 .ink-toolbox__tool--undo:disabled {

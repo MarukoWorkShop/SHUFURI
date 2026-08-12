@@ -317,7 +317,9 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
                       ? L('释义', 'Meaning')
                       : L('英译', 'English Translation')}
                   </dt>
-                  <dd>{micro.direct_meaning}</dd>
+                  <dd>
+                    {micro.direct_meaning.replace(/^局部参考[：:]\s*/, '')}
+                  </dd>
                 </div>
               </dl>
             </section>

@@ -922,10 +922,11 @@
   }
 }
 
-/* 划词模式（导出预览遗留选择器，编辑页用 .edit-canvas-scroll.is-explain-mode） */
+/* 划词模式（导出预览遗留选择器，编辑页用 .edit-canvas-scroll.is-explain-mode）。
+ * 禁用原生文字选区（user-select: none），只用笔刷高亮（黄色），避免蓝色原生选区打架。 */
 .fv-poster-preview-list.is-explain-mode .fv-body-h {
-  -webkit-user-select: text;
-  user-select: text;
+  -webkit-user-select: none;
+  user-select: none;
   cursor: text;
 }
 

@@ -51,6 +51,7 @@ export default function HomeSessionProvider({
     confirmVisible: clipboardCard.confirmVisible,
     confirmStreaming: clipboardCard.confirmStreaming,
     isGeneratingStudy: clipboardCard.isGeneratingStudy,
+    isLayouting: clipboardCard.isLayouting,
     studyError: clipboardCard.studyError,
     confirmTitle: clipboardCard.confirmTitle,
     confirmArtist: clipboardCard.confirmArtist,

@@ -103,15 +103,15 @@ export default function HomeScreen({
         <h1 className="home-hero__headline">
           {appSettings.interfaceLanguage === 'en'
             ? 'Pause the melody, dive into the words.'
-            : '把歌词一键变成外语学习材料'}
+            : '让旋律暂停，让文字浮现'}
         </h1>
         <p
           className="home-hero__subtitle"
           lang={appSettings.interfaceLanguage === 'en' ? 'en' : 'zh'}
         >
           {appSettings.interfaceLanguage === 'en'
-            ? 'Your AI companion for singing across borders. With one click, fetch lyrics and transform them into comprehensive study texts—revealing pronunciation, deep grammar, and the delicate nuances of the written word.'
-            : '外语歌词标注排版工具 · 快速生成Prompt，去免费 AI Chat 搜索歌词，SHUFURI帮你一键转化成结构化学习文本，涵盖注音、生词与语法剖析，并快速导出 PDF，制作独家歌词学习集。'}
+            ? 'Turn your favorite songs into study cards with readings and grammar notes'
+            : '把喜欢的歌，变成带注音与语法解析的学习材料'}
         </p>
       </div>
       <HowItWorks />

@@ -16,17 +16,64 @@
   position: relative;
 }
 
-/* 伪全屏：占满编辑区可视高度 */
+/* 伪全屏：占满编辑区可视高度（桌面端） */
 .edit-area--presentation.edit-area--presentation-fs {
   position: fixed;
   inset: 0;
-  z-index: var(--z-modal, 100);
+  z-index: calc(var(--z-modal, 100) + 30);
   width: 100vw;
   height: 100dvh;
   max-height: 100dvh;
   background: var(--color-edit-canvas-bg);
   padding: var(--ui-space-2, 8px);
   box-sizing: border-box;
+}
+
+/* 手机端全屏修复：
+ * - 用 -webkit-fill-available 替代 100dvh，避免 iOS Safari 地址栏显隐导致高度跳动
+ * - 加 safe-area padding 防止内容被刘海/底部 home indicator 遮挡
+ * - 确保内部可滚动
+ * - 字体不放大（1x），避免 1.5× 导致溢出
+ */
+@media (max-width: 899px) {
+  .edit-area--presentation.edit-area--presentation-fs {
+    height: -webkit-fill-available;
+    max-height: -webkit-fill-available;
+    padding-top: calc(env(safe-area-inset-top, 0px) + var(--ui-space-3, 12px));
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--ui-space-3, 12px));
+    padding-left: calc(env(safe-area-inset-left, 0px) + var(--ui-space-2, 8px));
+    padding-right: calc(env(safe-area-inset-right, 0px) + var(--ui-space-2, 8px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .edit-area--presentation-fs .edit-present-exit {
+    top: env(safe-area-inset-top, 12px);
+    right: env(safe-area-inset-right, 8px);
+  }
+
+  /* 手机端全屏不放大字体，保持原尺寸避免溢出 */
+  .edit-area--presentation.edit-area--presentation-fs {
+    --edit-present-font-scale-left: 1;
+    --edit-present-font-scale-right: 1;
+    --edit-spotlight-focus-scale: 1.15;
+  }
+
+  /*
+   * 手机/平板端：AI 划词「就绪态」解除滚动约束，允许上下浏览长文。
+   * 划词此前已改为按坐标命中，竖直滚动与横向涂抹不冲突；
+   * 涂抹「进行中」(painting) 仍禁滚动防跑动。与 export-preview.css 的 640px 断点互补。
+   */
+  .edit-canvas-scroll.explain-brush-ready {
+    touch-action: pan-y;
+  }
+  .edit-canvas-scroll.explain-brush-ready .fv-edit-document-root {
+    touch-action: pan-y;
+  }
+  .edit-canvas-scroll.explain-brush-painting,
+  .edit-canvas-scroll.explain-brush-painting .fv-edit-document-root {
+    touch-action: none;
+  }
 }
 
 .edit-present-exit {

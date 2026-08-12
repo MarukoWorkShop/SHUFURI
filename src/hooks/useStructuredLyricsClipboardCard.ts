@@ -93,6 +93,8 @@ export function useStructuredLyricsClipboardCard({
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [confirmStreaming, setConfirmStreaming] = useState(false);
   const [isGeneratingStudy, setIsGeneratingStudy] = useState(false);
+  // 排版（解析剪贴板 → 渲染歌词学习页）期间为 true，用于展示全屏 Loading，避免静默卡顿。
+  const [isLayouting, setIsLayouting] = useState(false);
   const [studyError, setStudyError] = useState<string | null>(null);
   const [confirmTitle, setConfirmTitle] = useState('');
   const [confirmArtist, setConfirmArtist] = useState('');
@@ -194,7 +196,7 @@ export function useStructuredLyricsClipboardCard({
           );
           awaitingStudyPasteRef.current = false;
           setConfirmVisible(false);
-          void layoutFromRaw(merged, onRenderLayout, showToast).then(() => {
+          void runLayout(merged).then(() => {
             showToast(
               vocabCount + grammarCount > 0
                 ? `${L('已合并词解（V', 'Merged vocab (V')}${vocabCount}/G${grammarCount})${L('并排版', 'and formatted layout.')}`
@@ -257,13 +259,18 @@ export function useStructuredLyricsClipboardCard({
       } catch (err: any) {
         // 用户点击按钮（user gesture）触发的读剪贴板失败：
         //  - NotAllowedError：权限未授予/被浏览器拦截 → 派发 blocked 事件，App 层弹 toast 引导去地址栏授权
-        //  - 其他错误（如 iOS WKWebView 非 focused、Capacitor 插件不可用）：弹手动粘贴 modal，
-        //    让用户用系统粘贴手势（Cmd+V / 长按粘贴）写入 textarea
+        //  - 其他错误（如 iOS WKWebView 非 focused、Capacitor 插件不可用）：
+        //    不再弹独立「手动粘贴」modal（其行为类似系统粘贴浮层，与「去生成口令」点击即成功不一致），
+        //    改为 toast 引导用户在首页「粘贴剪贴板歌词」区域手动粘贴。
         if (err?.name === 'NotAllowedError') {
           dispatchClipboardBlockedEvent();
         } else {
-          setManualPasteText('');
-          setManualPasteOpen(true);
+          showToast(
+            L(
+              '自动读取剪贴板失败，请在「粘贴剪贴板歌词」区域手动粘贴',
+              'Auto clipboard read failed. Please paste manually in the lyrics paste area.',
+            ),
+          );
         }
       }
     },
@@ -331,13 +338,26 @@ export function useStructuredLyricsClipboardCard({
     awaitingStudyPasteRef.current = false;
   }, []);
 
+  // 包装 layoutFromRaw：排版期间切换 isLayouting，驱动全屏 Loading 覆盖。
+  const runLayout = useCallback(
+    async (stream: string) => {
+      setIsLayouting(true);
+      try {
+        await layoutFromRaw(stream, onRenderLayout, showToast);
+      } finally {
+        setIsLayouting(false);
+      }
+    },
+    [onRenderLayout, showToast],
+  );
+
   const handleConfirmLayout = useCallback(() => {
     const stream = confirmedStreamRef.current;
     setConfirmVisible(false);
     awaitingStudyPasteRef.current = false;
     if (!stream) return;
-    void layoutFromRaw(stream, onRenderLayout, showToast);
-  }, [onRenderLayout, showToast]);
+    void runLayout(stream);
+  }, [runLayout]);
 
   const handleConfirmStudy = useCallback(async () => {
     const stream = confirmedStreamRef.current;
@@ -362,7 +382,7 @@ export function useStructuredLyricsClipboardCard({
           );
           awaitingStudyPasteRef.current = false;
           setConfirmVisible(false);
-          await layoutFromRaw(merged, onRenderLayout, showToast);
+          await runLayout(merged);
           showToast(
             vocabCount + grammarCount > 0
               ? `${L('已生成并合并词解（V', 'Generated & merged vocab (V')}${vocabCount}/G${grammarCount})${L('并排版', 'and formatted layout.')}`
@@ -455,6 +475,7 @@ export function useStructuredLyricsClipboardCard({
     confirmVisible,
     confirmStreaming,
     isGeneratingStudy,
+    isLayouting,
     studyError,
     confirmTitle,
     confirmArtist,

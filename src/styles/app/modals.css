@@ -11,6 +11,33 @@
   justify-content: center;
 }
 
+/* ==============================================
+   全局排版 Loading 覆盖（剪贴板解析生成歌词页期间）
+   ============================================== */
+.global-layout-loading {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-action-sheet);
+  background: var(--color-bg-app, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.global-layout-loading__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: var(--color-fg-secondary, #555);
+}
+
+.global-layout-loading__text {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
 .ai-action-sheet-panel {
   width: 100%;
   max-width: 480px;

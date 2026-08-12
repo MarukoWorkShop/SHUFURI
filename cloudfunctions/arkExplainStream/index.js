@@ -1,8 +1,8 @@
-const cloud = require('wx-server-sdk');
+const cloudbase = require('@cloudbase/node-sdk');
 const fetch = require('node-fetch');
 const { Readable } = require('stream');
 
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+const cloud = cloudbase.init({ env: cloudbase.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
 
@@ -28,7 +28,7 @@ const COST_ALERT_RATIO = 0.8;
 const DAILY_COST_COLLECTION = 'ai_daily_cost';
 const EST_COST_PER_1K_TOKENS = 0.0004;
 
-const MODEL = 'doubao-seed-2-0-mini';
+const MODEL = 'doubao-seed-2-0-mini-260428';
 const MAX_TOKENS = 360;
 
 const SYSTEM_PREFIX = [
@@ -243,8 +243,9 @@ exports.main = async (event, context) => {
       body: JSON.stringify({
         model: MODEL,
         messages,
-        max_tokens: MAX_TOKENS,
+        max_completion_tokens: MAX_TOKENS,
         temperature: 0.3,
+        thinking: { type: 'disabled' },
         stream: true,
       }),
     });

@@ -246,6 +246,19 @@ html:has(.app--edit) body,
 }
 
 /*
+ * 划词（Highlighter Brush）激活态：禁用触摸滚动抢占，保证触摸滑动时
+ * pointermove 连续触发、elementFromPoint 稳定命中，整句可连续涂选。
+ * 仅划词模式生效，平时 .edit-canvas-scroll 仍保留 pan-y 可滚动。
+ * 同时禁用原生文字选区（user-select: none），避免蓝色原生选区与黄色笔刷高亮打架。
+ */
+.edit-canvas-scroll.explain-brush-ready,
+.edit-canvas-scroll.explain-brush-painting {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/*
  * 编辑画布 frame 高度含 +8px 缓冲；默认白底会在底部露白边。
  * 与页面羊皮纸同色并去掉卡片阴影，避免底部色条。
  */
@@ -579,6 +592,23 @@ html:has(.app--edit) body,
   .preview-back-btn {
     width: 44px;
     height: 44px;
+  }
+
+  /*
+   * 手机端：AI 划词「就绪态」解除滚动约束，允许上下浏览长文。
+   * 划词滑动此前已改为按坐标命中（tokenAtPoint），竖直滚动与涂抹不冲突：
+   * 用户竖直滑动 → 浏览页面；横向涂抹 → 选词。涂抹「进行中」(painting) 仍禁滚动防跑动。
+   */
+  .edit-canvas-scroll.explain-brush-ready {
+    touch-action: pan-y;
+  }
+  .edit-canvas-scroll.explain-brush-ready .fv-edit-document-root {
+    touch-action: pan-y;
+  }
+  /* 涂抹进行中：仍禁用滚动，避免边涂边跑 */
+  .edit-canvas-scroll.explain-brush-painting,
+  .edit-canvas-scroll.explain-brush-painting .fv-edit-document-root {
+    touch-action: none;
   }
 
   .btn-export-save:not(:disabled) {

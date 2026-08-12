@@ -81,9 +81,13 @@ export default function HtmlPasteInput({
   /** Step2 A/B/C 引导区展开/收起状态（默认展开） */
   const [guideExpanded, setGuideExpanded] = useState(true);
 
+  // ---- 粘贴分享链接输入框（pastePrimary useMemo 依赖 pasteValue，故提前声明）----
+  const [pasteActive, setPasteActive] = useState(false);
+  const [pasteValue, setPasteValue] = useState('');
+
   /**
    * 主次暗示（同一时间最多一个主按钮）：
-   * - 剪贴板可排版且表单歌名未偏离 → 粘贴为主（btn-filled）
+   * - 剪贴板可排版 / 用户已在 textarea 中粘贴了内容 且表单歌名未偏离 → 粘贴为主（btn-filled）
    * - 否则若已填标题 → 生成口令为主（btn-filled），粘贴为次（btn-tonal）
    * - 粘贴永不 disabled（浏览器要求在用户手势中读剪贴板）
    * - 仅「缺标题」禁用口令
@@ -98,26 +102,44 @@ export default function HtmlPasteInput({
       streamKey.length > 0 &&
       formKey.length > 0 &&
       streamKey !== formKey;
-    const pasteIsPrimary = pasteLayoutReady && !diverged;
+    // 自动检测到可排版流，或用户手动在 textarea 中粘贴了内容 → 粘贴按钮优先
+    const hasPasteContent = pasteValue.trim().length > 0;
+    const pasteIsPrimary = (pasteLayoutReady || hasPasteContent) && !diverged;
     const genIsPrimary = canGen && !pasteIsPrimary;
     return {
       pastePrimary: pasteIsPrimary,
       genPrimary: genIsPrimary,
       canGenerate: canGen,
     };
-  }, [songTitle, pasteLayoutReady, clipboardStreamTitle]);
+  }, [songTitle, pasteLayoutReady, clipboardStreamTitle, pasteValue]);
 
-  // ---- 粘贴分享链接输入框 ----
-  const [pasteActive, setPasteActive] = useState(false);
-  const [pasteValue, setPasteValue] = useState('');
   const [langHelpVisible, setLangHelpVisible] = useState(false);
   const pasteInputRef = useRef<HTMLTextAreaElement>(null);
   const pasteActiveRef = useRef(false);
   pasteActiveRef.current = pasteActive;
 
-  const handlePasteAreaClick = useCallback(() => {
-    if (parseMusicShareBusy) return;
+  const handlePasteAreaClick = useCallback(async () => {
+    // 先展开输入框（保证点击必有可见反馈），但**不**立即聚焦 textarea，
+    // 否则 iOS Safari 会因 textarea 获得焦点而弹出系统「粘贴」浮层。
+    // busy 只阻止重复读剪贴板，绝不阻止展开，避免「点击毫无反应」。
     setPasteActive(true);
+    if (parseMusicShareBusy) return;
+    // 在用户手势的同步上下文内先尝试读剪贴板：读成功就直接填入，
+    // 此时 textarea 未被聚焦，iOS 不会弹出系统粘贴浮层（浮层完全消除）。
+    // 仅当读剪贴板失败/不支持/为空 时，才聚焦 textarea 让用户手动粘贴（浮层作为降级）。
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text && text.trim()) {
+          setPasteValue(text.trim());
+          return; // 已成功填入，不聚焦 → 不弹系统浮层
+        }
+      } catch {
+        // 读剪贴板失败（无权限/被拒）→ 降级为手动粘贴
+      }
+    }
+    // 降级：聚焦 textarea，让用户手动粘贴（此时 iOS 弹系统浮层是预期的）
+    requestAnimationFrame(() => pasteInputRef.current?.focus());
   }, [parseMusicShareBusy]);
 
   const handlePaste = useCallback(
@@ -134,6 +156,8 @@ export default function HtmlPasteInput({
   const submitPaste = useCallback(() => {
     const text = pasteValue.trim();
     if (!text || !onParseMusicShareText) return;
+    // 失焦 textarea，避免点击「解析」后 iOS 因 textarea 仍聚焦而弹出系统「粘贴」浮层。
+    pasteInputRef.current?.blur();
     onParseMusicShareText(text);
   }, [pasteValue, onParseMusicShareText]);
 
@@ -304,7 +328,7 @@ export default function HtmlPasteInput({
           {/* 三栏横排：TITLE / ARTIST / LANG（Figma 复刻） */}
           <div className="ext-pipeline__fields-row">
             <label className="ext-pipeline__field ext-pipeline__field--title">
-              <span className="ext-pipeline__label">TITLE</span>
+              <span className="ext-pipeline__label">{L('歌名', 'TITLE')}</span>
               <input
                 type="text"
                 className="ext-pipeline__input"
@@ -318,7 +342,7 @@ export default function HtmlPasteInput({
             </label>
 
             <label className="ext-pipeline__field ext-pipeline__field--artist">
-              <span className="ext-pipeline__label">ARTIST</span>
+              <span className="ext-pipeline__label">{L('歌手', 'ARTIST')}</span>
               <input
                 type="text"
                 className="ext-pipeline__input"
@@ -332,7 +356,7 @@ export default function HtmlPasteInput({
             {onLanguageChange && (
               <div className="ext-pipeline__field ext-pipeline__field--lang">
                 <div className="ext-pipeline__lang-header">
-                  <span className="ext-pipeline__label">LANG</span>
+                  <span className="ext-pipeline__label">{L('语言', 'LANG')}</span>
                   <button
                     type="button"
                     className={`ext-pipeline__lang-help${langHelpVisible ? ' is-active' : ''}`}
@@ -368,7 +392,23 @@ export default function HtmlPasteInput({
           {onParseMusicShareText ? (
               <div className={`ext-pipeline__share-fill ${pasteActive ? 'is-active' : ''}`}>
                 {pasteActive ? (
-                  <div className="ext-pipeline__share-fill-field">
+                  <div
+                    className="ext-pipeline__share-fill-field"
+                    onClick={async () => {
+                      // 用户手势内直接读剪贴板填入，避免 iOS 弹出系统粘贴菜单
+                      if (parseMusicShareBusy) return;
+                      let text = '';
+                      if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
+                        try { text = await navigator.clipboard.readText(); } catch { text = ''; }
+                      }
+                      if (text && text.trim()) {
+                        setPasteValue(text.trim());
+                      } else {
+                        // 读失败时才聚焦 textarea 让用户手动粘贴
+                        pasteInputRef.current?.focus();
+                      }
+                    }}
+                  >
                     <textarea
                       ref={pasteInputRef}
                       className="ext-pipeline__share-fill-input"
@@ -383,7 +423,6 @@ export default function HtmlPasteInput({
                       onBlur={handlePasteBlur}
                       onKeyDown={handlePasteKeyDown}
                       disabled={parseMusicShareBusy}
-                      autoFocus
                     />
                     {pasteValue.trim() && !parseMusicShareBusy ? (
                       <button
@@ -402,7 +441,6 @@ export default function HtmlPasteInput({
                     type="button"
                     className="ext-pipeline__share-fill-btn"
                     onClick={handlePasteAreaClick}
-                    disabled={parseMusicShareBusy}
                     title={L('点击后粘贴 QQ / 网易云分享链接，自动解析歌名与歌手', 'Tap to paste a QQ/NetEase share link — title and artist will be parsed automatically.')}
                   >
                     <span className="ext-pipeline__share-fill-btn-icon">🔗</span>

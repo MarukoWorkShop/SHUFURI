@@ -23,6 +23,7 @@ import { getAppSettings } from '../services/appSettings';
 import { useTimedMessage } from '../hooks/useTimedMessage';
 import { L } from '../utils/i18n';
 import AppToast from './AppToast';
+import { ExportImagePreviewSheet } from './ExportImagePreviewSheet';
 import {
   formatWatermarkPageLabel,
   WATERMARK_BRAND,
@@ -173,6 +174,7 @@ function ShufuriPosterSinglePage({
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const rasterizingRef = useRef(false);
   const [saving, setSaving] = useState(false);
+  const [imagePreview, setImagePreview] = useState<{ blobUrl: string; filename: string } | null>(null);
   const { message: saveToast, show: showToast } = useTimedMessage(2400);
 
   const LONG_PRESS_MS = 600;
@@ -259,18 +261,11 @@ function ShufuriPosterSinglePage({
         return;
       }
 
-      // 浏览器环境：触发下载
+      // 浏览器环境：iOS/Android 无「写入系统相册」API，改为全屏预览层，
+      // 让用户长按 <img> 调起系统「存储图像」菜单；桌面浏览器可用「下载」按钮。
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
       const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
-      a.download = `${pageImageFilename(title, pageIndex)}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      showToast(L('图片已保存', 'Image saved'));
+      setImagePreview({ blobUrl: url, filename: `${pageImageFilename(title, pageIndex)}.${ext}` });
     } catch (e) {
       console.error('[save-page]', e);
       showToast(
@@ -403,6 +398,16 @@ function ShufuriPosterSinglePage({
         </div>
       )}
       {saveToast && <AppToast message={saveToast} placement="anchored" />}
+      {imagePreview && (
+        <ExportImagePreviewSheet
+          blobUrl={imagePreview.blobUrl}
+          filename={imagePreview.filename}
+          onClose={() => {
+            URL.revokeObjectURL(imagePreview.blobUrl);
+            setImagePreview(null);
+          }}
+        />
+      )}
       <div style={scaleWrapperStyle}>
         <div
           ref={captureRef}

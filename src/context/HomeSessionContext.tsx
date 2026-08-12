@@ -36,6 +36,8 @@ export type HomeSessionContextValue = {
   confirmVisible: boolean;
   confirmStreaming: boolean;
   isGeneratingStudy: boolean;
+  /** 剪贴板解析并排版为歌词学习页期间为 true（驱动全屏 Loading） */
+  isLayouting: boolean;
   studyError: string | null;
   confirmTitle: string;
   confirmArtist: string;
