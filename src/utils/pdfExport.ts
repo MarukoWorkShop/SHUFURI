@@ -295,23 +295,73 @@ function resolveExportPdfFilename(filename: string, layoutProfile: PosterLayoutP
   return posterPdfExportFilename(safe, layoutProfile);
 }
 
-/** Web：触发浏览器下载 PDF Blob */
+/** Blob → dataURL（移动端 <a download> 对 dataURL 比 blobURL 更可靠） */
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+/** Web：触发浏览器下载 PDF Blob。
+ * 移动端（尤其 iOS Safari）对 <a download> + blobURL 支持极差（直接忽略 → 无反应），
+ * 改为：blob → dataURL → <a download>（dataURL 在多数移动浏览器可触发下载）；
+ * 若仍失败，降级用 window.open 打开预览由用户手动保存。 */
 export async function deliverPosterPdfBlob(blob: Blob, filename: string): Promise<void> {
   const safeName = filename.replace(/[/\\?*:|"]/g, '_').slice(0, 120) || 'poster.pdf';
   const finalName = safeName.endsWith('.pdf') ? safeName : `${safeName}.pdf`;
 
-  const url = URL.createObjectURL(blob);
+  const isIOS = /iP(ad|hone|od)/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (isIOS) {
+    // iOS Safari 硬性忽略 <a download>，且 window.open(blobURL) 分享时文件名会成 Unknown。
+    // 优先用 navigator.share 直接分享带文件名的 File 对象（分享面板会显示歌名）；
+    // 不支持/被拒时回退 window.open 打开预览由用户手动保存。
+    const file = new File([blob], finalName, { type: 'application/pdf' });
+    if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: finalName });
+        return;
+      } catch {
+        // 用户取消或不支持 → 继续回退
+      }
+    }
+    const url = URL.createObjectURL(blob);
+    const opened = window.open(url, '_blank');
+    if (!opened) {
+      // 弹窗被拦截：回退到 <a download>（虽常被忽略，但部分场景可落《文件》）
+      triggerAnchorDownload(url, finalName);
+    }
+    // iOS 预览页需保留 URL 一段时间
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return;
+  }
+
+  try {
+    const dataUrl = await blobToDataUrl(blob);
+    triggerAnchorDownload(dataUrl, finalName);
+  } catch {
+    const url = URL.createObjectURL(blob);
+    triggerAnchorDownload(url, finalName);
+    setTimeout(() => URL.revokeObjectURL(url), 200);
+  }
+}
+
+function triggerAnchorDownload(url: string, filename: string): void {
   const a = document.createElement('a');
   a.href = url;
-  a.download = finalName;
+  a.download = filename;
   a.rel = 'noopener';
+  a.target = '_blank';
   a.style.display = 'none';
   document.body.appendChild(a);
   a.click();
   setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 200);
+    if (a.parentNode) document.body.removeChild(a);
+  }, 400);
 }
 
 async function pickPdfSaveHandle(filename: string): Promise<FileSystemFileHandle | null> {
@@ -371,19 +421,35 @@ export function addCanvasToPdfPage(
   pdf.addImage(imgData, 'JPEG', 0, 0, wMm, hMm, undefined, JPEG_ADD_COMPRESSION);
 }
 
-function deliverDownloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.rel = 'noopener';
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 200);
+async function deliverDownloadBlob(blob: Blob, filename: string): Promise<void> {
+  const isIOS = /iP(ad|hone|od)/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) {
+    // iOS Safari：<a download> 会落到《文件》app 而非相册，且 window.open 分享文件名成 Unknown。
+    // 优先用 navigator.share 直接分享带文件名的图片 File（可「存储到照片」且文件名正确）；
+    // 不支持时回退 window.open 打开预览由用户手动保存。
+    const file = new File([blob], filename, { type: blob.type || 'image/png' });
+    if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: filename });
+        return;
+      } catch {
+        /* 用户取消或不支持 → 回退 */
+      }
+    }
+    const url = URL.createObjectURL(blob);
+    const opened = window.open(url, '_blank');
+    if (!opened) triggerAnchorDownload(url, filename);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return;
+  }
+  blobToDataUrl(blob)
+    .then((dataUrl) => triggerAnchorDownload(dataUrl, filename))
+    .catch(() => {
+      const url = URL.createObjectURL(blob);
+      triggerAnchorDownload(url, filename);
+      setTimeout(() => URL.revokeObjectURL(url), 200);
+    });
 }
 
 /** 每一页可独立指定栅格尺寸 */
@@ -755,7 +821,7 @@ export async function exportPosterPngFromPageHtmls(
         filename: shareBase,
       });
     } else {
-      deliverDownloadBlob(blob, downloadName);
+      await deliverDownloadBlob(blob, downloadName);
       if (i < n - 1) {
         await new Promise<void>((resolve) => setTimeout(resolve, 350));
       }
