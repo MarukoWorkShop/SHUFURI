@@ -1,4 +1,4 @@
-import type { PosterLayoutProfile, PosterFontStyle } from '../shufuriPoster/types';
+import type { PosterLayoutProfile } from '../shufuriPoster/types';
 import type { LyricsLanguage, LangCode, ColorTheme } from '../../services/appSettings';
 import {
   resolvePosterTypography,
@@ -15,7 +15,6 @@ export type VectorPrintCssOptions = {
   showRuby?: boolean;
   userFontScale?: number;
   userLineHeightScale?: number;
-  posterFontStyle?: PosterFontStyle;
 };
 
 /**
@@ -36,7 +35,6 @@ export function buildVectorPrintInnerCss(
     showRuby: options.showRuby,
     userFontScale: options.userFontScale,
     userLineHeightScale: options.userLineHeightScale,
-    posterFontStyle: options.posterFontStyle,
   });
   return compilePosterCss(resolved, {
     unit: 'mm',

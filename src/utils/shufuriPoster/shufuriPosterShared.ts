@@ -1,4 +1,4 @@
-import type { PosterLayoutProfile, PosterFontStyle } from './types.ts';
+import type { PosterLayoutProfile } from './types.ts';
 import { dimForFuriganaPoster } from './dimensions.ts';
 import type { LyricsLanguage, LangCode, ColorTheme } from '../../services/appSettings.ts';
 import {
@@ -131,7 +131,6 @@ export type FuriganaPosterCssOptions = {
   showRuby?: boolean;
   userFontScale?: number;
   userLineHeightScale?: number;
-  posterFontStyle?: PosterFontStyle;
 };
 
 export function buildShufuriPosterInnerCss(
@@ -149,13 +148,11 @@ export function buildShufuriPosterInnerCss(
     showRuby,
     userFontScale: options.userFontScale,
     userLineHeightScale: options.userLineHeightScale,
-    posterFontStyle: options.posterFontStyle,
   });
   return compilePosterCss(resolved, {
     unit: 'px',
     viewMode: 'screen',
     showRuby,
-    posterFontStyle: options.posterFontStyle,
   });
 }
 

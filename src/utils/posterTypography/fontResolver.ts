@@ -1,11 +1,9 @@
 import type { ColorTheme, LangCode, LyricsLanguage } from '../../services/appSettings';
-import type { PosterFontStyle, PosterLayoutProfile } from '../shufuriPoster/types.ts';
+import type { PosterLayoutProfile } from '../shufuriPoster/types.ts';
 import { dimForProfile, POSTER_ELASTIC_FONT_BASE_PX } from '../shufuriPoster/dimensions.ts';
 import {
   EN_FONT_FAMILY,
-  KO_FONT_FAMILY_BATANG,
   KO_FONT_FAMILY_SYSTEM_SERIF,
-  KO_POSTER_TITLE_FONT_FAMILY_BATANG,
   KO_POSTER_TITLE_FONT_FAMILY_SYSTEM,
   KOZMIN_PRO_REGULAR_FAMILY,
   UI_FONT_FAMILY,
@@ -70,8 +68,6 @@ export interface ResolverContext {
   userLineHeightScale?: number;
   /** @deprecated 仅 resolveLang 过渡用 */
   language?: LyricsLanguage;
-  /** 韩文字体样式：system（默认零下载）/ batang（HCR Batang 衬线，按需加载） */
-  posterFontStyle?: PosterFontStyle;
 }
 
 export function supportsPosterRubyToggle(lang: LangCode): boolean {
@@ -93,14 +89,12 @@ export function resolveLangFromOptions(options: {
 /**
  * 歌名区默认字体（整段 h1 继承）。
  * jp 默认 KozMin；简体中译歌名/歌手由 `.fv-title-serif--source-han` 覆盖为思源宋体。
- * zh 一律思源；ko 思源+Batang；en KozMin。
+ * zh 一律思源；ko 思源+系统衬线；en KozMin。
  */
-export function resolvePosterTitleFont(lang: LangCode, posterFontStyle?: PosterFontStyle): string {
+export function resolvePosterTitleFont(lang: LangCode): string {
   switch (lang) {
     case 'ko':
-      return posterFontStyle === 'batang'
-        ? KO_POSTER_TITLE_FONT_FAMILY_BATANG
-        : KO_POSTER_TITLE_FONT_FAMILY_SYSTEM;
+      return KO_POSTER_TITLE_FONT_FAMILY_SYSTEM;
     case 'zh':
       return ZH_POSTER_TITLE_FONT_FAMILY;
     case 'en':
@@ -170,7 +164,7 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   const zhLyricsLh = scaleLine(zhLyricsLhBase);
   const koLh = jpLh;
 
-  const titleFont = resolvePosterTitleFont(lang, ctx.posterFontStyle);
+  const titleFont = resolvePosterTitleFont(lang);
   const sectionTitleFont = isEnglish ? UI_FONT_FAMILY : ZH_FONT_FAMILY;
   const jpLyricFont = isEnglish ? EN_FONT_FAMILY : KOZMIN_PRO_REGULAR_FAMILY;
   const jpStudyFont = isEnglish ? EN_FONT_FAMILY : KOZMIN_PRO_REGULAR_FAMILY;
@@ -233,10 +227,10 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
 
   const lyricPrimarySize = isZhPipeline ? zhMainPx : mainPx;
   /** 中文歌词正文用思源宋体；PingFang 仅留给 UI / 辅文 / 词解
-   *  韩文：system 模式走系统衬线栈（与标题统一），batang 模式走 HCR Batang */
+   *  韩文：统一使用系统衬线栈（与标题统一） */
   const lyricPrimaryFont =
     lang === 'ko'
-      ? (ctx.posterFontStyle === 'batang' ? KO_FONT_FAMILY_BATANG : KO_FONT_FAMILY_SYSTEM_SERIF)
+      ? KO_FONT_FAMILY_SYSTEM_SERIF
       : lang === 'en'
         ? EN_FONT_FAMILY
         : lang === 'zh'

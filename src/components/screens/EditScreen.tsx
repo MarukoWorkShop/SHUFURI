@@ -91,8 +91,6 @@ export default function EditScreen() {
     showRubyAnnotations,
     rubyToggleSupported,
     handleShowRubyChange,
-    posterFontStyle,
-    setPosterFontStyle,
   } = usePosterTypographyContext();
 
   const ink = usePosterInkContext();
@@ -827,25 +825,6 @@ export default function EditScreen() {
               onToggleExplain={handleToggleExplain}
             />
           ) : null}
-          <div className="poster-font-style-switch" role="group" aria-label={L('韩文字体', 'Korean Font')}>
-            <span className="poster-font-style-switch__label">{L('韩文字体', 'Korean Font')}</span>
-            <button
-              type="button"
-              className={`poster-font-style-switch__opt${posterFontStyle === 'system' ? ' is-active' : ''}`}
-              aria-pressed={posterFontStyle === 'system'}
-              onClick={() => setPosterFontStyle('system')}
-            >
-              {L('系统', 'System')}
-            </button>
-            <button
-              type="button"
-              className={`poster-font-style-switch__opt${posterFontStyle === 'batang' ? ' is-active' : ''}`}
-              aria-pressed={posterFontStyle === 'batang'}
-              onClick={() => setPosterFontStyle('batang')}
-            >
-              {L('Batang', 'Batang')}
-            </button>
-          </div>
           <div ref={editCanvasRef} className={scrollClass}>
             <InkFineTuneEditor
               containerRef={editCanvasRef}
@@ -885,7 +864,6 @@ export default function EditScreen() {
                 language={lyricsLanguage}
                 colorTheme={colorTheme}
                 showRuby={showRubyAnnotations}
-                posterFontStyle={posterFontStyle}
               />
             </InkFineTuneEditor>
           </div>

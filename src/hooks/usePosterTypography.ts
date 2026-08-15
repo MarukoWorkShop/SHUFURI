@@ -8,10 +8,8 @@ import {
   resolvePosterRubyToggleSupported,
 } from '../utils/shufuriPoster/inferPosterLang';
 import {
-  DEFAULT_POSTER_FONT_STYLE,
   DEFAULT_PREVIEW_TYPOGRAPHY,
   buildPosterRenderOptions,
-  type PosterFontStyle,
   type PosterLayoutProfile,
   type PosterPageSlice,
 } from '../utils/shufuriPoster/types';
@@ -51,7 +49,6 @@ export function usePosterTypography({
 }: Options) {
   const [showRubyAnnotations, setShowRubyAnnotations] = useState(true);
   const [repaginating, setRepaginating] = useState(false);
-  const [posterFontStyle, setPosterFontStyle] = useState<PosterFontStyle>(DEFAULT_POSTER_FONT_STYLE);
   const previewTypography = DEFAULT_PREVIEW_TYPOGRAPHY;
 
   const posterPipelineLang = useMemo(
@@ -63,8 +60,8 @@ export function usePosterTypography({
     [lang, bodyHtml, lyricsLanguage],
   );
   const posterRenderOpts = useMemo(
-    () => buildPosterRenderOptions(showRubyAnnotations, previewTypography, posterFontStyle),
-    [showRubyAnnotations, previewTypography, posterFontStyle],
+    () => buildPosterRenderOptions(showRubyAnnotations, previewTypography),
+    [showRubyAnnotations, previewTypography],
   );
 
   const rebuildExportPages = useCallback(async () => {
@@ -75,7 +72,7 @@ export function usePosterTypography({
     }
     setRepaginating(true);
     try {
-      await ensurePosterFontsLoaded(posterFontStyle);
+      await ensurePosterFontsLoaded();
       const pageHtmls = buildPosterPagesFromBody(
         bodyHtml,
         title,
@@ -84,7 +81,7 @@ export function usePosterTypography({
         lyricsLanguage,
         lang,
         titleMarkupHtml,
-        buildPosterRenderOptions(showRubyAnnotations, previewTypography, posterFontStyle),
+        buildPosterRenderOptions(showRubyAnnotations, previewTypography),
       );
       setPages(pageHtmls);
       resetPosterPageRefs(pageRefs, pageHtmls.length);
@@ -101,7 +98,6 @@ export function usePosterTypography({
     titleMarkupHtml,
     showRubyAnnotations,
     previewTypography,
-    posterFontStyle,
     setPages,
     pageRefs,
   ]);
@@ -128,8 +124,6 @@ export function usePosterTypography({
     posterPipelineLang,
     rubyToggleSupported,
     posterRenderOpts,
-    posterFontStyle,
-    setPosterFontStyle,
     rebuildExportPages,
     handleShowRubyChange,
     resetTypographyPreview,

@@ -269,9 +269,8 @@ async function waitForOwnerDocumentFonts(el: HTMLElement): Promise<void> {
 /** 将单页根节点栅格化为 Canvas（导出 mount 已在离屏 1:1，直接栅格化） */
 export async function rasterizePosterLayoutPageRoot(
   el: HTMLElement,
-  posterFontStyle?: import('./shufuriPoster/types').PosterFontStyle,
 ): Promise<HTMLCanvasElement> {
-  await ensurePosterFontsLoaded(posterFontStyle);
+  await ensurePosterFontsLoaded();
   // 导出挂在独立 iframe 时，必须等 ownerDocument.fonts，不能只等主文档。
   await waitForOwnerDocumentFonts(el);
   if (typeof document !== 'undefined' && document.fonts?.ready) {
@@ -498,7 +497,7 @@ export async function exportPosterLayoutPdfFromFlatPages(
     const { pageRoot, canvasWidthPx, canvasHeightPx } = pages[i]!;
     const wMm = canvasWidthPx * CSS_PX_TO_MM;
     const hMm = canvasHeightPx * CSS_PX_TO_MM;
-    const canvas = await rasterizePosterLayoutPageRoot(pageRoot, undefined);
+    const canvas = await rasterizePosterLayoutPageRoot(pageRoot);
     addCanvasToPdfPage(pdf, canvas, wMm, hMm, i === 0);
     if (i < pages.length - 1) {
       await yieldBetweenExportPages();
@@ -548,7 +547,7 @@ export async function exportPosterSinglePngFromRoot(
   filename: string,
 ): Promise<void> {
   const safeName = filename.replace(/[/\\?*:|"]/g, '_').slice(0, 120) || 'poster.png';
-  const canvas = await rasterizePosterLayoutPageRoot(pageRoot, undefined);
+  const canvas = await rasterizePosterLayoutPageRoot(pageRoot);
   const blob: Blob | null = await new Promise((resolve) => {
     canvas.toBlob((b) => resolve(b), 'image/png', 1);
   });
@@ -619,7 +618,7 @@ export async function exportPosterPdfFromPageHtmls(
     return;
   }
 
-  await ensurePosterFontsLoaded(renderOptions?.posterFontStyle);
+  await ensurePosterFontsLoaded();
   const { width, height } = getPosterExportCanvasSize(layoutProfile);
   const wMm = width * CSS_PX_TO_MM;
   const hMm = height * CSS_PX_TO_MM;
@@ -651,7 +650,6 @@ export async function exportPosterPdfFromPageHtmls(
       try {
         const canvas = await rasterizePosterLayoutPageRoot(
           mount.root,
-          renderOptions?.posterFontStyle,
         );
         addCanvasToPdfPage(pdf, canvas, wMm, hMm, i === 0);
       } finally {
@@ -695,7 +693,7 @@ export async function rasterizePageHtmlToBlob(
   const { width, height } = getPosterExportCanvasSize(layoutProfile);
   const scale = options.maxScale ?? pickQuickSaveRasterScale(width, height);
 
-  await ensurePosterFontsLoaded(renderOptions?.posterFontStyle);
+  await ensurePosterFontsLoaded();
   const mount = mountPosterExportPage(document, {
     title,
     artist,

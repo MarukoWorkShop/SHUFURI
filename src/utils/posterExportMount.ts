@@ -4,12 +4,11 @@ import {
   buildShufuriPosterRootStyle,
   getShufuriPosterCanvasDimensions,
 } from './shufuriPoster/shufuriPosterShared';
-import type { PosterFontStyle, PosterLayoutProfile, PosterRenderOptions } from './shufuriPoster/types';
+import type { PosterLayoutProfile, PosterRenderOptions } from './shufuriPoster/types';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
 import {
   getPosterJapaneseFontsFaceCss,
-  getPosterKoreanFontFaceCss,
   getPosterSansationFontFaceCss,
   getPosterSourceHanSerifScFontFaceCss,
 } from './shufuriPoster/fonts';
@@ -32,10 +31,9 @@ const EXPORT_IFRAME_FONT_STYLE_ID = 'poster-export-font-faces';
 let exportIframe: HTMLIFrameElement | null = null;
 
 /** iframe head 注入完整海报 @font-face（与 compilePosterCss 一致；URL 相对主文档绝对化） */
-function injectExportIframeFontFaces(idoc: Document, posterFontStyle?: PosterFontStyle): void {
+function injectExportIframeFontFaces(idoc: Document): void {
   const css =
     getPosterJapaneseFontsFaceCss() +
-    getPosterKoreanFontFaceCss(posterFontStyle) +
     getPosterSourceHanSerifScFontFaceCss() +
     getPosterSansationFontFaceCss();
   let el = idoc.getElementById(EXPORT_IFRAME_FONT_STYLE_ID) as HTMLStyleElement | null;
@@ -160,9 +158,8 @@ export function mountPosterExportPage(
   const iframe = getExportIframe();
   sizeExportIframe(iframe, canvasW, canvasH);
   const idoc = iframe.contentDocument!;
-  const posterFontStyle = renderOptions?.posterFontStyle;
   try {
-    injectExportIframeFontFaces(idoc, posterFontStyle);
+    injectExportIframeFontFaces(idoc);
   } catch {
     /* 字体注入失败可降级 */
   }
@@ -209,7 +206,6 @@ export function mountPosterExportPage(
     showRuby: renderOptions?.showRuby,
     userFontScale: renderOptions?.userFontScale,
     userLineHeightScale: renderOptions?.userLineHeightScale,
-    posterFontStyle,
   });
   shell.appendChild(styleEl);
 

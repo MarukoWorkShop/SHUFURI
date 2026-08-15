@@ -5,11 +5,9 @@ import {
   ZH_SONGTI_FONT_FAMILY,
   getPosterEnglishFontFaceCss,
   getPosterJapaneseFontsFaceCss,
-  getPosterKoreanFontFaceCss,
   getPosterSourceHanSerifScFontFaceCss,
   getPosterSansationFontFaceCss,
 } from '../shufuriPoster/fonts.ts';
-import type { PosterFontStyle } from '../shufuriPoster/types.ts';
 import {
   buildCjkNoBreakClassCss,
   buildCjkWrapCss,
@@ -41,7 +39,6 @@ export type CompilePosterCssOptions = {
   viewMode?: 'screen' | 'edit';
   includeFontFaces?: boolean;
   showRuby?: boolean;
-  posterFontStyle?: PosterFontStyle;
 };
 
 function compileRubyVisibilityCss(showRuby: boolean): string {
@@ -765,7 +762,7 @@ export function compilePosterCss(
   const includeFontFaces = options.includeFontFaces ?? unit === 'px';
 
   const fontFaces = includeFontFaces
-    ? `${getPosterJapaneseFontsFaceCss()}${getPosterKoreanFontFaceCss(options.posterFontStyle)}${getPosterSourceHanSerifScFontFaceCss()}${getPosterEnglishFontFaceCss()}${getPosterSansationFontFaceCss()}`
+    ? `${getPosterJapaneseFontsFaceCss()}${getPosterSourceHanSerifScFontFaceCss()}${getPosterEnglishFontFaceCss()}${getPosterSansationFontFaceCss()}`
     : '';
 
   const printShell = unit === 'mm' && spec ? compilePrintPageShell(spec) : '';

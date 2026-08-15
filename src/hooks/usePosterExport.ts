@@ -87,7 +87,7 @@ export function usePosterExport({
 
     try {
       const posterRenderOpts = getPosterRenderOpts();
-      await ensurePosterFontsLoaded(posterRenderOpts.posterFontStyle);
+      await ensurePosterFontsLoaded();
       const currentPages = buildPosterPagesFromBody(
         currentBodyHtml,
         currentTitle,

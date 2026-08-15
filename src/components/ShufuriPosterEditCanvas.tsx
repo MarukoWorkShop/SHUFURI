@@ -12,7 +12,7 @@ import {
   resolveDisplayTitle,
   stampTitleMarkupSerifHtml,
 } from '../utils/shufuriPoster/posterTitle';
-import type { PosterLayoutProfile, PosterFontStyle } from '../utils/shufuriPoster/types';
+import type { PosterLayoutProfile } from '../utils/shufuriPoster/types';
 import type { ColorTheme, LangCode, LyricsLanguage } from '../services/appSettings';
 import { sanitizeShufuriPosterHtml } from './ShufuriPosterPreview';
 import { resolvePosterPipelineLang } from '../utils/shufuriPoster/inferPosterLang';
@@ -35,8 +35,6 @@ type Props = {
   language?: LyricsLanguage;
   colorTheme?: ColorTheme;
   showRuby?: boolean;
-  /** 韩文字体样式：system（默认）/ batang（HCR Batang 衬线，按需加载） */
-  posterFontStyle?: PosterFontStyle;
 };
 
 /** 高度亚像素抖动忽略阈值，避免 frame 高度微变触发 scroll 死循环 */
@@ -54,7 +52,6 @@ export default function ShufuriPosterEditCanvas({
   language = 'jp',
   colorTheme,
   showRuby = true,
-  posterFontStyle,
 }: Props) {
   const safeBody = useMemo(() => sanitizeShufuriPosterHtml(bodyHtml), [bodyHtml]);
   /**
@@ -86,9 +83,8 @@ export default function ShufuriPosterEditCanvas({
         lang: pipelineLang,
         colorTheme,
         showRuby,
-        posterFontStyle,
       })}${buildShufuriEditDocumentCssOverrides()}`,
-    [layoutProfile, language, pipelineLang, colorTheme, showRuby, posterFontStyle],
+    [layoutProfile, language, pipelineLang, colorTheme, showRuby],
   );
   const rootStyle = useMemo(
     () => buildShufuriEditDocumentRootStyle(layoutProfile),

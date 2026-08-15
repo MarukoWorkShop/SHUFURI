@@ -67,9 +67,8 @@ export async function buildPrintDocumentHtml(
 
   const showRuby = renderOptions?.showRuby ?? true;
   const colorTheme = getAppSettings().colorTheme;
-  const posterFontStyle = renderOptions?.posterFontStyle;
   const spec = printPageSpec(layoutProfile);
-  const fontFaceCss = await getPrintFontFaceCss(posterFontStyle);
+  const fontFaceCss = await getPrintFontFaceCss();
   const cssCommon = {
     language,
     lang,
@@ -77,7 +76,6 @@ export async function buildPrintDocumentHtml(
     showRuby,
     userFontScale: renderOptions?.userFontScale,
     userLineHeightScale: renderOptions?.userLineHeightScale,
-    posterFontStyle,
   };
   const baseCss = buildVectorPrintInnerCss(layoutProfile, spec, {
     spacingScale: EXPORT_HTML2CANVAS_SCALE_FUDGE,
