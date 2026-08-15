@@ -105,6 +105,7 @@ function ShufuriPosterSinglePage({
         showRuby: renderOptions?.showRuby,
         userFontScale: renderOptions?.userFontScale,
         userLineHeightScale: renderOptions?.userLineHeightScale,
+        posterFontStyle: renderOptions?.posterFontStyle,
       }),
     [layoutProfile, spacingScale, language, pipelineLang, renderOptions],
   );

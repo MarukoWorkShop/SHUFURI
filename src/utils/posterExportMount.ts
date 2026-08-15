@@ -4,10 +4,15 @@ import {
   buildShufuriPosterRootStyle,
   getShufuriPosterCanvasDimensions,
 } from './shufuriPoster/shufuriPosterShared';
-import type { PosterLayoutProfile, PosterRenderOptions } from './shufuriPoster/types';
+import type { PosterFontStyle, PosterLayoutProfile, PosterRenderOptions } from './shufuriPoster/types';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
-import { POSTER_JP_FONT_FACE_CSS } from './shufuriPoster/fonts';
+import {
+  getPosterJapaneseFontsFaceCss,
+  getPosterKoreanFontFaceCss,
+  getPosterSansationFontFaceCss,
+  getPosterSourceHanSerifScFontFaceCss,
+} from './shufuriPoster/fonts';
 import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
 import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
 import { appendPosterWatermark } from './shufuriPoster/posterWatermark';
@@ -21,8 +26,47 @@ import { appendPosterWatermark } from './shufuriPoster/posterWatermark';
  */
 const EXPORT_HTML2CANVAS_SCALE_FUDGE = 0.98;
 
+const EXPORT_IFRAME_FONT_STYLE_ID = 'poster-export-font-faces';
+
 /** 导出用离屏 iframe 单例：与主文档文档流完全隔离，根除移动端 append 大节点导致的重排抖动 */
 let exportIframe: HTMLIFrameElement | null = null;
+
+/** iframe head 注入完整海报 @font-face（与 compilePosterCss 一致；URL 相对主文档绝对化） */
+function injectExportIframeFontFaces(idoc: Document, posterFontStyle?: PosterFontStyle): void {
+  const css =
+    getPosterJapaneseFontsFaceCss() +
+    getPosterKoreanFontFaceCss(posterFontStyle) +
+    getPosterSourceHanSerifScFontFaceCss() +
+    getPosterSansationFontFaceCss();
+  let el = idoc.getElementById(EXPORT_IFRAME_FONT_STYLE_ID) as HTMLStyleElement | null;
+  if (!el) {
+    el = idoc.createElement('style');
+    el.id = EXPORT_IFRAME_FONT_STYLE_ID;
+    idoc.head.appendChild(el);
+  }
+  el.textContent = css;
+}
+
+/**
+ * 将导出 iframe 视口扩到至少画布尺寸。
+ * 10×10 会让内部 layout / 文字 metrics 按极小 containing block 计算，
+ * html2canvas 再叠加 overflow:hidden → 字形被横切成「只剩一半」。
+ */
+function sizeExportIframe(iframe: HTMLIFrameElement, canvasW: number, canvasH: number): void {
+  const curW = parseInt(iframe.style.width, 10) || 0;
+  const curH = parseInt(iframe.style.height, 10) || 0;
+  const w = Math.max(canvasW, curW);
+  const h = Math.max(canvasH, curH);
+  iframe.style.width = `${w}px`;
+  iframe.style.height = `${h}px`;
+  const idoc = iframe.contentDocument;
+  if (!idoc) return;
+  idoc.documentElement.style.width = `${w}px`;
+  idoc.documentElement.style.height = `${h}px`;
+  idoc.body.style.margin = '0';
+  idoc.body.style.width = `${w}px`;
+  idoc.body.style.minHeight = `${h}px`;
+}
 
 function getExportIframe(): HTMLIFrameElement {
   if (exportIframe && exportIframe.isConnected) return exportIframe;
@@ -30,11 +74,12 @@ function getExportIframe(): HTMLIFrameElement {
   iframe.setAttribute('aria-hidden', 'true');
   iframe.setAttribute('tabindex', '-1');
   // 离屏但保持渲染：用 absolute 移出视口（不可 hidden/clip/opacity:0，否则 html2canvas 抓空）
+  // 宽高在 mount 时按画布尺寸设置，不可长期钉死 10×10。
   iframe.style.position = 'absolute';
   iframe.style.left = '-100000px';
   iframe.style.top = '0';
-  iframe.style.width = '10px';
-  iframe.style.height = '10px';
+  iframe.style.width = '1px';
+  iframe.style.height = '1px';
   iframe.style.border = '0';
   iframe.style.visibility = 'visible';
   iframe.style.pointerEvents = 'none';
@@ -47,11 +92,8 @@ function getExportIframe(): HTMLIFrameElement {
   idoc.open();
   idoc.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>');
   idoc.close();
-  // 同步主文档的字体 @font-face 到 iframe，避免栅格化字体错位
   try {
-    const fontStyle = document.createElement('style');
-    fontStyle.textContent = POSTER_JP_FONT_FACE_CSS;
-    idoc.head.appendChild(fontStyle);
+    injectExportIframeFontFaces(idoc);
   } catch {
     /* 字体注入失败可降级 */
   }
@@ -114,8 +156,16 @@ export function mountPosterExportPage(
   //    —— html2canvas 会直接裁切或忽略不可见内容，导致栅格化全空白。
   // 2) 整个离屏节点挂在独立的隐藏 iframe 文档里（而非主文档 body）：
   //    彻底隔离主文档文档流，根除移动端 append 1080×1920 大节点导致的反复重排「字号抖动」与卡死。
+  // 3) iframe 视口宽高必须 ≥ 画布尺寸，否则文字 metrics / containing block 失真 → 半字形切边。
   const iframe = getExportIframe();
+  sizeExportIframe(iframe, canvasW, canvasH);
   const idoc = iframe.contentDocument!;
+  const posterFontStyle = renderOptions?.posterFontStyle;
+  try {
+    injectExportIframeFontFaces(idoc, posterFontStyle);
+  } catch {
+    /* 字体注入失败可降级 */
+  }
   const backdrop = idoc.createElement('div');
   backdrop.setAttribute('aria-hidden', 'true');
   backdrop.style.position = 'absolute';
@@ -159,6 +209,7 @@ export function mountPosterExportPage(
     showRuby: renderOptions?.showRuby,
     userFontScale: renderOptions?.userFontScale,
     userLineHeightScale: renderOptions?.userLineHeightScale,
+    posterFontStyle,
   });
   shell.appendChild(styleEl);
 

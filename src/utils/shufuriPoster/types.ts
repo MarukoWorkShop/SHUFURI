@@ -6,7 +6,15 @@ export type PosterRenderOptions = {
   showRuby?: boolean;
   userFontScale?: number;
   userLineHeightScale?: number;
+  /** 韩文字体样式：system（默认，纯系统字体，零下载）/ batang（HCR Batang 衬线，导出时按需加载） */
+  posterFontStyle?: PosterFontStyle;
 };
+
+/** 韩文字体样式维度（独立维度，与 colorTheme 平级） */
+export type PosterFontStyle = 'system' | 'batang';
+
+/** 默认韩文字体样式：纯系统字体，首屏零下载 */
+export const DEFAULT_POSTER_FONT_STYLE: PosterFontStyle = 'system';
 
 export type PreviewTypography = {
   fontScale: number;
@@ -22,11 +30,13 @@ export const DEFAULT_PREVIEW_TYPOGRAPHY: PreviewTypography = {
 export function buildPosterRenderOptions(
   showRuby: boolean,
   typography: PreviewTypography,
+  posterFontStyle: PosterFontStyle = DEFAULT_POSTER_FONT_STYLE,
 ): PosterRenderOptions {
   return {
     showRuby,
     userFontScale: typography.fontScale,
     userLineHeightScale: typography.lineHeightScale,
+    posterFontStyle,
   };
 }
 

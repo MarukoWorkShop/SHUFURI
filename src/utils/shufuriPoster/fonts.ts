@@ -25,12 +25,26 @@ export const EN_FONT_FAMILY = KOZMIN_PRO_REGULAR_FAMILY;
 /** 全局 UI：PingFang Light，中英文统一 */
 export const UI_FONT_FAMILY = ZH_FONT_FAMILY;
 
-/** 韩文排版字体（HCR Batang 为主，Apple SD Gothic Neo 等系统字体兜底） */
-export const KO_FONT_FAMILY =
+/**
+ * 韩文系统字体栈（默认/首屏零下载路径）：纯系统韩文字体，不引用 HCR Batang。
+ * 用于 posterFontStyle === 'system'（默认）与未指定字体样式时。
+ */
+export const KO_FONT_FAMILY_SYSTEM =
+  '"Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Nanum Gothic", sans-serif';
+
+/**
+ * 韩文排版字体栈（batang 样式）：HCR Batang 衬线为主，系统字体兜底。
+ * 仅当用户选择 posterFontStyle === 'batang' 时才使用，且 HCR Batang 二进制字体按需加载。
+ */
+export const KO_FONT_FAMILY_BATANG =
   '"HCR Batang", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", serif';
 
-/** 韩文海报歌名：汉字优先思源宋体，韩文回退 Batang */
-export const KO_POSTER_TITLE_FONT_FAMILY = `${ZH_SONGTI_FONT_FAMILY}, ${KO_FONT_FAMILY}`;
+/** 向后兼容别名：默认走系统字体栈（零下载） */
+export const KO_FONT_FAMILY = KO_FONT_FAMILY_SYSTEM;
+
+/** 韩文海报歌名：汉字优先思源宋体，韩文回退系统字体（默认）/ Batang（batang 样式） */
+export const KO_POSTER_TITLE_FONT_FAMILY_SYSTEM = `${ZH_SONGTI_FONT_FAMILY}, ${KO_FONT_FAMILY_SYSTEM}`;
+export const KO_POSTER_TITLE_FONT_FAMILY_BATANG = `${ZH_SONGTI_FONT_FAMILY}, ${KO_FONT_FAMILY_BATANG}`;
 
 /** 中文海报歌名 */
 export const ZH_POSTER_TITLE_FONT_FAMILY = ZH_SONGTI_FONT_FAMILY;
@@ -115,9 +129,17 @@ export function getPosterJapaneseFontsFaceCss(): string {
   return getPosterJapaneseRegularFontFaceCss();
 }
 
-export function getPosterKoreanFontFaceCss(): string {
-  const fontUrl = getPosterKoreanFontUrl();
-  return `
+import type { PosterFontStyle } from './types';
+
+/**
+ * 韩文 @font-face 注入。
+ * - posterFontStyle === 'batang'：注入 HCR Batang 的 @font-face（二进制字体异步按需加载）。
+ * - 'system' / 未指定：返回空（纯系统字体，首屏零下载）。
+ */
+export function getPosterKoreanFontFaceCss(fontStyle?: PosterFontStyle): string {
+  if (fontStyle === 'batang') {
+    const fontUrl = getPosterKoreanFontUrl();
+    return `
 @font-face {
   font-family: "HCR Batang";
   src: url("${fontUrl}") format("truetype");
@@ -125,6 +147,8 @@ export function getPosterKoreanFontFaceCss(): string {
   font-style: normal;
   font-display: block;
 }`;
+  }
+  return '';
 }
 
 /** 思源宋体 SC Regular — 歌名 / 中文衬线 */
@@ -187,8 +211,12 @@ export async function ensurePosterJapaneseFontLoaded(): Promise<void> {
   ]);
 }
 
-/** 预加载韩文字体，供分页测量与导出栅格化前调用 */
-export async function ensurePosterKoreanFontLoaded(): Promise<void> {
+/**
+ * 预加载韩文字体，供分页测量与导出栅格化前调用。
+ * 仅当 posterFontStyle === 'batang' 时才拉取 HCR Batang（27MB），其余样式零下载。
+ */
+export async function ensurePosterKoreanFontLoaded(fontStyle?: PosterFontStyle): Promise<void> {
+  if (fontStyle !== 'batang') return;
   if (!document.fonts?.load) return;
   await Promise.all([
     loadFontWithTimeout('400 16px "HCR Batang"', '한', FONT_LOAD_TIMEOUT_MS),
@@ -229,10 +257,10 @@ export function waitForPosterLayoutReady(): Promise<void> {
 }
 
 /** 预加载海报所需字体（含思源宋体，避免歌名回退 PingFang） */
-export async function ensurePosterFontsLoaded(): Promise<void> {
+export async function ensurePosterFontsLoaded(fontStyle?: PosterFontStyle): Promise<void> {
   await Promise.all([
     ensurePosterJapaneseFontLoaded(),
-    ensurePosterKoreanFontLoaded(),
+    ensurePosterKoreanFontLoaded(fontStyle),
     ensurePosterEnglishFontLoaded(),
     ensurePosterSourceHanSerifScFontLoaded(),
   ]);

@@ -8,8 +8,10 @@ import { useNativeBridge } from '../hooks/useNativeBridge';
 import { usePosterSave } from '../hooks/usePosterSave';
 import { usePosterWorkspace } from '../hooks/usePosterWorkspace';
 import {
+  DEFAULT_POSTER_FONT_STYLE,
   DEFAULT_PREVIEW_TYPOGRAPHY,
   buildPosterRenderOptions,
+  type PosterFontStyle,
   type PosterLayoutProfile,
 } from '../utils/shufuriPoster/types';
 import {
@@ -88,6 +90,7 @@ export default function PosterWorkspaceProvider({
   const titleMarkupHtmlRef = useRef<string | undefined>(undefined);
   const showRubyRef = useRef(true);
   const previewTypographyRef = useRef(DEFAULT_PREVIEW_TYPOGRAPHY);
+  const posterFontStyleRef = useRef<PosterFontStyle>(DEFAULT_POSTER_FONT_STYLE);
   const nativeExportingRef = useRef(false);
   const workspaceSessionRef = useRef<WorkspaceSessionOps>({
     resetInkSession: () => {},
@@ -108,7 +111,7 @@ export default function PosterWorkspaceProvider({
   }, [onWorkspaceReset]);
 
   const getPosterRenderOpts = useCallback(
-    () => buildPosterRenderOptions(showRubyRef.current, previewTypographyRef.current),
+    () => buildPosterRenderOptions(showRubyRef.current, previewTypographyRef.current, posterFontStyleRef.current),
     [],
   );
 
@@ -186,12 +189,15 @@ export default function PosterWorkspaceProvider({
     repaginating,
     rubyToggleSupported,
     posterRenderOpts,
+    posterFontStyle,
+    setPosterFontStyle,
     handleShowRubyChange,
     resetTypographyPreview,
   } = typography;
 
   useEffect(() => { showRubyRef.current = showRubyAnnotations; }, [showRubyAnnotations]);
   useEffect(() => { previewTypographyRef.current = previewTypography; }, [previewTypography]);
+  useEffect(() => { posterFontStyleRef.current = posterFontStyle; }, [posterFontStyle]);
 
   workspaceSessionRef.current = {
     resetInkSession: inkSession.resetInkSession,
@@ -215,6 +221,7 @@ export default function PosterWorkspaceProvider({
     titleMarkupHtmlRef,
     showRubyRef,
     previewTypographyRef,
+    getPosterRenderOpts,
     setPages,
     nativeExportingRef,
     showToast,
@@ -465,6 +472,8 @@ export default function PosterWorkspaceProvider({
       repaginating,
       rubyToggleSupported,
       posterRenderOpts,
+      posterFontStyle,
+      setPosterFontStyle,
       handleShowRubyChange,
     }),
     [

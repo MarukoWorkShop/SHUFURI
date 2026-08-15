@@ -4,6 +4,7 @@ import type { ColorTheme, LangCode, LyricsLanguage } from '../services/appSettin
 import type { SavedLyricsProject } from '../services/savedLyricsStore';
 import type { AppMode } from '../hooks/usePosterWorkspace';
 import type {
+  PosterFontStyle,
   PosterLayoutProfile,
   PosterPageSlice,
   PosterRenderOptions,
@@ -136,6 +137,8 @@ export type PosterTypographyContextValue = {
   repaginating: boolean;
   rubyToggleSupported: boolean;
   posterRenderOpts: PosterRenderOptions;
+  posterFontStyle: PosterFontStyle;
+  setPosterFontStyle: (next: PosterFontStyle) => void;
   handleShowRubyChange: (next: boolean) => void;
 };
 

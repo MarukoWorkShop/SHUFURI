@@ -8,7 +8,6 @@ import {
 import { resolveExportTitle } from '../utils/shufuriPoster/posterTitle';
 import { ensurePosterFontsLoaded } from '../utils/shufuriPoster/fonts';
 import { buildPosterPagesFromBody } from '../utils/shufuriPoster/buildPosterPages';
-import { buildPosterRenderOptions } from '../utils/shufuriPoster/types';
 import type {
   PosterLayoutProfile,
   PosterPageSlice,
@@ -39,6 +38,7 @@ type Options = WorkspaceRefs & {
   posterRenderOpts: PosterRenderOptions;
   showRubyRef: { current: boolean };
   previewTypographyRef: { current: import('../utils/shufuriPoster/types').PreviewTypography };
+  getPosterRenderOpts: () => PosterRenderOptions;
   setPages: (pages: PosterPageSlice[]) => void;
   nativeExportingRef: { current: boolean };
   showToast: ShowAppToast;
@@ -60,6 +60,7 @@ export function usePosterExport({
   titleMarkupHtmlRef,
   showRubyRef,
   previewTypographyRef,
+  getPosterRenderOpts,
   setPages,
   nativeExportingRef,
   showToast,
@@ -85,7 +86,8 @@ export function usePosterExport({
     }
 
     try {
-      await ensurePosterFontsLoaded();
+      const posterRenderOpts = getPosterRenderOpts();
+      await ensurePosterFontsLoaded(posterRenderOpts.posterFontStyle);
       const currentPages = buildPosterPagesFromBody(
         currentBodyHtml,
         currentTitle,
@@ -94,7 +96,7 @@ export function usePosterExport({
         lyricsLanguage,
         lang,
         titleMarkupHtmlRef.current,
-        buildPosterRenderOptions(showRubyRef.current, previewTypographyRef.current),
+        posterRenderOpts,
       );
       pagesRef.current = currentPages;
       setPages(currentPages);
@@ -105,7 +107,7 @@ export function usePosterExport({
       }
 
       const baseFilename = posterPdfExportFilename(resolveExportTitle(currentTitle), currentProfile);
-      const renderOpts = buildPosterRenderOptions(showRubyRef.current, previewTypographyRef.current);
+      const renderOpts = posterRenderOpts;
 
       if (exportType === 'export_pdf') {
         await exportPosterPdf(
