@@ -26,11 +26,21 @@ export const EN_FONT_FAMILY = KOZMIN_PRO_REGULAR_FAMILY;
 export const UI_FONT_FAMILY = ZH_FONT_FAMILY;
 
 /**
- * 韩文系统字体栈（默认/首屏零下载路径）：纯系统韩文字体，不引用 HCR Batang。
- * 用于 posterFontStyle === 'system'（默认）与未指定字体样式时。
+ * 韩文系统字体栈（无衬线，默认/首屏零下载路径）：纯系统韩文字体，不引用 HCR Batang。
+ * 用于 posterFontStyle === 'batang' 之外的韩文无衬线场景（历史默认）。
  */
 export const KO_FONT_FAMILY_SYSTEM =
   '"Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Nanum Gothic", sans-serif';
+
+/**
+ * 韩文系统衬线字体栈（首屏零下载）：用户选择"系统衬线"风格时使用，不引用 HCR Batang。
+ * 显式列出各平台的系统韩文衬线字体，确保标题与主体歌词统一为衬线观感：
+ * - macOS：Apple Myungjo（系统自带韩文衬线）
+ * - Windows：Batang / Gungsuh（系统自带韩文衬线）
+ * - 通用：Noto Serif KR 兜底，最终回落 serif 通用族
+ */
+export const KO_FONT_FAMILY_SYSTEM_SERIF =
+  '"Apple Myungjo", "Batang", "Gungsuh", "Noto Serif KR", serif';
 
 /**
  * 韩文排版字体栈（batang 样式）：HCR Batang 衬线为主，系统字体兜底。
@@ -42,9 +52,15 @@ export const KO_FONT_FAMILY_BATANG =
 /** 向后兼容别名：默认走系统字体栈（零下载） */
 export const KO_FONT_FAMILY = KO_FONT_FAMILY_SYSTEM;
 
-/** 韩文海报歌名：汉字优先思源宋体，韩文回退系统字体（默认）/ Batang（batang 样式） */
-export const KO_POSTER_TITLE_FONT_FAMILY_SYSTEM = `${ZH_SONGTI_FONT_FAMILY}, ${KO_FONT_FAMILY_SYSTEM}`;
-export const KO_POSTER_TITLE_FONT_FAMILY_BATANG = `${ZH_SONGTI_FONT_FAMILY}, ${KO_FONT_FAMILY_BATANG}`;
+/** 韩文海报歌名：汉字优先思源宋体，韩文走系统衬线（默认）/ Batang 衬线（batang 样式）
+ *
+ * system 模式下韩文显式使用系统衬线栈（Apple Myungjo 等），与主体歌词统一衬线观感。
+ * 关键顺序：思源宋体(汉字衬线) → 韩文系统衬线栈 → serif 通用族兜底。
+ */
+export const KO_POSTER_TITLE_FONT_FAMILY_SYSTEM =
+  `${SOURCE_HAN_SERIF_SC_FAMILY}, "Songti SC", "STSong", "Songti TC", "SimSun", ${KO_FONT_FAMILY_SYSTEM_SERIF}`;
+export const KO_POSTER_TITLE_FONT_FAMILY_BATANG =
+  `${SOURCE_HAN_SERIF_SC_FAMILY}, "Songti SC", "STSong", "Songti TC", "SimSun", ${KO_FONT_FAMILY_BATANG}, serif`;
 
 /** 中文海报歌名 */
 export const ZH_POSTER_TITLE_FONT_FAMILY = ZH_SONGTI_FONT_FAMILY;

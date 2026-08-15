@@ -1,6 +1,5 @@
 import {
   EN_FONT_FAMILY,
-  KO_FONT_FAMILY,
   KOZMIN_PRO_REGULAR_FAMILY,
   ZH_FONT_FAMILY,
   ZH_SONGTI_FONT_FAMILY,
@@ -309,6 +308,8 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   const rubyBaseGapCss = rubyBaseGapEm > 0 ? `padding-bottom: ${rubyBaseGapEm}em;` : '';
 
   const titleFont = R.posterTitle.fontFamily;
+  /** 韩文主体/词汇/语法强制字体：跟随 resolver 的 posterFontStyle 决策（system 系统衬线 / batang HCR Batang） */
+  const koFontFamily = R.lyricPrimary.fontFamily;
   const titleWght = R.posterTitle.fontWeight;
   const artistWght = R.posterArtist.fontWeight;
   const sectionTitleFont = R.sectionTitle.fontFamily;
@@ -480,7 +481,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   }
   ${bodySel} .ko-line,
   ${bodySel} .ko-line * {
-    font-family: ${KO_FONT_FAMILY} !important;
+    font-family: ${koFontFamily} !important;
     font-size: ${mainFs} !important;
     font-weight: ${koWght} !important;
     color: ${BODY_TEXT_COLOR} !important;
@@ -502,7 +503,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   ${bodySel} .vocab-ex-ko *,
   ${bodySel} .grammar-ex-ko,
   ${bodySel} .grammar-ex-ko * {
-    font-family: ${KO_FONT_FAMILY} !important;
+    font-family: ${koFontFamily} !important;
     font-size: ${auxFs} !important;
     font-weight: ${koWght} !important;
     color: ${BODY_TEXT_COLOR} !important;
@@ -557,7 +558,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   }
   /* 划词笔记等混排：谚文片段保持韩语正文字体（覆盖 .grammar-detail * 的中文栈） */
   ${bodySel} .grammar-detail .ko-run {
-    font-family: ${KO_FONT_FAMILY} !important;
+    font-family: ${koFontFamily} !important;
   }
   ${bodySel} .vocab-ex-ja,
   ${bodySel} .vocab-ex-ko,
@@ -599,7 +600,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   ${bodySel} .vocab-line1 .vocab-word-ko *,
   ${bodySel} h3.grammar-point-title .grammar-title-ko,
   ${bodySel} h3.grammar-point-title .grammar-title-ko * {
-    font-family: ${KO_FONT_FAMILY} !important;
+    font-family: ${koFontFamily} !important;
     font-size: ${mainFs} !important;
     font-weight: ${koWght} !important;
     color: ${r.vocabEmphasisColor} !important;
@@ -609,7 +610,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   ${r.lang === 'ko' ? `
   ${bodySel} .lyrics-explain-notes .vocab-line1 .vocab-word,
   ${bodySel} .lyrics-explain-notes .vocab-line1 .vocab-word *:not(rt):not(rp) {
-    font-family: ${KO_FONT_FAMILY} !important;
+    font-family: ${koFontFamily} !important;
     font-weight: ${koWght} !important;
     color: ${r.vocabEmphasisColor} !important;
     line-height: ${L.koLh} !important;

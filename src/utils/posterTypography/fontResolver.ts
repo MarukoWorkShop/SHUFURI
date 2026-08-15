@@ -4,7 +4,7 @@ import { dimForProfile, POSTER_ELASTIC_FONT_BASE_PX } from '../shufuriPoster/dim
 import {
   EN_FONT_FAMILY,
   KO_FONT_FAMILY_BATANG,
-  KO_FONT_FAMILY_SYSTEM,
+  KO_FONT_FAMILY_SYSTEM_SERIF,
   KO_POSTER_TITLE_FONT_FAMILY_BATANG,
   KO_POSTER_TITLE_FONT_FAMILY_SYSTEM,
   KOZMIN_PRO_REGULAR_FAMILY,
@@ -232,10 +232,11 @@ export function resolvePosterTypography(ctx: ResolverContext): ResolvedTypograph
   }
 
   const lyricPrimarySize = isZhPipeline ? zhMainPx : mainPx;
-  /** 中文歌词正文用思源宋体；PingFang 仅留给 UI / 辅文 / 词解 */
+  /** 中文歌词正文用思源宋体；PingFang 仅留给 UI / 辅文 / 词解
+   *  韩文：system 模式走系统衬线栈（与标题统一），batang 模式走 HCR Batang */
   const lyricPrimaryFont =
     lang === 'ko'
-      ? (ctx.posterFontStyle === 'batang' ? KO_FONT_FAMILY_BATANG : KO_FONT_FAMILY_SYSTEM)
+      ? (ctx.posterFontStyle === 'batang' ? KO_FONT_FAMILY_BATANG : KO_FONT_FAMILY_SYSTEM_SERIF)
       : lang === 'en'
         ? EN_FONT_FAMILY
         : lang === 'zh'

@@ -4,6 +4,7 @@ import {
   ZH_FONT_FAMILY,
   SOURCE_HAN_SERIF_SC_FAMILY,
 } from '../shufuriPoster/fonts';
+import type { PosterFontStyle } from '../shufuriPoster/types';
 
 let cachedJpRegularFontFaceCss: string | null = null;
 let cachedKoFontFaceCss: string | null = null;
@@ -138,10 +139,18 @@ export async function getPrintSourceHanSerifScFontFaceCss(): Promise<string> {
 }
 
 /** 日文+韩文+英文+思源宋体+Sansation Regular @font-face，PDF 打印时内嵌 */
-export async function getPrintFontFaceCss(): Promise<string> {
+export async function getPrintFontFaceCss(
+  posterFontStyle: PosterFontStyle = 'system',
+): Promise<string> {
+  // system 模式：韩文走系统衬线，跳过 27MB 的 HCR Batang @font-face（零下载）。
+  // batang 模式：注入 HCR Batang @font-face 供矢量打印使用。
+  const koPromise =
+    posterFontStyle === 'batang'
+      ? getPrintKoreanFontFaceCss()
+      : Promise.resolve('');
   const [jpRegular, koCss, enCss, zhSerifCss, sansationCss] = await Promise.all([
     getPrintJapaneseRegularFontFaceCss(),
-    getPrintKoreanFontFaceCss(),
+    koPromise,
     getPrintEnglishFontFaceCss(),
     getPrintSourceHanSerifScFontFaceCss(),
     getPrintSansationRegularFontFaceCss(),
