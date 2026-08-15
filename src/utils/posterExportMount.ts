@@ -7,11 +7,6 @@ import {
 import type { PosterLayoutProfile, PosterRenderOptions } from './shufuriPoster/types';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
-import {
-  getPosterJapaneseFontsFaceCss,
-  getPosterSansationFontFaceCss,
-  getPosterSourceHanSerifScFontFaceCss,
-} from './shufuriPoster/fonts';
 import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
 import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
 import { appendPosterWatermark } from './shufuriPoster/posterWatermark';
@@ -25,56 +20,60 @@ import { appendPosterWatermark } from './shufuriPoster/posterWatermark';
  */
 const EXPORT_HTML2CANVAS_SCALE_FUDGE = 0.98;
 
-const EXPORT_IFRAME_FONT_STYLE_ID = 'poster-export-font-faces';
-
-/** 导出用离屏 iframe 单例：与主文档文档流完全隔离，根除移动端 append 大节点导致的重排抖动 */
-let exportIframe: HTMLIFrameElement | null = null;
-
-/** iframe head 注入完整海报 @font-face（与 compilePosterCss 一致；URL 相对主文档绝对化） */
-function injectExportIframeFontFaces(idoc: Document): void {
-  const css =
-    getPosterJapaneseFontsFaceCss() +
-    getPosterSourceHanSerifScFontFaceCss() +
-    getPosterSansationFontFaceCss();
-  let el = idoc.getElementById(EXPORT_IFRAME_FONT_STYLE_ID) as HTMLStyleElement | null;
-  if (!el) {
-    el = idoc.createElement('style');
-    el.id = EXPORT_IFRAME_FONT_STYLE_ID;
-    idoc.head.appendChild(el);
-  }
-  el.textContent = css;
+/**
+ * 导出专用 CSS（仅挂载 DOM，不影响屏幕预览）。
+ *
+ * html2canvas 1.4.x 用拉丁样本 "Hidden Text" 测 font baseline，对 CJK
+ * （PingFang / Apple Myungjo / 思源）基线常偏大，字形画到行盒下方；
+ * 任一祖先 overflow≠visible 或 contain:paint 都会把下半截裁掉
+ * （表现为中文行底部切边，韩文略好、标题因行高更大常幸免）。
+ */
+const EXPORT_RASTER_SAFE_CSS = `
+.fv-html-poster-root[data-export-raster="1"],
+.fv-html-poster-root[data-export-raster="1"] .fv-body-h,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .jp-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .ko-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .cn-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .gloss-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-line1,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-ja,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-ko,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-zh,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-cn,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-gloss,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit h3.grammar-point-title,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-detail,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-ja,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-ko,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-zh,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-cn,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-gloss {
+  overflow: visible !important;
 }
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .jp-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .ko-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .cn-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .gloss-line {
+  padding-bottom: 0.22em !important;
+  line-height: 1.55 !important;
+}
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line * {
+  line-height: 1.55 !important;
+}
+`;
 
-function getExportIframe(): HTMLIFrameElement {
-  if (exportIframe && exportIframe.isConnected) return exportIframe;
-  const iframe = document.createElement('iframe');
-  iframe.setAttribute('aria-hidden', 'true');
-  iframe.setAttribute('tabindex', '-1');
-  // 离屏但保持渲染：用 absolute 移出视口（不可 hidden/clip/opacity:0，否则 html2canvas 抓空）
-  iframe.style.position = 'absolute';
-  iframe.style.left = '-100000px';
-  iframe.style.top = '0';
-  iframe.style.width = '10px';
-  iframe.style.height = '10px';
-  iframe.style.border = '0';
-  iframe.style.visibility = 'visible';
-  iframe.style.pointerEvents = 'none';
-  document.body.appendChild(iframe);
-  // 确保 iframe 内文档就绪
-  if (!iframe.contentDocument) {
-    iframe.src = 'about:blank';
-  }
-  const idoc = iframe.contentDocument!;
-  idoc.open();
-  idoc.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>');
-  idoc.close();
-  try {
-    injectExportIframeFontFaces(idoc);
-  } catch {
-    /* 字体注入失败可降级 */
-  }
-  exportIframe = iframe;
-  return iframe;
+/** 导出 backdrop 完全移出左缘：画布宽 + 视口宽 + 余量（-200vw 不足以隐藏 1080px 手机竖屏画布） */
+function getExportBackdropOffscreenLeft(canvasW: number): number {
+  const vw =
+    typeof window !== 'undefined'
+      ? Math.ceil(window.visualViewport?.width ?? window.innerWidth ?? canvasW)
+      : canvasW;
+  return -(canvasW + vw + 64);
 }
 
 function sanitizeFragmentHtml(html: string): string {
@@ -91,7 +90,14 @@ export type PosterExportPageMount = {
   dispose: () => void;
 };
 
-/** 与预览页结构一致，离屏挂载，供 PDF/PNG 栅格化（不依赖预览 ref） */
+/**
+ * 与预览页结构一致，离屏挂载到**主文档**，供 PDF/PNG 栅格化。
+ *
+ * 不再使用独立 10×10 iframe：iframe 内 containing block / 字体 metrics 与
+ * 主文档不一致，叠加歌词行 overflow:hidden 后 html2canvas 会横切半字形。
+ * 移动端「能拿到 PDF」由 pdfExport.deliverPosterPdfBlob（share/dataURL）负责，
+ * 与挂载方式无关；防抖动靠离屏 fixed + contain，勿再引入过小 iframe。
+ */
 export function mountPosterExportPage(
   doc: Document,
   opts: {
@@ -108,7 +114,6 @@ export function mountPosterExportPage(
     renderOptions?: PosterRenderOptions;
   },
 ): PosterExportPageMount {
-  void doc; // 离屏节点改挂独立 iframe（见 getExportIframe），不再直接使用主文档
   const {
     title,
     artist,
@@ -130,76 +135,72 @@ export function mountPosterExportPage(
   // 关键约束：
   // 1) 不能使用 clip-path / opacity:0 / visibility:hidden / z-index:-1 on shell
   //    —— html2canvas 会直接裁切或忽略不可见内容，导致栅格化全空白。
-  // 2) 整个离屏节点挂在独立的隐藏 iframe 文档里（而非主文档 body）：
-  //    彻底隔离主文档文档流，根除移动端 append 1080×1920 大节点导致的反复重排「字号抖动」与卡死。
-  // 3) iframe 视口宽高必须 ≥ 画布尺寸，否则文字 metrics / containing block 失真 → 半字形切边。
-  const iframe = getExportIframe();
-  // sizeExportIframe removed: windowWidth/windowHeight in html2canvas handles viewport correctly; manual expansion caused containing block conflict -> half-glyph clipping
-  const idoc = iframe.contentDocument!;
-  try {
-    injectExportIframeFontFaces(idoc);
-  } catch {
-    /* 字体注入失败可降级 */
-  }
-  const backdrop = idoc.createElement('div');
+  // 2) 禁止 100vw 全屏遮罩或 prepare 时移入视口 —— 会触发视口/缩放重算与全屏白闪。
+  // 3) left 须 ≤ -(canvasW + viewportW)：translateX(-200vw) 无法盖住 1080px 画布，会漏出左侧大字。
+  const backdrop = doc.createElement('div');
   backdrop.setAttribute('aria-hidden', 'true');
-  backdrop.style.position = 'absolute';
-  backdrop.style.left = '0';
+  backdrop.style.position = 'fixed';
+  backdrop.style.left = `${getExportBackdropOffscreenLeft(canvasW)}px`;
   backdrop.style.top = '0';
   backdrop.style.width = `${canvasW}px`;
   backdrop.style.height = `${canvasH}px`;
-  backdrop.style.overflow = 'hidden';
+  // 导出挂载勿用 overflow:hidden / contain:paint：二者都会在 html2canvas 里变成
+  // ClipEffect，把 CJK 基线偏移画出的下半字形裁掉。页边界由强制 canvas 尺寸保证。
+  backdrop.style.overflow = 'visible';
   backdrop.style.background = '#ffffff';
   backdrop.style.pointerEvents = 'none';
-  backdrop.style.contain = 'layout style paint';
+  backdrop.style.contain = 'layout style';
+  backdrop.style.zIndex = '2147483646';
 
-  const wrapper = idoc.createElement('div');
+  const wrapper = doc.createElement('div');
   wrapper.style.position = 'absolute';
   wrapper.style.left = '0';
   wrapper.style.top = '0';
   wrapper.style.width = `${canvasW}px`;
   wrapper.style.height = `${canvasH}px`;
-  wrapper.style.overflow = 'hidden';
+  wrapper.style.overflow = 'visible';
   wrapper.style.pointerEvents = 'none';
 
-  const shell = idoc.createElement('div');
+  const shell = doc.createElement('div');
   shell.className = 'fv-html-poster-root';
-  // rootStyle 已包含 position:relative、width、height（带px单位）、padding、overflow:hidden、
-  // display:flex 等全部关键样式
+  shell.dataset.exportRaster = '1';
+  // rootStyle 含 overflow:hidden；导出必须覆盖为 visible，否则半字形切边复发
   Object.assign(shell.style, rootStyle);
+  shell.style.overflow = 'visible';
   // 将预期画布尺寸存为 data 属性，供 rasterize 阶段读取以确保 canvas 尺寸精确
   shell.dataset.exportCanvasW = String(canvasW);
   shell.dataset.exportCanvasH = String(canvasH);
   shell.dataset.rubyVisible = (renderOptions?.showRuby ?? true) ? 'true' : 'false';
 
-  const styleEl = idoc.createElement('style');
+  const styleEl = doc.createElement('style');
   // 叠加 html2canvas 渲染补偿因子，确保 PDF 栅格化不溢出
   const exportScale = spacingScale * EXPORT_HTML2CANVAS_SCALE_FUDGE;
   const pipelineLang = resolvePosterPipelineLang(lang, bodyFragmentHtml, language);
-  styleEl.textContent = buildShufuriPosterInnerCss(layoutProfile, {
-    spacingScale: exportScale,
-    language,
-    lang: pipelineLang,
-    colorTheme: getAppSettings().colorTheme,
-    showRuby: renderOptions?.showRuby,
-    userFontScale: renderOptions?.userFontScale,
-    userLineHeightScale: renderOptions?.userLineHeightScale,
-  });
+  styleEl.textContent =
+    buildShufuriPosterInnerCss(layoutProfile, {
+      spacingScale: exportScale,
+      language,
+      lang: pipelineLang,
+      colorTheme: getAppSettings().colorTheme,
+      showRuby: renderOptions?.showRuby,
+      userFontScale: renderOptions?.userFontScale,
+      userLineHeightScale: renderOptions?.userLineHeightScale,
+    }) + EXPORT_RASTER_SAFE_CSS;
   shell.appendChild(styleEl);
 
   if (showTitle) {
-    const h1 = idoc.createElement('h1');
+    const h1 = doc.createElement('h1');
     h1.className = 'fv-title-h';
     applyPosterTitleElement(h1, title, artist, pipelineLang ?? 'jp');
     shell.appendChild(h1);
   }
 
-  const body = idoc.createElement('div');
+  const body = doc.createElement('div');
   body.className = 'fv-body-h';
   body.innerHTML = sanitizeFragmentHtml(bodyFragmentHtml);
   shell.appendChild(body);
 
-  appendPosterWatermark(shell, pageIndex + 1, idoc);
+  appendPosterWatermark(shell, pageIndex + 1, doc);
 
   const titleElForMeasure = showTitle ? shell.querySelector('h1.fv-title-h') : null;
   applyPosterBodyMaxHeight(body, layoutProfile, {
@@ -209,7 +210,7 @@ export function mountPosterExportPage(
 
   wrapper.appendChild(shell);
   backdrop.appendChild(wrapper);
-  idoc.body.appendChild(backdrop);
+  doc.body.appendChild(backdrop);
   void shell.offsetHeight;
 
   return {
