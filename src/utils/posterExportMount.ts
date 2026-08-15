@@ -45,39 +45,17 @@ function injectExportIframeFontFaces(idoc: Document): void {
   el.textContent = css;
 }
 
-/**
- * 将导出 iframe 视口扩到至少画布尺寸。
- * 10×10 会让内部 layout / 文字 metrics 按极小 containing block 计算，
- * html2canvas 再叠加 overflow:hidden → 字形被横切成「只剩一半」。
- */
-function sizeExportIframe(iframe: HTMLIFrameElement, canvasW: number, canvasH: number): void {
-  const curW = parseInt(iframe.style.width, 10) || 0;
-  const curH = parseInt(iframe.style.height, 10) || 0;
-  const w = Math.max(canvasW, curW);
-  const h = Math.max(canvasH, curH);
-  iframe.style.width = `${w}px`;
-  iframe.style.height = `${h}px`;
-  const idoc = iframe.contentDocument;
-  if (!idoc) return;
-  idoc.documentElement.style.width = `${w}px`;
-  idoc.documentElement.style.height = `${h}px`;
-  idoc.body.style.margin = '0';
-  idoc.body.style.width = `${w}px`;
-  idoc.body.style.minHeight = `${h}px`;
-}
-
 function getExportIframe(): HTMLIFrameElement {
   if (exportIframe && exportIframe.isConnected) return exportIframe;
   const iframe = document.createElement('iframe');
   iframe.setAttribute('aria-hidden', 'true');
   iframe.setAttribute('tabindex', '-1');
   // 离屏但保持渲染：用 absolute 移出视口（不可 hidden/clip/opacity:0，否则 html2canvas 抓空）
-  // 宽高在 mount 时按画布尺寸设置，不可长期钉死 10×10。
   iframe.style.position = 'absolute';
   iframe.style.left = '-100000px';
   iframe.style.top = '0';
-  iframe.style.width = '1px';
-  iframe.style.height = '1px';
+  iframe.style.width = '10px';
+  iframe.style.height = '10px';
   iframe.style.border = '0';
   iframe.style.visibility = 'visible';
   iframe.style.pointerEvents = 'none';
@@ -156,7 +134,7 @@ export function mountPosterExportPage(
   //    彻底隔离主文档文档流，根除移动端 append 1080×1920 大节点导致的反复重排「字号抖动」与卡死。
   // 3) iframe 视口宽高必须 ≥ 画布尺寸，否则文字 metrics / containing block 失真 → 半字形切边。
   const iframe = getExportIframe();
-  sizeExportIframe(iframe, canvasW, canvasH);
+  // sizeExportIframe removed: windowWidth/windowHeight in html2canvas handles viewport correctly; manual expansion caused containing block conflict -> half-glyph clipping
   const idoc = iframe.contentDocument!;
   try {
     injectExportIframeFontFaces(idoc);
