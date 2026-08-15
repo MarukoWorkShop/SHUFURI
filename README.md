@@ -46,7 +46,7 @@ Vite + React（Web）/ iOS WebView 壳（Capacitor 桥接）
 | 云函数 costReport | Token 成本统计报表 |
 | 环境 ID | `ai-native-d5gtc59uc47601f23`（上海 ap-shanghai） |
 
-**最近部署**：2026-08-11（重新部署：4 个云函数 arkProxy/arkExplainStream/aiFeedback/costReport 全部 force 覆盖更新；前端 53 文件重新部署到静态托管。本次包含 `src/codec/prompt/encoderCommon.ts` 提示词强化、`ExplainMicroscopePanel.tsx`/`InkToolbox.css`/`HomeScreen.tsx` UI 调整，以及 arkProxy/arkExplainStream 云函数代码更新）
+**最近部署**：2026-08-14（前端重新部署到静态托管，53 文件。本次包含首页 UI 重构：`MorphingWidget` 形变微件、链接分享胶囊组件、`HtmlPasteInput` 折叠态、`home.css` 样式更新；音乐链接白名单过滤；X 按钮仅在"已复制"态浮现）
 
 **部署命令**：
 
