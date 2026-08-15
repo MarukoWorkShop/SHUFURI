@@ -139,14 +139,14 @@ export async function getPrintSourceHanSerifScFontFaceCss(): Promise<string> {
 
 /** 日文+韩文+英文+思源宋体+Sansation Regular @font-face，PDF 打印时内嵌 */
 export async function getPrintFontFaceCss(): Promise<string> {
-  const [jpRegular, koCss, enCss, zhSerifCss, sansationCss] = await Promise.all([
+  // 韩文统一使用系统衬线字体（Apple Myungjo / Batang 系统自带），无需 @font-face 注入。
+  const [jpRegular, enCss, zhSerifCss, sansationCss] = await Promise.all([
     getPrintJapaneseRegularFontFaceCss(),
-    getPrintKoreanFontFaceCss(),
     getPrintEnglishFontFaceCss(),
     getPrintSourceHanSerifScFontFaceCss(),
     getPrintSansationRegularFontFaceCss(),
   ]);
-  return `${jpRegular}\n${koCss}\n${enCss}\n${zhSerifCss}\n${sansationCss}`;
+  return `${jpRegular}\n${enCss}\n${zhSerifCss}\n${sansationCss}`;
 }
 
 export {

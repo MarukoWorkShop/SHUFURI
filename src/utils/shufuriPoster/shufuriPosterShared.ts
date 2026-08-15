@@ -149,7 +149,11 @@ export function buildShufuriPosterInnerCss(
     userFontScale: options.userFontScale,
     userLineHeightScale: options.userLineHeightScale,
   });
-  return compilePosterCss(resolved, { unit: 'px', viewMode: 'screen', showRuby });
+  return compilePosterCss(resolved, {
+    unit: 'px',
+    viewMode: 'screen',
+    showRuby,
+  });
 }
 
 /** @deprecated 使用 buildShufuriPosterInnerCss */

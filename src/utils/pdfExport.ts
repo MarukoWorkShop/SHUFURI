@@ -134,6 +134,24 @@ function pickRasterScale(width: number, height: number): number {
  * 4) 优先使用 data 属性中存储的预期画布尺寸（exportCanvasW/H），避免内容较少的末页
  *    offsetHeight < 预期高度导致 canvas 偏小，PDF 写入时被拉伸。
  */
+/**
+ * html2canvas clone 文档里强制去掉所有裁剪。
+ * 仅靠源 DOM CSS 不够：库对每个 overflow≠visible 的节点加 ClipEffect，
+ * 再叠加错误的 CJK baseline → 中文/韩文行底部被横切。
+ */
+function neutralizeOverflowForHtml2CanvasClone(_clonedDoc: Document, clonedEl: HTMLElement): void {
+  const root =
+    clonedEl.closest('.fv-html-poster-root') instanceof HTMLElement
+      ? (clonedEl.closest('.fv-html-poster-root') as HTMLElement)
+      : clonedEl;
+  root.style.setProperty('overflow', 'visible', 'important');
+  root.querySelectorAll<HTMLElement>('*').forEach((node) => {
+    node.style.setProperty('overflow', 'visible', 'important');
+    node.style.setProperty('overflow-x', 'visible', 'important');
+    node.style.setProperty('overflow-y', 'visible', 'important');
+  });
+}
+
 function buildHtml2CanvasOpts(target: HTMLElement, scale: number): Html2CanvasOpts {
   // 优先使用 shell 上存储的预期尺寸（来自 mountPosterExportPage），fallback 到 offset 尺寸
   const expectedW = target.dataset.exportCanvasW
@@ -152,6 +170,7 @@ function buildHtml2CanvasOpts(target: HTMLElement, scale: number): Html2CanvasOp
     logging: false,
     windowWidth: expectedW,
     windowHeight: expectedH,
+    onclone: neutralizeOverflowForHtml2CanvasClone,
   };
 }
 
@@ -256,11 +275,13 @@ async function canvasToBlob(
 }
 
 /** 将单页根节点栅格化为 Canvas（导出 mount 已在离屏 1:1，直接栅格化） */
-export async function rasterizePosterLayoutPageRoot(el: HTMLElement): Promise<HTMLCanvasElement> {
+export async function rasterizePosterLayoutPageRoot(
+  el: HTMLElement,
+): Promise<HTMLCanvasElement> {
   await ensurePosterFontsLoaded();
   // 内嵌 @font-face 字体在首次栅格时可能尚未解码完成，等待文档字体就绪，
   // 避免部分移动浏览器栅格出空白/字体错位进而静默失败。
-  if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+  if (typeof document !== 'undefined' && document.fonts?.ready) {
     try {
       await document.fonts.ready;
     } catch {
@@ -635,7 +656,9 @@ export async function exportPosterPdfFromPageHtmls(
       });
       mount.prepare();
       try {
-        const canvas = await rasterizePosterLayoutPageRoot(mount.root);
+        const canvas = await rasterizePosterLayoutPageRoot(
+          mount.root,
+        );
         addCanvasToPdfPage(pdf, canvas, wMm, hMm, i === 0);
       } finally {
         mount.dispose();

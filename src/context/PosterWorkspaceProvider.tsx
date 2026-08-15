@@ -215,6 +215,7 @@ export default function PosterWorkspaceProvider({
     titleMarkupHtmlRef,
     showRubyRef,
     previewTypographyRef,
+    getPosterRenderOpts,
     setPages,
     nativeExportingRef,
     showToast,

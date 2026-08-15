@@ -13,7 +13,6 @@ import {
 import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
 import {
   getPosterJapaneseFontsFaceCss,
-  getPosterKoreanFontFaceCss,
   getPosterSourceHanSerifScFontFaceCss,
   getPosterSansationFontFaceCss,
 } from './shufuriPoster/fonts';
@@ -93,7 +92,6 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
   });
 
   const jpFontCss = getPosterJapaneseFontsFaceCss();
-  const koFontCss = getPosterKoreanFontFaceCss();
   const zhSerifFontCss = getPosterSourceHanSerifScFontFaceCss();
   const sansationFontCss = getPosterSansationFontFaceCss();
   const watermarkCss = buildPosterWatermarkCss({ profile: layoutProfile });
@@ -121,7 +119,6 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
   <defs>
     <style>
       ${xmlEscape(jpFontCss)}
-      ${xmlEscape(koFontCss)}
       ${xmlEscape(zhSerifFontCss)}
       ${xmlEscape(sansationFontCss)}
       ${xmlEscape(innerCss)}

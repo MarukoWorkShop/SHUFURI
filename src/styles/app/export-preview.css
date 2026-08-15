@@ -693,3 +693,5 @@ html:has(.app--edit) body,
   font-weight: 600;
 }
 
+/* 韩文字体样式切换（独立维度，与 colorTheme 平级） */
+

@@ -25,12 +25,28 @@ export const EN_FONT_FAMILY = KOZMIN_PRO_REGULAR_FAMILY;
 /** 全局 UI：PingFang Light，中英文统一 */
 export const UI_FONT_FAMILY = ZH_FONT_FAMILY;
 
-/** 韩文排版字体（HCR Batang 为主，Apple SD Gothic Neo 等系统字体兜底） */
-export const KO_FONT_FAMILY =
-  '"HCR Batang", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", serif';
+/**
+ * 韩文系统无衬线字体栈（供非歌词 UI 场景使用）：
+ * macOS: Apple SD Gothic Neo / Windows: Malgun Gothic / Linux: Nanum Gothic
+ */
+export const KO_FONT_FAMILY_SYSTEM =
+  '"Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Nanum Gothic", sans-serif';
 
-/** 韩文海报歌名：汉字优先思源宋体，韩文回退 Batang */
-export const KO_POSTER_TITLE_FONT_FAMILY = `${ZH_SONGTI_FONT_FAMILY}, ${KO_FONT_FAMILY}`;
+/**
+ * 韩文系统衬线字体栈（海报标题 + 主体歌词统一使用，首屏零下载）：
+ * - macOS：Apple Myungjo（系统自带韩文衬线）
+ * - Windows：Batang / Gungsuh（系统自带韩文衬线，非 HCR）
+ * - 通用：Noto Serif KR 兜底，最终回落 serif 通用族
+ */
+export const KO_FONT_FAMILY_SYSTEM_SERIF =
+  '"Apple Myungjo", "Batang", "Gungsuh", "Noto Serif KR", serif';
+
+/** 向后兼容别名：默认走系统字体栈（零下载） */
+export const KO_FONT_FAMILY = KO_FONT_FAMILY_SYSTEM;
+
+/** 韩文海报歌名：汉字优先思源宋体，韩文走系统衬线（与主体歌词统一） */
+export const KO_POSTER_TITLE_FONT_FAMILY_SYSTEM =
+  `${SOURCE_HAN_SERIF_SC_FAMILY}, "Songti SC", "STSong", "Songti TC", "SimSun", ${KO_FONT_FAMILY_SYSTEM_SERIF}`;
 
 /** 中文海报歌名 */
 export const ZH_POSTER_TITLE_FONT_FAMILY = ZH_SONGTI_FONT_FAMILY;
@@ -115,16 +131,12 @@ export function getPosterJapaneseFontsFaceCss(): string {
   return getPosterJapaneseRegularFontFaceCss();
 }
 
+/**
+ * 韩文 @font-face 注入。
+ * 韩文统一使用系统衬线字体（Apple Myungjo / Batang 系统自带），无需下载外部字体，返回空。
+ */
 export function getPosterKoreanFontFaceCss(): string {
-  const fontUrl = getPosterKoreanFontUrl();
-  return `
-@font-face {
-  font-family: "HCR Batang";
-  src: url("${fontUrl}") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: block;
-}`;
+  return '';
 }
 
 /** 思源宋体 SC Regular — 歌名 / 中文衬线 */
@@ -187,15 +199,12 @@ export async function ensurePosterJapaneseFontLoaded(): Promise<void> {
   ]);
 }
 
-/** 预加载韩文字体，供分页测量与导出栅格化前调用 */
+/**
+ * 预加载韩文字体（系统衬线，无需下载外部字体）。
+ * 韩文统一使用 Apple Myungjo / Batang 等系统自带字体，此函数为空操作。
+ */
 export async function ensurePosterKoreanFontLoaded(): Promise<void> {
-  if (!document.fonts?.load) return;
-  await Promise.all([
-    loadFontWithTimeout('400 16px "HCR Batang"', '한', FONT_LOAD_TIMEOUT_MS),
-    loadFontWithTimeout('400 26px "HCR Batang"', '한', FONT_LOAD_TIMEOUT_MS),
-    loadFontWithTimeout('400 46px "HCR Batang"', '한', FONT_LOAD_TIMEOUT_MS),
-    loadFontWithTimeout('400 56px "HCR Batang"', '한', FONT_LOAD_TIMEOUT_MS),
-  ]);
+  // 系统字体无需预加载
 }
 
 /** 预加载英文字体（PingFang Light） */

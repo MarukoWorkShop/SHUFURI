@@ -87,8 +87,11 @@ export default function EditScreen() {
     appendGrammarStudyItem,
   } = usePosterDocumentContext();
 
-  const { showRubyAnnotations, rubyToggleSupported, handleShowRubyChange } =
-    usePosterTypographyContext();
+  const {
+    showRubyAnnotations,
+    rubyToggleSupported,
+    handleShowRubyChange,
+  } = usePosterTypographyContext();
 
   const ink = usePosterInkContext();
   const showToast = useAppToast();
