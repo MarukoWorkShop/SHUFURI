@@ -48,6 +48,103 @@
 }
 
 /* ---- 极简输入区（Figma 设计） ---- */
+/* Step 1 单列：歌曲信息输入区 + 链接区下方居中的口令微件 */
+.ext-pipeline__input-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+/* 链接区下方的形变微件容器：水平居中 */
+.ext-pipeline__gen-sidebar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* ---- 折叠态：一根分割线 + 灰色极简信息 + 重新编辑 ---- */
+.ext-pipeline__collapsed {
+  width: 100%;
+}
+
+.ext-pipeline__collapsed-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.ext-pipeline__collapsed-line {
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.ext-pipeline__collapsed-info {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-height: 20px;
+}
+
+.ext-pipeline__collapsed-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.01em;
+}
+
+.ext-pipeline__collapsed-meta {
+  font-size: 13px;
+  font-weight: 400;
+  color: #9ca3af;
+}
+
+.ext-pipeline__collapsed-edit {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ext-pipeline__collapsed-edit:hover {
+  color: #374151;
+}
+
+/* 暗色模式适配 */
+[data-theme='dark'] .ext-pipeline__collapsed-line {
+  background: #374151;
+}
+
+[data-theme='dark'] .ext-pipeline__collapsed-title {
+  color: #9ca3af;
+}
+
+[data-theme='dark'] .ext-pipeline__collapsed-meta {
+  color: #6b7280;
+}
+
+[data-theme='dark'] .ext-pipeline__collapsed-edit {
+  color: #9ca3af;
+}
+
+[data-theme='dark'] .ext-pipeline__collapsed-edit:hover {
+  color: #d1d5db;
+}
+
+/* 原有 ext-pipeline__head 样式保持不变 */
 .ext-pipeline__head {
   display: flex;
   flex-direction: column;
@@ -105,52 +202,12 @@
   }
 }
 
-/* LANG 头部：label + ? 按钮横向排列 */
+/* LANG 头部：label + 图标横向排列，图标紧贴 label 右侧 4px */
 .ext-pipeline__lang-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   margin-bottom: 6px;
-}
-
-/* LANG ? 纯文字问号，无边框圆圈，浮在画面中 */
-.ext-pipeline__lang-help {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--color-fg-muted, #94a3b8);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  cursor: pointer;
-  transition: color 0.15s ease, opacity 0.15s ease;
-}
-
-.ext-pipeline__lang-help:hover,
-.ext-pipeline__lang-help.is-active {
-  color: var(--color-fg-secondary, #6b7280);
-}
-
-/* LANG 提示文案（点击 ? 后显示在 select 上方） */
-.ext-pipeline__lang-hint {
-  margin: 0 0 6px 0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: #fffbeb; /* 浅黄背景 */
-  font-size: 12px;
-  line-height: 1.5;
-  color: #92400e;
-}
-
-[data-theme='dark'] .ext-pipeline__lang-hint {
-  background: #3b2e00;
-  color: #fbbf24;
 }
 
 /* LANG 原生 select 下拉框 — 高度与 input 完全对齐 */
@@ -165,7 +222,7 @@
   padding: 13px 14px;
   padding-right: 32px; /* 留出箭头空间 */
   font-family: var(--ui-font-sans);
-  font-size: 16px !important; /* 与 input 统一 16px */
+  font-size: 13.5px !important; /* 与"去生成AI口令"按钮文案一致 */
   font-weight: 400;
   line-height: 1.25; /* 与 input 统一 */
   letter-spacing: 0.01em;
@@ -193,6 +250,353 @@
   box-shadow: none !important;
 }
 
+/* 分割线 + "或者" / "or" */
+.ext-pipeline__divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.ext-pipeline__divider-line {
+  flex: 1 1 auto;
+  height: 1px;
+  background-color: #e5e5e5;
+}
+
+.ext-pipeline__divider-text {
+  font-size: 12px;
+  color: #b0b0b0;
+  white-space: nowrap;
+}
+
+[data-theme='dark'] .ext-pipeline__divider-line {
+  background-color: #3a3a3a;
+}
+
+[data-theme='dark'] .ext-pipeline__divider-text {
+  color: #6a6a6a;
+}
+
+/* ===== Step 2 · 极简分隔线状态条 ===== */
+.ext-pipeline__summary-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--color-border-subtle, #ececec);
+}
+
+.ext-pipeline__summary-text {
+  font-family: var(--ui-font-sans);
+  font-size: 13px; /* text-sm */
+  font-weight: 500;
+  color: var(--color-fg-secondary, #6b7280);
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ext-pipeline__reedit-link {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--color-fg-secondary, #6b7280);
+  font-family: var(--ui-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 2px 4px;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+
+.ext-pipeline__reedit-link:hover {
+  color: var(--color-fg, #111);
+  text-decoration: underline;
+}
+
+/* ===== Step 2 · 活页纸质感粘贴区 ===== */
+.ext-pipeline__paper {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 56px 40px; /* 大留白，仿 A5/A6 页边距 */
+  background: #ffffff;
+  border: 1px solid var(--color-border-subtle, #f0f0f0);
+  border-radius: 18px;
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.ext-pipeline__paper-icon {
+  color: #d1d5db; /* text-gray-300 */
+}
+
+.ext-pipeline__paper-hint {
+  margin: 0;
+  font-family: var(--ui-font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-fg-secondary, #9ca3af);
+  letter-spacing: 0.01em;
+}
+
+/* 暗色模式：分隔线 + 活页纸 */
+[data-theme='dark'] .app--home .ext-pipeline__summary-line {
+  border-bottom-color: #2e2e2e;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__summary-text {
+  color: #9ca3af;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__reedit-link {
+  color: #9ca3af;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__reedit-link:hover {
+  color: #f3f4f6;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__paper {
+  background: #1c1c1c;
+  border-color: #2e2e2e;
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__paper-icon {
+  color: #4b5563;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__paper-hint {
+  color: #6b7280;
+}
+
+/* ===== MorphingWidget · 形变微件 ===== */
+.morphing-widget__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px; /* 较原 44px 增大约 10% */
+  padding-inline: 20px;
+  border-radius: 999px;
+  font-family: var(--ui-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  border: none;
+  background: #F3F4F6;
+  color: #374151;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+  position: relative; /* 光波层定位基准 */
+  overflow: hidden; /* 裁剪光波，防止溢出 */
+}
+
+.morphing-widget__pill:hover:not(:disabled) {
+  background: #E5E7EB;
+  box-shadow: 0 4px 18px -4px rgba(0, 0, 0, 0.22); /* 悬停阴影微微加深 */
+}
+
+.morphing-widget__pill.is-copied {
+  background: var(--color-kinari, #EAE370);
+  color: var(--color-kinari-text, #2B2B1A);
+  box-shadow: none;
+}
+
+/* 光波扫过层：45° 倾斜半透明白色渐变，从左向右周期性扫过 */
+.morphing-widget__shimmer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.55) 48%,
+    rgba(255, 255, 255, 0.7) 50%,
+    rgba(255, 255, 255, 0.55) 52%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  animation: mw-shimmer 4.5s ease-in-out infinite;
+}
+
+@keyframes mw-shimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  55% {
+    transform: translateX(120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .morphing-widget__shimmer {
+    animation: none;
+  }
+}
+
+/* 右上角箭头：默认轻微内缩，hover 时向右上微移 */
+.morphing-widget__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+  opacity: 0.85;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.morphing-widget__pill:hover .morphing-widget__arrow {
+  transform: translate(2px, -2px);
+  opacity: 1;
+}
+
+.morphing-widget__arrow--light {
+  color: #ffffff;
+}
+
+.morphing-widget__pill.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.morphing-widget__pill--paste {
+  background: #1a1a1a;
+  color: #ffffff;
+  border: 1px solid #1a1a1a;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
+}
+
+.morphing-widget__pill--paste:hover {
+  background: #262626 !important; /* 黑色基调上背景微调（略提亮） */
+  border-color: #eae370;
+  box-shadow: 0 0 0 2px rgba(234, 227, 112, 0.5), 0 1px 8px rgba(0, 0, 0, 0.18);
+}
+
+/* 图标容器 */
+.morphing-widget__icon-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.morphing-widget__icon-abs {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* X 按钮（圆形） */
+.morphing-widget__x-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid #E5E7EB;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+  flex-shrink: 0;
+}
+
+.morphing-widget__x-btn:hover {
+  border-color: #D1D5DB;
+  background: #F9FAFB;
+}
+
+/* 复制后：X 按钮变品牌黑 + KINARI 细发光，引导点击 */
+.morphing-widget__x-btn.is-guide {
+  border-color: #1a1a1a;
+  background: #1a1a1a;
+  box-shadow: 0 0 0 3px rgba(234, 227, 112, 0.55),
+    0 0 12px 2px rgba(234, 227, 112, 0.45);
+  animation: morphing-widget-guide-pulse 1.6s ease-in-out infinite;
+}
+
+.morphing-widget__x-btn.is-guide:hover {
+  background: #000000;
+  border-color: #000000;
+}
+
+@keyframes morphing-widget-guide-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(234, 227, 112, 0.5),
+      0 0 10px 1px rgba(234, 227, 112, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(234, 227, 112, 0.7),
+      0 0 16px 4px rgba(234, 227, 112, 0.55);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .morphing-widget__x-btn.is-guide {
+    animation: none;
+  }
+}
+
+/* 暗色模式 */
+[data-theme='dark'] .app--home .morphing-widget__pill {
+  background: #2a2a2a;
+  color: #d1d5db;
+}
+
+[data-theme='dark'] .app--home .morphing-widget__pill:hover:not(:disabled) {
+  background: #333;
+}
+
+[data-theme='dark'] .app--home .morphing-widget__pill.is-copied {
+  background: var(--color-kinari, #EAE370);
+  color: var(--color-kinari-text, #2B2B1A);
+}
+
+[data-theme='dark'] .app--home .morphing-widget__pill.is-disabled {
+  opacity: 0.4;
+  background: #222;
+}
+
+[data-theme='dark'] .app--home .morphing-widget__x-btn {
+  border-color: #3a3a3a;
+}
+
+[data-theme='dark'] .app--home .morphing-widget__x-btn:hover {
+  border-color: #4a4a4a;
+  background: #252525;
+}
+
+[data-theme='dark'] .app--home .morphing-widget__x-btn.is-guide {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+}
+
+[data-theme='dark'] .app--home .morphing-widget__pill--paste {
+  background: #1a1a1a;
+  color: #ffffff;
+  border-color: #1a1a1a;
+}
+
+[data-theme='dark'] .app--home .morphing-widget__pill--paste:hover {
+  border-color: #eae370;
+  box-shadow: 0 0 0 2px rgba(234, 227, 112, 0.5);
+}
+
+
+
 
 .ext-pipeline__share-fill {
   display: flex;
@@ -202,53 +606,63 @@
   margin-top: -8px;
 }
 
-/* 粘贴分享链接：浅灰底圆角框（与输入框风格一致） */
-.ext-pipeline__share-fill-btn {
+/* 链接分享：灵动胶囊 ↔ 输入框（framer-motion layout 动画） */
+.ext-pipeline__share-fill {
+  width: 100%;
   display: flex;
+}
+
+/* 胶囊容器：收缩态随内容宽度，展开态撑满；layout 动画丝滑拉长 */
+.ext-pipeline__capsule {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  border: 1px solid #e7e5e4;
+  border-radius: 999px;
+  background: #fafaf9;
+  overflow: hidden;
+  box-sizing: border-box;
+  transition: border-radius 0.32s ease, background 0.2s ease, border-color 0.3s ease, border-width 0.3s ease;
+}
+
+/* 展开态：去掉边框，圆角收敛为输入框 */
+.ext-pipeline__share-fill.is-active .ext-pipeline__capsule {
+  width: 100%;
+  border-radius: 14px;
+  border-color: transparent;
+}
+
+/* 收缩态：灰色小胶囊（音乐图标 + 文案 + 平台标签） */
+.ext-pipeline__capsule-collapsed {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   margin: 0;
-  padding: 13px 14px;
-  border: 1px solid #E7E5E4;
-  border-radius: 10px;
-  background: #FAFAF9;
+  padding: 9px 14px;
+  border: none;
+  background: transparent;
   font-family: var(--ui-font-sans);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 400;
   letter-spacing: 0.01em;
-  color: var(--ui-fg);
-  text-align: left;
-  cursor: text;
+  color: var(--color-fg-secondary, #6b7280);
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  outline: none !important; /* 移除 button 默认 focus outline */
+  outline: none;
 }
 
-/* 链接框交互态：保持边框和背景不变，消除跳闪 */
-.ext-pipeline__share-fill-btn:hover:not(:disabled),
-.ext-pipeline__share-fill-btn:focus,
-.ext-pipeline__share-fill-btn:focus-visible,
-.ext-pipeline__share-fill-btn:focus-within,
-.ext-pipeline__share-fill-btn:active {
-  border-color: #E7E5E4;
-  background: #FAFAF9;
+.ext-pipeline__capsule-collapsed:hover {
+  background: rgba(0, 0, 0, 0.025);
 }
 
-.ext-pipeline__share-fill-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.ext-pipeline__share-fill-btn-icon {
+.ext-pipeline__capsule-icon {
   flex-shrink: 0;
-  font-size: 15px;
-  line-height: 1;
+  color: #9ca3af;
 }
 
-.ext-pipeline__share-fill-btn-text {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.ext-pipeline__capsule-label {
   white-space: nowrap;
   color: var(--color-fg-secondary, #6b7280);
 }
@@ -260,20 +674,20 @@
   font-weight: 500;
   letter-spacing: 0.02em;
   color: var(--color-fg-muted, #94a3b8);
-  background: var(--color-bg-elevated, #fff);
-  border: 1px solid var(--color-border-subtle, #f1f5f9);
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
   border-radius: 999px;
   white-space: nowrap;
 }
 
-.ext-pipeline__share-fill-field {
+/* 展开态：input 占满 + 右侧解析按钮 */
+.ext-pipeline__capsule-expanded {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border: 1px solid #E7E5E4;
-  border-radius: 10px;
-  background: #FAFAF9;
+  gap: 0;
+  width: 100%;
+  padding: 5px 6px 5px 12px;
+  box-sizing: border-box;
 }
 
 /* 粘贴输入框 */
@@ -281,31 +695,30 @@
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
-  padding: 7px 10px;
+  padding: 6px 8px;
   height: 30px;
   box-sizing: border-box;
-  border: 1px solid transparent; /* 边框由外层 btn 提供 */
-  border-radius: 8px;
-  background: transparent; /* 背景由外层 btn 提供 */
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
   font-family: var(--ui-font-sans);
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 400;
   line-height: 1.2;
   letter-spacing: 0.01em;
   color: var(--ui-fg);
-  resize: none;
-  overflow: hidden;
-  outline: none;
-  -webkit-appearance: none;
-  appearance: none;
-  box-shadow: none;
+  outline: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  box-shadow: none !important;
 }
 
 .ext-pipeline__share-fill-input:focus,
-.ext-pipeline__share-fill-input:focus-visible {
-  outline: none;
-  border-color: transparent;
-  box-shadow: none;
+.ext-pipeline__share-fill-input:focus-visible,
+.ext-pipeline__share-fill-input:focus-within {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .ext-pipeline__share-fill-input::placeholder {
@@ -313,25 +726,31 @@
   opacity: 1;
 }
 
-.ext-pipeline__share-fill-input:focus {
-  outline: none;
-  box-shadow: none;
-}
-
 .ext-pipeline__share-fill-submit {
   flex: 0 0 auto;
   margin: 0;
-  padding: 8px 14px;
+  padding: 9px 20px;
   border: none;
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--color-brand);
   color: #fff;
   font-family: var(--ui-font-sans);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.1s;
+  transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
   -webkit-tap-highlight-color: transparent;
+}
+
+.ext-pipeline__share-fill-submit:hover {
+  opacity: 0.92;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+.ext-pipeline__share-fill-submit:active {
+  transform: scale(0.97);
 }
 
 .ext-pipeline__share-fill-submit:hover {
@@ -340,6 +759,41 @@
 
 .ext-pipeline__share-fill-submit:active {
   transform: scale(0.98);
+}
+
+/* 清空按钮：圆形浅灰，紧贴输入框右侧，hover 略深 */
+.ext-pipeline__share-fill-clear {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: #ECECEC;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ext-pipeline__share-fill-clear:hover {
+  background: #E0E0E0;
+  color: #374151;
+}
+
+.ext-pipeline__share-fill-clear:active {
+  transform: scale(0.94);
+}
+
+[data-theme='dark'] .ext-pipeline__share-fill-clear {
+  background: #3a3a3a;
+  color: #9ca3af;
+}
+
+[data-theme='dark'] .ext-pipeline__share-fill-clear:hover {
+  background: #4a4a4a;
+  color: #e5e7eb;
 }
 
 /* 输入框：浅灰底圆角框（与暗色模式对称），label 置于框内顶部 */
@@ -411,7 +865,7 @@
   box-shadow: none;
   padding: 13px 14px;
   font-family: var(--ui-font-sans);
-  font-size: 16px !important;
+  font-size: 13.5px !important; /* 与"去生成AI口令"按钮文案一致 */
   font-weight: 400;
   line-height: 1.25;
   letter-spacing: 0.01em;
@@ -705,24 +1159,13 @@
   margin-top: 4px;
 }
 
-/* Step 2 标题居中 + 两侧水平分割线（Figma：贯穿全宽） */
+/* Step 2 标题：左对齐，与 Step 1 保持一致 */
 .ext-pipeline__step--generate .ext-pipeline__step-head {
-  justify-content: center;
-  position: relative;
+  justify-content: flex-start;
   display: flex;
   align-items: center;
   gap: 9px;
-  margin-bottom: 16px;
-}
-
-/* 分割线贯穿整个卡片宽度 */
-.ext-pipeline__step--generate .ext-pipeline__step-head::before,
-.ext-pipeline__step--generate .ext-pipeline__step-head::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--color-border-subtle, #e5e5e5);
-  min-width: 20px;
+  margin-bottom: 14px;
 }
 
 .ext-pipeline__step-head {
@@ -1736,7 +2179,7 @@
   }
 
   .app--home .ext-pipeline__input {
-    font-size: 17px !important;
+    font-size: 13.5px !important;
     padding: 14px 16px;
   }
 
@@ -2067,14 +2510,15 @@
 }
 
 [data-theme='dark'] .app--home .ext-pipeline__share-fill-input {
-  background: #1a1a1a;
-  border: 1px solid #3a3a3a;
-  color: #ffffff;
+  background: transparent;
+  border: none;
+  color: var(--ui-fg);
   box-shadow: none;
 }
 
 [data-theme='dark'] .app--home .ext-pipeline__share-fill-input:focus {
-  border-color: #4a4a5c;
+  outline: none;
+  box-shadow: none;
 }
 
 [data-theme='dark'] .app--home .lang-wheel-with-hint__label {
@@ -2271,15 +2715,6 @@
 [data-theme='dark'] .app--home .ext-pipeline__select:focus {
   border-color: #3a3a3a;
   background: #2f2f2f;
-}
-
-[data-theme='dark'] .app--home .ext-pipeline__lang-help {
-  color: #666666;
-}
-
-[data-theme='dark'] .app--home .ext-pipeline__lang-help:hover,
-[data-theme='dark'] .app--home .ext-pipeline__lang-help.is-active {
-  color: #999999;
 }
 
 /* 桌面端：三栏间距加大，LANG 宽度略增 */

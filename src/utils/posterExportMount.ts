@@ -7,6 +7,7 @@ import {
 import type { PosterLayoutProfile, PosterRenderOptions } from './shufuriPoster/types';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
+import { POSTER_JP_FONT_FACE_CSS } from './shufuriPoster/fonts';
 import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
 import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
 import { appendPosterWatermark } from './shufuriPoster/posterWatermark';
@@ -20,13 +21,42 @@ import { appendPosterWatermark } from './shufuriPoster/posterWatermark';
  */
 const EXPORT_HTML2CANVAS_SCALE_FUDGE = 0.98;
 
-/** 导出 backdrop 完全移出左缘：画布宽 + 视口宽 + 余量（-200vw 不足以隐藏 1080px 手机竖屏画布） */
-function getExportBackdropOffscreenLeft(canvasW: number): number {
-  const vw =
-    typeof window !== 'undefined'
-      ? Math.ceil(window.visualViewport?.width ?? window.innerWidth ?? canvasW)
-      : canvasW;
-  return -(canvasW + vw + 64);
+/** 导出用离屏 iframe 单例：与主文档文档流完全隔离，根除移动端 append 大节点导致的重排抖动 */
+let exportIframe: HTMLIFrameElement | null = null;
+
+function getExportIframe(): HTMLIFrameElement {
+  if (exportIframe && exportIframe.isConnected) return exportIframe;
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.setAttribute('tabindex', '-1');
+  // 离屏但保持渲染：用 absolute 移出视口（不可 hidden/clip/opacity:0，否则 html2canvas 抓空）
+  iframe.style.position = 'absolute';
+  iframe.style.left = '-100000px';
+  iframe.style.top = '0';
+  iframe.style.width = '10px';
+  iframe.style.height = '10px';
+  iframe.style.border = '0';
+  iframe.style.visibility = 'visible';
+  iframe.style.pointerEvents = 'none';
+  document.body.appendChild(iframe);
+  // 确保 iframe 内文档就绪
+  if (!iframe.contentDocument) {
+    iframe.src = 'about:blank';
+  }
+  const idoc = iframe.contentDocument!;
+  idoc.open();
+  idoc.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>');
+  idoc.close();
+  // 同步主文档的字体 @font-face 到 iframe，避免栅格化字体错位
+  try {
+    const fontStyle = document.createElement('style');
+    fontStyle.textContent = POSTER_JP_FONT_FACE_CSS;
+    idoc.head.appendChild(fontStyle);
+  } catch {
+    /* 字体注入失败可降级 */
+  }
+  exportIframe = iframe;
+  return iframe;
 }
 
 function sanitizeFragmentHtml(html: string): string {
@@ -60,6 +90,7 @@ export function mountPosterExportPage(
     renderOptions?: PosterRenderOptions;
   },
 ): PosterExportPageMount {
+  void doc; // 离屏节点改挂独立 iframe（见 getExportIframe），不再直接使用主文档
   const {
     title,
     artist,
@@ -81,12 +112,14 @@ export function mountPosterExportPage(
   // 关键约束：
   // 1) 不能使用 clip-path / opacity:0 / visibility:hidden / z-index:-1 on shell
   //    —— html2canvas 会直接裁切或忽略不可见内容，导致栅格化全空白。
-  // 2) 禁止 100vw 全屏遮罩或 prepare 时移入视口 —— 会触发视口/缩放重算与全屏白闪。
-  // 3) left 须 ≤ -(canvasW + viewportW)：translateX(-200vw) 无法盖住 1080px 画布，会漏出左侧大字。
-  const backdrop = doc.createElement('div');
+  // 2) 整个离屏节点挂在独立的隐藏 iframe 文档里（而非主文档 body）：
+  //    彻底隔离主文档文档流，根除移动端 append 1080×1920 大节点导致的反复重排「字号抖动」与卡死。
+  const iframe = getExportIframe();
+  const idoc = iframe.contentDocument!;
+  const backdrop = idoc.createElement('div');
   backdrop.setAttribute('aria-hidden', 'true');
-  backdrop.style.position = 'fixed';
-  backdrop.style.left = `${getExportBackdropOffscreenLeft(canvasW)}px`;
+  backdrop.style.position = 'absolute';
+  backdrop.style.left = '0';
   backdrop.style.top = '0';
   backdrop.style.width = `${canvasW}px`;
   backdrop.style.height = `${canvasH}px`;
@@ -94,9 +127,8 @@ export function mountPosterExportPage(
   backdrop.style.background = '#ffffff';
   backdrop.style.pointerEvents = 'none';
   backdrop.style.contain = 'layout style paint';
-  backdrop.style.zIndex = '2147483646';
 
-  const wrapper = doc.createElement('div');
+  const wrapper = idoc.createElement('div');
   wrapper.style.position = 'absolute';
   wrapper.style.left = '0';
   wrapper.style.top = '0';
@@ -105,7 +137,7 @@ export function mountPosterExportPage(
   wrapper.style.overflow = 'hidden';
   wrapper.style.pointerEvents = 'none';
 
-  const shell = doc.createElement('div');
+  const shell = idoc.createElement('div');
   shell.className = 'fv-html-poster-root';
   // rootStyle 已包含 position:relative、width、height（带px单位）、padding、overflow:hidden、
   // display:flex 等全部关键样式
@@ -115,7 +147,7 @@ export function mountPosterExportPage(
   shell.dataset.exportCanvasH = String(canvasH);
   shell.dataset.rubyVisible = (renderOptions?.showRuby ?? true) ? 'true' : 'false';
 
-  const styleEl = doc.createElement('style');
+  const styleEl = idoc.createElement('style');
   // 叠加 html2canvas 渲染补偿因子，确保 PDF 栅格化不溢出
   const exportScale = spacingScale * EXPORT_HTML2CANVAS_SCALE_FUDGE;
   const pipelineLang = resolvePosterPipelineLang(lang, bodyFragmentHtml, language);
@@ -131,18 +163,18 @@ export function mountPosterExportPage(
   shell.appendChild(styleEl);
 
   if (showTitle) {
-    const h1 = doc.createElement('h1');
+    const h1 = idoc.createElement('h1');
     h1.className = 'fv-title-h';
     applyPosterTitleElement(h1, title, artist, pipelineLang ?? 'jp');
     shell.appendChild(h1);
   }
 
-  const body = doc.createElement('div');
+  const body = idoc.createElement('div');
   body.className = 'fv-body-h';
   body.innerHTML = sanitizeFragmentHtml(bodyFragmentHtml);
   shell.appendChild(body);
 
-  appendPosterWatermark(shell, pageIndex + 1, doc);
+  appendPosterWatermark(shell, pageIndex + 1, idoc);
 
   const titleElForMeasure = showTitle ? shell.querySelector('h1.fv-title-h') : null;
   applyPosterBodyMaxHeight(body, layoutProfile, {
@@ -152,7 +184,7 @@ export function mountPosterExportPage(
 
   wrapper.appendChild(shell);
   backdrop.appendChild(wrapper);
-  doc.body.appendChild(backdrop);
+  idoc.body.appendChild(backdrop);
   void shell.offsetHeight;
 
   return {
