@@ -231,7 +231,12 @@ export function usePosterWorkspace({
   const handleLayoutChange = useCallback(
     async (profile: PosterLayoutProfile) => {
       if (profile === layoutProfile || !bodyHtml.trim()) return;
+      // 字体已 memoize；进编辑时预热后此处应接近瞬时
       await loadPosterFonts();
+      // 让出一帧，便于工具栏显示「排版中…」
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
       const pageHtmls = await buildPages(
         bodyHtml,
         title,

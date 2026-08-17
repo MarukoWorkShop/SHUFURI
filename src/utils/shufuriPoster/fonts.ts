@@ -91,7 +91,7 @@ export function getPosterSansationFontFaceCss(): string {
   src: url("${fontUrl}") format("truetype");
   font-weight: 400;
   font-style: normal;
-  font-display: block;
+  font-display: swap;
 }`;
 }
 
@@ -108,7 +108,7 @@ export function getPosterJapaneseRegularFontFaceCss(): string {
   src: url("${fontUrl}") format("opentype");
   font-weight: 400;
   font-style: normal;
-  font-display: block;
+  font-display: swap;
 }`;
 }
 
@@ -131,12 +131,27 @@ export function getPosterSourceHanSerifScFontFaceCss(): string {
   src: url("${fontUrl}") format("opentype");
   font-weight: 400;
   font-style: normal;
-  font-display: block;
+  font-display: swap;
 }`;
 }
 
 /** @deprecated 使用 getPosterJapaneseFontsFaceCss() */
 export const POSTER_JP_FONT_FACE_CSS = getPosterJapaneseFontsFaceCss();
+
+const POSTER_FONT_FACES_STYLE_ID = 'shufuri-poster-font-faces';
+
+/** 确保文档级注册海报 @font-face（否则 fonts.load 不会真正下载思源宋体） */
+export function ensurePosterFontFacesRegistered(): void {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(POSTER_FONT_FACES_STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = POSTER_FONT_FACES_STYLE_ID;
+  style.textContent =
+    getPosterJapaneseFontsFaceCss() +
+    getPosterSourceHanSerifScFontFaceCss() +
+    getPosterSansationFontFaceCss();
+  document.head.appendChild(style);
+}
 
 function loadFontWithTimeout(font: string, text: string, ms: number): Promise<void> {
   return new Promise<void>((resolve) => {
@@ -154,20 +169,12 @@ function loadFontWithTimeout(font: string, text: string, ms: number): Promise<vo
   });
 }
 
-async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | void> {
-  return new Promise<T | void>((resolve) => {
-    const timer = setTimeout(() => {
-      resolve();
-    }, ms);
-    promise
-      .then((v) => {
-        clearTimeout(timer);
-        resolve(v);
-      })
-      .catch(() => {
-        clearTimeout(timer);
-        resolve();
-      });
+/** 字体加载后等待两帧布局，避免 iOS WebKit 用错误 metrics 分页 */
+export function waitForPosterLayoutReady(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
   });
 }
 
@@ -203,24 +210,26 @@ export async function ensurePosterSourceHanSerifScFontLoaded(): Promise<void> {
   ]);
 }
 
-/** 字体加载后等待两帧布局，避免 iOS WebKit 用错误 metrics 分页 */
-export function waitForPosterLayoutReady(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => resolve());
-    });
-  });
-}
+let posterFontsLoadPromise: Promise<void> | null = null;
 
-/** 预加载海报所需字体（含思源宋体，避免歌名回退 PingFang；韩文走系统衬线无需下载） */
+/**
+ * 预加载海报所需字体（含思源宋体）。
+ * 结果 memoize：导出切比例不应每次再等 8s+。
+ * 不 await document.fonts.ready（会等页面上所有字体，测量注入 @font-face 时易反复卡住）。
+ */
 export async function ensurePosterFontsLoaded(): Promise<void> {
-  await Promise.all([
-    ensurePosterJapaneseFontLoaded(),
-    ensurePosterEnglishFontLoaded(),
-    ensurePosterSourceHanSerifScFontLoaded(),
-  ]);
-  if (document.fonts?.ready) {
-    await withTimeout(document.fonts.ready, FONT_LOAD_TIMEOUT_MS);
-  }
-  await waitForPosterLayoutReady();
+  if (posterFontsLoadPromise) return posterFontsLoadPromise;
+  posterFontsLoadPromise = (async () => {
+    ensurePosterFontFacesRegistered();
+    await Promise.all([
+      ensurePosterJapaneseFontLoaded(),
+      ensurePosterEnglishFontLoaded(),
+      ensurePosterSourceHanSerifScFontLoaded(),
+    ]);
+    await waitForPosterLayoutReady();
+  })().catch((err) => {
+    posterFontsLoadPromise = null;
+    throw err;
+  });
+  return posterFontsLoadPromise;
 }

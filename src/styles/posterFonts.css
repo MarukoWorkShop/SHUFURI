@@ -1,6 +1,7 @@
 /**
  * 海报 / 学习卡衬线与水印字 — 勿打进首屏 theme。
  * 由 EditScreen、ExportScreen、StudyCardsLibrary 等按需 import。
+ * font-display: swap — 避免分页测量时 block 等 23MB 思源宋体导致切比例卡死。
  */
 
 /* 海报水印 / 页码 Sansation Regular */
@@ -12,10 +13,19 @@
   font-display: swap;
 }
 
-/* 日文学习衬线：仅当 UI 使用 --font-serif-jp 时才会下载 */
+/* 日文学习衬线 */
 @font-face {
   font-family: "Kozuka Mincho Pro R";
   src: url("/assets/KozMinPro-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 歌名 / 中文衬线（约 23MB；必须在此注册，ensurePosterFontsLoaded 才能真正下载） */
+@font-face {
+  font-family: "Source Han Serif SC";
+  src: url("/assets/SourceHanSerifSC-Regular.otf") format("opentype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;

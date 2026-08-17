@@ -107,6 +107,9 @@ export function createPosterMeasurer(
     showRuby: renderOptions?.showRuby,
     userFontScale: renderOptions?.userFontScale,
     userLineHeightScale: renderOptions?.userLineHeightScale,
+    // 字体由 posterFonts.css / ensurePosterFontFacesRegistered 文档级注册；
+    // 测量时再注入 @font-face（尤其思源 23MB + font-display:block）会卡死切比例。
+    includeFontFaces: false,
   });
   const titleEl = doc.createElement('h1');
   titleEl.className = 'fv-title-h';

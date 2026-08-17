@@ -131,6 +131,8 @@ export type FuriganaPosterCssOptions = {
   showRuby?: boolean;
   userFontScale?: number;
   userLineHeightScale?: number;
+  /** 默认 true；测量容器应 false，避免每个 measurer 再注入 @font-face 触发下载 */
+  includeFontFaces?: boolean;
 };
 
 export function buildShufuriPosterInnerCss(
@@ -153,6 +155,7 @@ export function buildShufuriPosterInnerCss(
     unit: 'px',
     viewMode: 'screen',
     showRuby,
+    includeFontFaces: options.includeFontFaces,
   });
 }
 

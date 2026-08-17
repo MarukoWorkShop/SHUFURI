@@ -1,10 +1,12 @@
 import ShufuriPosterPreview from './ShufuriPosterPreview';
 import PosterLayoutWheel from './PosterLayoutWheel';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import { useCallback, useState } from 'react';
 import {
   usePosterDocumentContext,
   usePosterTypographyContext,
 } from '../context/PosterWorkspaceContext';
+import type { PosterLayoutProfile } from '../utils/shufuriPoster/types';
 import { L } from '../utils/i18n';
 
 export default function ExportPreviewPanel() {
@@ -27,6 +29,20 @@ export default function ExportPreviewPanel() {
   } = usePosterDocumentContext();
 
   const { repaginating, posterRenderOpts } = usePosterTypographyContext();
+  const [layoutChanging, setLayoutChanging] = useState(false);
+  const layoutBusy = layoutChanging || repaginating;
+
+  const onLayoutProfileChange = useCallback(
+    async (profile: PosterLayoutProfile) => {
+      setLayoutChanging(true);
+      try {
+        await handleLayoutChange(profile);
+      } finally {
+        setLayoutChanging(false);
+      }
+    },
+    [handleLayoutChange],
+  );
 
   return (
     <div className="preview-area export-area">
@@ -42,7 +58,7 @@ export default function ExportPreviewPanel() {
           </button>
           <PosterLayoutWheel
             value={layoutProfile}
-            onChange={(profile) => void handleLayoutChange(profile)}
+            onChange={(profile) => void onLayoutProfileChange(profile)}
           />
         </div>
 
@@ -50,7 +66,7 @@ export default function ExportPreviewPanel() {
           <span className="page-count">
             {L(`共 ${pages.length} 页`, `${pages.length} pages in total`)}
           </span>
-          {repaginating && (
+          {layoutBusy && (
             <span className="preview-repaginate-hint">{L('排版中…', 'Formatting layout…')}</span>
           )}
           <span className="export-gallery-hint">
@@ -61,7 +77,7 @@ export default function ExportPreviewPanel() {
               type="button"
               className="btn-export btn-export-save"
               onClick={() => void handleSave()}
-              disabled={saving}
+              disabled={saving || layoutBusy}
             >
               {saving ? L('保存中…', 'Saving…') : L('保存', 'Save')}
             </button>
@@ -69,7 +85,7 @@ export default function ExportPreviewPanel() {
               type="button"
               className="btn-export btn-export-pdf"
               onClick={() => void handleExportPdf()}
-              disabled={exporting}
+              disabled={exporting || layoutBusy}
             >
               {exporting ? L('导出中…', 'Exporting…') : L('导出 PDF', 'Export as PDF')}
             </button>
