@@ -93,8 +93,8 @@ function resolveLayoutLabels(profile: PosterLayoutProfile): {
   }
   if (profile === 'socialPoster') {
     return {
-      caption: L('社媒首图', 'Social Post'),
-      ariaLabel: L('社媒首图 3:4', 'Social Post 3:4'),
+      caption: L('小红书 / Instagram', 'Xiaohongshu / Instagram'),
+      ariaLabel: L('社媒首图 3:4（小红书 / Instagram）', 'Social post 3:4 for Xiaohongshu / Instagram'),
     };
   }
   return {

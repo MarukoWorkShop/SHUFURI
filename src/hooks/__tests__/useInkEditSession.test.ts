@@ -193,6 +193,7 @@ describe('useInkEditSession - handleInkRemoveRuby', () => {
         rubyIndex: 0,
         kanji: '漢字',
         kana: 'かんじ',
+        readingScript: 'kana',
         anchorRect: DOMRect.fromRect({ x: 0, y: 0, width: 10, height: 10 }),
       });
     });
@@ -268,6 +269,7 @@ describe('useInkEditSession - existing behaviors preserved', () => {
         rubyIndex: 0,
         kanji: '漢',
         kana: 'かん',
+        readingScript: 'kana',
         anchorRect: DOMRect.fromRect({ x: 0, y: 0, width: 10, height: 10 }),
       });
     });

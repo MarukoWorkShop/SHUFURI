@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import InkFineTunePopover, { type InkEditTarget } from '../InkFineTunePopover';
 
@@ -166,6 +167,7 @@ describe('InkFineTunePopover - kind:ruby 不注音 button', () => {
     rubyIndex: 0,
     kanji: '漢字',
     kana: 'かんじ',
+    readingScript: 'kana',
     anchorRect: stubAnchor(),
   };
 
@@ -251,10 +253,18 @@ describe('InkFineTunePopover - kind:ruby 不注音 button', () => {
 // ---------------------------------------------------------------------------
 
 describe('InkFineTunePopover - all kinds', () => {
-  it('renders 假名/汉字 inputs for kind:ruby', () => {
+  it('renders 假名/汉字 inputs for kind:ruby (日语)', () => {
     render(
       <InkFineTunePopover
-        target={{ kind: 'ruby', groupIndex: 0, rubyIndex: 0, kanji: '花', kana: 'はな', anchorRect: stubAnchor() }}
+        target={{
+          kind: 'ruby',
+          groupIndex: 0,
+          rubyIndex: 0,
+          kanji: '花',
+          kana: 'はな',
+          readingScript: 'kana',
+          anchorRect: stubAnchor(),
+        }}
         kanji="花" kana="はな" zhText="" titleText="" artistText="" jpText=""
         onKanjiChange={stringNoop} onKanaChange={stringNoop} onZhChange={stringNoop}
         onTitleChange={stringNoop} onArtistChange={stringNoop} onJpChange={stringNoop}
@@ -263,6 +273,29 @@ describe('InkFineTunePopover - all kinds', () => {
     );
 
     expect(screen.getByText('假名')).toBeDefined();
+    expect(screen.getByText('汉字')).toBeDefined();
+  });
+
+  it('renders 拼音/汉字 inputs for kind:ruby (中文)', () => {
+    render(
+      <InkFineTunePopover
+        target={{
+          kind: 'ruby',
+          groupIndex: 0,
+          rubyIndex: 0,
+          kanji: '花',
+          kana: 'huā',
+          readingScript: 'pinyin',
+          anchorRect: stubAnchor(),
+        }}
+        kanji="花" kana="huā" zhText="" titleText="" artistText="" jpText=""
+        onKanjiChange={stringNoop} onKanaChange={stringNoop} onZhChange={stringNoop}
+        onTitleChange={stringNoop} onArtistChange={stringNoop} onJpChange={stringNoop}
+        onConfirm={noop} onCancel={noop}
+      />,
+    );
+
+    expect(screen.getByText('拼音')).toBeDefined();
     expect(screen.getByText('汉字')).toBeDefined();
   });
 

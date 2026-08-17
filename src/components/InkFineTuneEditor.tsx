@@ -35,6 +35,7 @@ export function resolveEditTarget(el: Element): InkEditTarget | null {
       rubyIndex: Number(rubyIndex),
       kanji,
       kana: rt?.textContent?.trim() ?? '',
+      readingScript: ruby.closest('.cn-line') ? 'pinyin' : 'kana',
       anchorRect: ruby.getBoundingClientRect(),
     };
   }

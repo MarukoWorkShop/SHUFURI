@@ -2,7 +2,10 @@ import { useCallback, useState, type RefObject } from 'react';
 import type { LangCode } from '../services/appSettings';
 import { saveLyricsProject } from '../services/savedLyricsStore';
 import { replaceStudyCardsForBundle } from '../services/studyCardsStore';
-import { trySyncStudyCardsFromRaw } from '../studyCards/syncStudyCards';
+import {
+  tryMigrateStudyCardsBundle,
+  trySyncStudyCardsFromRaw,
+} from '../studyCards/syncStudyCards';
 import { rawLyricsHasStudyCardSections } from '../studyCards/extractStudyCards';
 import { hapticError, hapticSuccess } from './useHaptics';
 import { ensurePosterFontsLoaded } from '../utils/shufuriPoster/fonts';
@@ -22,6 +25,13 @@ import type {
 } from '../utils/shufuriPoster/types';
 import type { AppMode } from './usePosterWorkspace';
 import type { ShowAppToast } from '../context/AppToastContext';
+
+function createSavedProjectId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `proj-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
 
 type Options = {
   mode: AppMode;
@@ -76,6 +86,33 @@ export function usePosterSave({
     }
     setSaving(true);
     try {
+      const cleanedBody = prepareBodyHtmlForPreview(bodyHtml);
+      const cleanedTitleMarkup = prepareTitleMarkupHtml(titleMarkupHtml);
+      const documentLang = resolveDocumentLang(lang, bodyHtml, lyricsLanguage);
+      const exportTitle = resolveExportTitle(title);
+      const rawForSync = lyricsRef.current.trim() || lyrics.trim();
+      const projectId = savedProjectId ?? createSavedProjectId();
+      const sessionBundleId = studyCardsBundleIdRef.current;
+
+      // 词卡先于字体/分页写入，避免保存成功但词卡被跳过或 session 被误清空
+      let written = await trySyncStudyCardsFromRaw({
+        rawLyrics: rawForSync,
+        bundleId: projectId,
+        title: exportTitle,
+        artist: artist.trim() || undefined,
+        lang: documentLang,
+        includeVocabAndGrammar: defaultIncludeVocabAndGrammar,
+      });
+      if (sessionBundleId.startsWith('session-') && sessionBundleId !== projectId) {
+        if (written > 0) {
+          await replaceStudyCardsForBundle(sessionBundleId, []);
+        } else {
+          const migrated = await tryMigrateStudyCardsBundle(sessionBundleId, projectId);
+          written = Math.max(written, migrated);
+        }
+      }
+      studyCardsBundleIdRef.current = projectId;
+
       await ensurePosterFontsLoaded();
       const slices = buildPosterPagesFromBody(
         bodyHtml,
@@ -92,14 +129,12 @@ export function usePosterSave({
         setPages(slices);
         resetPosterPageRefs(pageRefs, slices.length);
       }
-      const cleanedBody = prepareBodyHtmlForPreview(bodyHtml);
-      const cleanedTitleMarkup = prepareTitleMarkupHtml(titleMarkupHtml);
-      const documentLang = resolveDocumentLang(lang, bodyHtml, lyricsLanguage);
+
       const saved = await saveLyricsProject({
-        id: savedProjectId ?? undefined,
-        title: resolveExportTitle(title),
+        id: projectId,
+        title: exportTitle,
         artist: artist.trim() || undefined,
-        rawLyrics: lyricsRef.current.trim() || lyrics,
+        rawLyrics: rawForSync,
         bodyHtml: cleanedBody,
         pageHtmls,
         layoutProfile,
@@ -109,31 +144,20 @@ export function usePosterSave({
         ...(cleanedTitleMarkup ? { titleMarkupHtml: cleanedTitleMarkup } : {}),
       });
       setSavedProjectId(saved.id);
-      const sessionBundleId = studyCardsBundleIdRef.current;
-      const rawForSync = saved.rawLyrics?.trim() || lyricsRef.current.trim() || lyrics.trim();
-      const written = await trySyncStudyCardsFromRaw({
-        rawLyrics: rawForSync,
-        bundleId: saved.id,
-        title: resolveExportTitle(title),
-        artist: artist.trim() || undefined,
-        lang: documentLang,
-        includeVocabAndGrammar:
-          saved.includeVocabAndGrammar ?? defaultIncludeVocabAndGrammar,
-      });
-      studyCardsBundleIdRef.current = saved.id;
-      if (sessionBundleId.startsWith('session-') && sessionBundleId !== saved.id) {
-        await replaceStudyCardsForBundle(sessionBundleId, []);
-      }
+
       const includeCards =
         saved.includeVocabAndGrammar ?? defaultIncludeVocabAndGrammar;
       if (written > 0) {
-        showToast(L(`已同步 ${written} 张学习卡`, `Synced ${written} study cards`), 2400);
+        showToast(L(`已同步学习卡到「我的学习卡」`, `Synced study cards to My Study Cards`), 2400);
       } else if (
-        includeCards &&
+        (includeCards || rawLyricsHasStudyCardSections(rawForSync)) &&
         rawForSync &&
         rawLyricsHasStudyCardSections(rawForSync)
       ) {
-        showToast(L('词卡同步失败，请打开控制台查看 [study-cards]', 'Failed to sync study cards. Check [study-cards] in the console.'), 3200);
+        showToast(
+          L('词卡同步失败，请打开控制台查看 [study-cards]', 'Failed to sync study cards. Check [study-cards] in the console.'),
+          3200,
+        );
       }
       onLibrarySaved();
       showToast(L('已保存到我的歌词库', 'Saved to My Lyrics.'), 2400);

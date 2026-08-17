@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Allow: /privacy.html
+Disallow: /api/
+Disallow: /dist/
+Disallow: /src/
+
+Sitemap: https://www.shufuri.com/sitemap.xml

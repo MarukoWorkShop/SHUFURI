@@ -18,8 +18,22 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.tcloudbaseapp.com https://*.tcb-api.tencentcloudapi.com https://*.tcloudbasegateway.com https://*.api.tcloudbasegateway.com https://*.api.tcloudbase.com https://*.tcb.cloud.tencent.com; media-src 'self'; frame-ancestors 'none';"
     />
-    <meta name="description" content="SHUFURI — 多语歌词释音与排版助手。支持日语、韩语、英语、中文歌词的发音标注、双语翻译与海报排版导出。" />
-    <title>SHUFURI — 多语歌词释音与排版助手</title>
+    <meta name="description" content="SHUFURI 是一款外语歌词标注工具，支持日语、韩语、英语、中文歌词的假名/罗马音/翻译排版与海报导出。配合豆包、ChatGPT 等 AI 使用，快速生成可打印、可分享的歌词学习页。" />
+    <title>SHUFURI — 外语歌词标注与排版工具</title>
+
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SHUFURI" />
+    <meta property="og:title" content="SHUFURI — 外语歌词标注与排版工具" />
+    <meta property="og:description" content="支持日、韩、英、中歌词的发音标注、双语翻译与海报排版导出。配合 AI 快速生成可打印、可分享的歌词学习页。" />
+    <meta property="og:url" content="https://www.shufuri.com/" />
+    <meta property="og:image" content="https://www.shufuri.com/assets/SHUFURI_1024.png" />
+    <meta property="og:image:width" content="1024" />
+    <meta property="og:image:height" content="1024" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="SHUFURI — 外语歌词标注与排版工具" />
+    <meta name="twitter:description" content="支持日、韩、英、中歌词的发音标注、双语翻译与海报排版导出。" />
+    <meta name="twitter:image" content="https://www.shufuri.com/assets/SHUFURI_1024.png" />
     <style>
       #app-boot {
         position: fixed;
@@ -147,6 +161,17 @@
       </div>
     </div>
     <div id="root"></div>
+    <noscript>
+      <h1>SHUFURI — 外语歌词标注与排版工具</h1>
+      <p>
+        SHUFURI 是一款面向外语歌词学习者的标注工具。你可以将豆包、ChatGPT、Kimi 等 AI 生成的歌词与语法数据，快速排版成带有假名、罗马音、中文翻译的歌词页，并导出为高清海报或 PDF 打印。
+      </p>
+      <p>支持语言：日语（振り仮名）、韩语、英语、中文。</p>
+      <p>核心功能：歌词排版、发音标注、双语翻译、海报导出、PDF 打印。</p>
+      <p>
+        <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">粤ICP备2026114306号</a>
+      </p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

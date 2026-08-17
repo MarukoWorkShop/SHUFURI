@@ -5,6 +5,7 @@ import {
 } from './extractStudyCards';
 import {
   countStudyCards,
+  listStudyCards,
   migrateStudyCardsBundle,
   replaceStudyCardsForBundle,
 } from '../services/studyCardsStore';
@@ -24,15 +25,17 @@ export type SyncStudyCardsOptions = ExtractStudyCardsMeta & {
 /** 热插拔入口：从结构化 raw 同步学习卡，失败静默不影响主流程 */
 export async function trySyncStudyCardsFromRaw(options: SyncStudyCardsOptions): Promise<number> {
   try {
-    if (options.includeVocabAndGrammar === false) {
-      console.warn('[study-cards] sync skipped: includeVocabAndGrammar disabled');
-      return 0;
-    }
     if (!options.rawLyrics?.trim()) {
       console.warn('[study-cards] sync skipped: rawLyrics empty');
       return 0;
     }
-    if (!rawLyricsHasStudyCardSections(options.rawLyrics)) {
+    const hasSections = rawLyricsHasStudyCardSections(options.rawLyrics);
+    // 设置关闭时仍允许：raw 已含 V|/G|（本轮已生成学习材料）则同步
+    if (options.includeVocabAndGrammar === false && !hasSections) {
+      console.warn('[study-cards] sync skipped: includeVocabAndGrammar disabled');
+      return 0;
+    }
+    if (!hasSections) {
       console.warn('[study-cards] sync skipped: no V|/G| sections in rawLyrics');
       return 0;
     }
@@ -64,12 +67,17 @@ export async function trySyncStudyCardsFromRaw(options: SyncStudyCardsOptions): 
   }
 }
 
-export async function tryMigrateStudyCardsBundle(fromId: string, toId: string): Promise<void> {
+export async function tryMigrateStudyCardsBundle(fromId: string, toId: string): Promise<number> {
   try {
-    if (!fromId || !toId || fromId === toId) return;
+    if (!fromId || !toId || fromId === toId) return 0;
+    const all = await listStudyCards();
+    const before = all.filter((c) => c.bundleId === fromId);
+    if (!before.length) return 0;
     await migrateStudyCardsBundle(fromId, toId);
+    return before.length;
   } catch (err) {
     console.warn('[study-cards] migrate skipped:', err);
+    return 0;
   }
 }
 

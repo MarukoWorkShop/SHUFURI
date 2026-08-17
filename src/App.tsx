@@ -3,6 +3,7 @@ import './App.css';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/app/AppLayout';
 import { PulsatingDots } from './components/PulsatingDots';
+import GlobalChunkLoading from './components/GlobalChunkLoading';
 import HomeScreen from './components/screens/HomeScreen';
 // Edit/Export 屏体积大（海报排版、导出、字典等），按需懒加载以缩小首屏
 const EditScreen = lazy(() => import('./components/screens/EditScreen'));
@@ -143,13 +144,21 @@ function AppShell({
             </div>
           }
         >
-          <Suspense fallback={null}>
+          <Suspense
+            fallback={
+              <GlobalChunkLoading messageZh="正在打开编辑页…" messageEn="Opening editor…" />
+            }
+          >
             <EditScreen />
           </Suspense>
         </ErrorBoundary>
       )}
       {mode === 'export' && (
-        <Suspense fallback={null}>
+        <Suspense
+          fallback={
+            <GlobalChunkLoading messageZh="正在打开导出页…" messageEn="Opening export…" />
+          }
+        >
           <ExportScreen />
         </Suspense>
       )}

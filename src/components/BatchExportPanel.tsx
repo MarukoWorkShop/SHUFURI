@@ -37,9 +37,9 @@ const SIZE_OPTIONS: SizeOption[] = [
   },
   {
     profile: 'socialPoster',
-    label: L('社媒首图', 'Social Post'),
-    activeLabel: L('社媒首图 (3:4)', 'Social Post (3:4)'),
-    desc: L('1080×1440 像素，适合社交平台竖版首图', '1080×1440 px, for social vertical posts'),
+    label: L('小红书 / Instagram', 'Xiaohongshu / Instagram'),
+    activeLabel: L('小红书 / Instagram (3:4)', 'Xiaohongshu / Instagram (3:4)'),
+    desc: L('1080×1440 像素，适合小红书、Instagram 等平台竖版首图', '1080×1440 px, for Xiaohongshu / Instagram vertical posts'),
     dimLabel: '1080 × 1440 px',
   },
 ];

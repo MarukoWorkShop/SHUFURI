@@ -55,6 +55,24 @@ describe('resolveEditTarget - kind:jp', () => {
     const target = resolveEditTarget(ruby);
     // 点击 ruby 本身 → 仍然是 kind:'ruby'，不被 kind:'jp' 覆盖
     expect(target?.kind).toBe('ruby');
+    if (target?.kind === 'ruby') {
+      expect(target.readingScript).toBe('kana');
+    }
+    unmount(root);
+  });
+
+  it('returns readingScript:pinyin for ruby inside .cn-line', () => {
+    const root = mount(
+      '<div data-ink-g="0"><div class="cn-line"><ruby data-ink-r="0">花<rt>huā</rt></ruby></div></div>',
+    );
+    const ruby = root.querySelector('ruby')!;
+    const target = resolveEditTarget(ruby);
+    expect(target?.kind).toBe('ruby');
+    if (target?.kind === 'ruby') {
+      expect(target.readingScript).toBe('pinyin');
+      expect(target.kanji).toBe('花');
+      expect(target.kana).toBe('huā');
+    }
     unmount(root);
   });
 

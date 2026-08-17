@@ -101,6 +101,7 @@ export function usePosterWorkspace({
       nextLang?: LangCode,
       nextTitleMarkupHtml?: string,
     ) => {
+      // 进编辑时等海报字体就绪，导出切比例才不会冷加载 23MB 思源宋体
       await loadPosterFonts();
       const normalized = ensureStudyItemIdsInBodyHtml(
         ensureExplainNoteIdsInBodyHtml(prepareBodyHtmlForPreview(nextBodyHtml)),
@@ -201,6 +202,13 @@ export function usePosterWorkspace({
     ) => {
       studyCardsBundleIdRef.current = createStudyCardsBundleId();
       const bundleId = studyCardsBundleIdRef.current;
+      // 词卡先写入 IDB，不依赖进编辑/字体；避免冷启动白屏期间同步未执行
+      await syncStudyCardsFromRaw(rawPaste, bundleId, {
+        title: nextTitle,
+        artist: nextArtist,
+        lang: nextLang,
+        includeVocabAndGrammar: defaultIncludeVocabAndGrammar,
+      });
       await enterEditWithLayout(
         nextBodyHtml,
         nextTitle,
@@ -210,12 +218,6 @@ export function usePosterWorkspace({
         nextArtist,
         nextLang,
       );
-      await syncStudyCardsFromRaw(rawPaste, bundleId, {
-        title: nextTitle,
-        artist: nextArtist,
-        lang: nextLang,
-        includeVocabAndGrammar: defaultIncludeVocabAndGrammar,
-      });
     },
     [
       enterEditWithLayout,
@@ -293,6 +295,12 @@ export function usePosterWorkspace({
         const prepared = preparePasteForLayout(trimmedRaw);
         studyCardsBundleIdRef.current = createStudyCardsBundleId();
         const bundleId = studyCardsBundleIdRef.current;
+        await syncStudyCardsFromRaw(trimmedRaw, bundleId, {
+          title: prepared.title || t,
+          artist: prepared.artist,
+          lang: prepared.lang,
+          includeVocabAndGrammar: defaultIncludeVocabAndGrammar,
+        });
         await enterEditWithLayout(
           prepared.bodyHtml,
           prepared.title || t,
@@ -302,12 +310,6 @@ export function usePosterWorkspace({
           prepared.artist,
           prepared.lang,
         );
-        await syncStudyCardsFromRaw(trimmedRaw, bundleId, {
-          title: prepared.title || t,
-          artist: prepared.artist,
-          lang: prepared.lang,
-          includeVocabAndGrammar: defaultIncludeVocabAndGrammar,
-        });
         return;
       }
 

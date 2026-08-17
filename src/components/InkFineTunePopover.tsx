@@ -25,6 +25,8 @@ export type InkEditTarget =
       rubyIndex: number;
       kanji: string;
       kana: string;
+      /** 中文歌词行（.cn-line）为拼音，日语行为假名 */
+      readingScript: 'kana' | 'pinyin';
       anchorRect: DOMRect;
     }
   | {
@@ -110,7 +112,9 @@ export default function InkFineTunePopover({
       {target.kind === 'ruby' ? (
         <>
           <label className="ink-fine-tune-popover__field">
-            <span className="ink-fine-tune-popover__label">假名</span>
+            <span className="ink-fine-tune-popover__label">
+              {target.readingScript === 'pinyin' ? '拼音' : '假名'}
+            </span>
             <input
               className="ink-fine-tune-popover__input"
               value={kana}
