@@ -182,10 +182,22 @@ function AppShell({
 export default function App() {
   useGlobalButtonFeedback();
 
-  // UV 埋点 + 全局错误监听：每次进入 App 记录一次
+  // UV 埋点 + 全局错误监听：延后到空闲，避免首屏抢带宽拉 ~750KB CloudBase SDK
   useEffect(() => {
-    trackPageView();
-    initErrorReporting();
+    const run = () => {
+      trackPageView();
+      initErrorReporting();
+    };
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (typeof w.requestIdleCallback === 'function') {
+      const id = w.requestIdleCallback(run, { timeout: 4000 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const t = window.setTimeout(run, 1500);
+    return () => window.clearTimeout(t);
   }, []);
 
   const settings = useAppSettings();
