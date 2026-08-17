@@ -182,22 +182,57 @@ function AppShell({
 export default function App() {
   useGlobalButtonFeedback();
 
-  // UV 埋点 + 全局错误监听：延后到空闲，避免首屏抢带宽拉 ~750KB CloudBase SDK
+  // UV 埋点 + 错误上报：强延后，避免首屏与 ~750KB CloudBase SDK 抢带宽（www 弱链路尤甚）
   useEffect(() => {
-    const run = () => {
-      trackPageView();
-      initErrorReporting();
-    };
+    let cancelled = false;
+    let fired = false;
+    let idleId: number | undefined;
+    let timeoutId: number | undefined;
+
     const w = window as Window & {
       requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
       cancelIdleCallback?: (id: number) => void;
     };
-    if (typeof w.requestIdleCallback === 'function') {
-      const id = w.requestIdleCallback(run, { timeout: 4000 });
-      return () => w.cancelIdleCallback?.(id);
-    }
-    const t = window.setTimeout(run, 1500);
-    return () => window.clearTimeout(t);
+
+    const clearSchedules = () => {
+      if (idleId != null) w.cancelIdleCallback?.(idleId);
+      if (timeoutId != null) window.clearTimeout(timeoutId);
+      idleId = undefined;
+      timeoutId = undefined;
+    };
+
+    const run = () => {
+      if (cancelled || fired) return;
+      fired = true;
+      clearSchedules();
+      trackPageView();
+      initErrorReporting();
+    };
+
+    const schedule = (delayMs: number) => {
+      clearSchedules();
+      if (typeof w.requestIdleCallback === 'function') {
+        idleId = w.requestIdleCallback(run, { timeout: delayMs });
+      } else {
+        timeoutId = window.setTimeout(run, delayMs);
+      }
+    };
+
+    const onInteract = () => {
+      if (cancelled || fired) return;
+      schedule(2000);
+    };
+    window.addEventListener('pointerdown', onInteract, { once: true, passive: true });
+    window.addEventListener('keydown', onInteract, { once: true });
+    // 无交互时等 20s 再拉 SDK，首页先稳
+    schedule(20_000);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('pointerdown', onInteract);
+      window.removeEventListener('keydown', onInteract);
+      clearSchedules();
+    };
   }, []);
 
   const settings = useAppSettings();
