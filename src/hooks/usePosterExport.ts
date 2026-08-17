@@ -1,10 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { LangCode, LyricsLanguage } from '../services/appSettings';
-import { exportPosterPdf } from '../utils/exportPosterPdf';
-import {
-  exportPosterPngFromPageHtmls,
-  posterPdfExportFilename,
-} from '../utils/pdfExport';
+// 导出链（html2canvas + jspdf）体积大，改为按需动态加载，避免拖慢首屏
 import { resolveExportTitle } from '../utils/shufuriPoster/posterTitle';
 import { ensurePosterFontsLoaded } from '../utils/shufuriPoster/fonts';
 import { buildPosterPagesFromBody } from '../utils/shufuriPoster/buildPosterPages';
@@ -106,8 +102,12 @@ export function usePosterExport({
         return;
       }
 
-      const baseFilename = posterPdfExportFilename(resolveExportTitle(currentTitle), currentProfile);
+      const baseFilename = resolveExportTitle(currentTitle);
       const renderOpts = posterRenderOpts;
+
+      // 按需加载导出链（html2canvas + jspdf）
+      const { exportPosterPngFromPageHtmls, posterPdfExportFilename } = await import('../utils/pdfExport');
+      const { exportPosterPdf } = await import('../utils/exportPosterPdf');
 
       if (exportType === 'export_pdf') {
         await exportPosterPdf(
@@ -124,7 +124,7 @@ export function usePosterExport({
           currentPages,
           currentTitle,
           currentProfile,
-          baseFilename,
+          posterPdfExportFilename(baseFilename, currentProfile),
           currentArtist,
           lyricsLanguage,
           lang,
@@ -180,6 +180,7 @@ export function usePosterExport({
     );
 
     try {
+      const { exportPosterPdf } = await import('../utils/exportPosterPdf');
       await Promise.race([
         exportPosterPdf(
           pages,

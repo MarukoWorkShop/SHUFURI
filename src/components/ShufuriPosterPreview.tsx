@@ -6,7 +6,6 @@ import {
   buildShufuriPosterRootStyle,
   getShufuriPosterCanvasDimensions,
 } from '../utils/shufuriPoster/shufuriPosterShared';
-import { rasterizePageHtmlToBlob } from '../utils/pdfExport';
 import { isNativeWebView, postSaveImageToLibrary } from '../utils/nativeBridge';
 import type { SaveImageResult } from '../utils/nativeBridge';
 import {
@@ -205,6 +204,7 @@ function ShufuriPosterSinglePage({
       const native = isNativeWebView();
 
       // 使用现有成熟管线：离屏挂载 → html2canvas 栅格化 → PNG/JPEG Blob
+      const { rasterizePageHtmlToBlob } = await import('../utils/pdfExport');
       const { blob, mimeType } = await rasterizePageHtmlToBlob(
         bodyFragmentHtml,
         title,

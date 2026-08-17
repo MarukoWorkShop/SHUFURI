@@ -143,10 +143,16 @@ function AppShell({
             </div>
           }
         >
-          <EditScreen />
+          <Suspense fallback={null}>
+            <EditScreen />
+          </Suspense>
         </ErrorBoundary>
       )}
-      {mode === 'export' && <ExportScreen />}
+      {mode === 'export' && (
+        <Suspense fallback={null}>
+          <ExportScreen />
+        </Suspense>
+      )}
 
       {mode === 'input' && homeSession.isLayouting && (
         <div className="global-layout-loading" role="status" aria-live="polite">

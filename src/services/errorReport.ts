@@ -12,9 +12,8 @@
  *   - 通过 aiFeedback 云函数异步写入 NoSQL，失败静默
  */
 
-import cloudbase from '@cloudbase/js-sdk';
+import { CLOUDBASE_ENV_ID, ensureCloudbaseApp } from './cloudbaseClient';
 
-const CLOUDBASE_ENV_ID = 'ai-native-d5gtc59uc47601f23';
 const FEEDBACK_FUNCTION_NAME = 'aiFeedback';
 const MAX_BUFFER = 50;
 const DEDUP_WINDOW_MS = 60_000;
@@ -23,8 +22,6 @@ const DEDUP_WINDOW_MS = 60_000;
 const recentKeys = new Map<string, number>();
 let buffer: ErrorReportItem[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
-let app: cloudbase.app.App | null = null;
-let auth: cloudbase.auth.App | null = null;
 
 interface ErrorReportItem {
   kind: 'error_report';
@@ -37,18 +34,6 @@ interface ErrorReportItem {
   timestamp: number;
   sessionId: string;
   userAgent: string;
-}
-
-async function ensureAuth(): Promise<cloudbase.app.App> {
-  if (!app) app = cloudbase.init({ env: CLOUDBASE_ENV_ID });
-  if (!auth) auth = app.auth({ persistence: 'local' });
-  try {
-    const loginState = await auth.getLoginState();
-    if (!loginState) await auth.signInAnonymously();
-  } catch {
-    // 认证失败不阻塞
-  }
-  return app;
 }
 
 function getSessionId(): string {
@@ -103,7 +88,7 @@ async function flush(): Promise<void> {
   if (buffer.length === 0) return;
   const batch = buffer.splice(0);
   try {
-    const appInstance = await ensureAuth();
+    const appInstance = await ensureCloudbaseApp();
     await appInstance.callFunction({
       name: FEEDBACK_FUNCTION_NAME,
       data: { kind: 'error_report', items: batch },
