@@ -67,7 +67,7 @@ export default function HomeScreen({
 
   useLayoutEffect(() => {
     // 首页 UI 只用系统字体（PingFang / Hiragino），不等待海报专用字体
-    // （KozMin / HCRBatang / SourceHanSerif 共 ~54MB，仅海报排版/导出时才按需加载）。
+    // （KozMin / SourceHanSerif 仅海报排版/导出时才按需加载；韩文走系统衬线）。
     // 直接淡出 boot loader，避免首屏被字体请求阻塞。
     requestAnimationFrame(() => hideAppBootLoader());
   }, []);
@@ -183,7 +183,14 @@ export default function HomeScreen({
           <span className="home-footer__sep" aria-hidden="true">|</span>
           <a className="home-footer__link" href="/privacy">{L('隐私政策', 'Privacy Policy')}</a>
           <span className="home-footer__sep" aria-hidden="true">|</span>
-          <span className="home-footer__meta">粤B2-XXXXXXXX</span>
+          <a
+            className="home-footer__link"
+            href="https://beian.miit.gov.cn/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            粤ICP备2026114306号
+          </a>
           <span className="home-footer__sep" aria-hidden="true">|</span>
           <span className="home-footer__meta">粤公网安备 XXXXXXXXXXXX号</span>
         </div>

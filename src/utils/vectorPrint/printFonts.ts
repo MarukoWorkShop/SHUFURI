@@ -6,7 +6,6 @@ import {
 } from '../shufuriPoster/fonts';
 
 let cachedJpRegularFontFaceCss: string | null = null;
-let cachedKoFontFaceCss: string | null = null;
 let cachedEnFontFaceCss: string | null = null;
 let cachedZhSerifFontFaceCss: string | null = null;
 
@@ -26,10 +25,7 @@ async function fetchAssetFontBase64(assetName: string): Promise<string> {
 }
 
 async function loadFontBase64FromGenerated(
-  key:
-    | 'PRINT_JP_REGULAR_FONT_BASE64_GENERATED'
-    | 'PRINT_KO_FONT_BASE64_GENERATED'
-    | 'PRINT_EN_FONT_BASE64_GENERATED',
+  key: 'PRINT_JP_REGULAR_FONT_BASE64_GENERATED' | 'PRINT_EN_FONT_BASE64_GENERATED',
   assetName: string,
 ): Promise<string> {
   try {
@@ -65,24 +61,6 @@ export async function getPrintJapaneseRegularFontFaceCss(): Promise<string> {
 /** @deprecated 已统一为 R；等同 getPrintJapaneseRegularFontFaceCss */
 export async function getPrintJapaneseFontFaceCss(): Promise<string> {
   return getPrintJapaneseRegularFontFaceCss();
-}
-
-export async function getPrintKoreanFontFaceCss(): Promise<string> {
-  if (cachedKoFontFaceCss) {
-    return cachedKoFontFaceCss;
-  }
-  const base64 = await loadFontBase64FromGenerated(
-    'PRINT_KO_FONT_BASE64_GENERATED',
-    'HCRBatang.ttf',
-  );
-  cachedKoFontFaceCss = `
-@font-face {
-  font-family: "HCR Batang";
-  src: url(data:font/truetype;base64,${base64}) format("truetype");
-  font-weight: 400;
-  font-style: normal;
-}`;
-  return cachedKoFontFaceCss;
 }
 
 export async function getPrintEnglishFontFaceCss(): Promise<string> {
@@ -137,9 +115,8 @@ export async function getPrintSourceHanSerifScFontFaceCss(): Promise<string> {
   return cachedZhSerifFontFaceCss;
 }
 
-/** 日文+韩文+英文+思源宋体+Sansation Regular @font-face，PDF 打印时内嵌 */
+/** 日文+英文+思源宋体+Sansation Regular @font-face；韩文走系统衬线，不内嵌 */
 export async function getPrintFontFaceCss(): Promise<string> {
-  // 韩文统一使用系统衬线字体（Apple Myungjo / Batang 系统自带），无需 @font-face 注入。
   const [jpRegular, enCss, zhSerifCss, sansationCss] = await Promise.all([
     getPrintJapaneseRegularFontFaceCss(),
     getPrintEnglishFontFaceCss(),

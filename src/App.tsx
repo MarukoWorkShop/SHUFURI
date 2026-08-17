@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import './App.css';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/app/AppLayout';
 import { PulsatingDots } from './components/PulsatingDots';
 import HomeScreen from './components/screens/HomeScreen';
-import EditScreen from './components/screens/EditScreen';
-import ExportScreen from './components/screens/ExportScreen';
+// Edit/Export 屏体积大（海报排版、导出、字典等），按需懒加载以缩小首屏
+const EditScreen = lazy(() => import('./components/screens/EditScreen'));
+const ExportScreen = lazy(() => import('./components/screens/ExportScreen'));
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useGlobalButtonFeedback } from './hooks/useGlobalButtonFeedback';
 import { saveAppSettings } from './services/appSettings';

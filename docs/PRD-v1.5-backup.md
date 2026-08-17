@@ -54,7 +54,7 @@ SHUFURI **主流程不负责搜歌词**；歌词生成仍走外部 AI 口令。�
 | 角色 | 典型场景 |
 |------|----------|
 | 日语学习者 | 从豆包等 App 复制带 `{汉字\|假名}` 的歌词 → 排版成 B5 打印海报 |
-| 韩语学习者 | 选 KOR 波轮 → AI 返回 `KO:` 行 + 词汇/语法 → HCR Batang 排版 |
+| 韩语学习者 | 选 KOR 波轮 → AI 返回 `KO:` 行 + 词汇/语法 → 系统衬线排版 |
 | 英语学习者 | 选 ENG → `EN:` 纯英文 + Sansation Light 排版 |
 | 重度用户 | 编辑注音/翻译 → 保存歌词本 → 多次导出 |
 
@@ -186,7 +186,7 @@ G|1|ば形（假定形）|详解|7|译
 
 | 用途 | jp | ko | en | zh |
 |------|----|----|-----|-----|
-| 歌词 | Kozuka Mincho EL | HCR Batang | Sansation Light | 思源宋体（Source Han Serif） |
+| 歌词 | Kozuka Mincho EL | 系统衬线（AppleMyungjo 等） | Sansation Light | 思源宋体（Source Han Serif） |
 | 中文 | PingFang SC | 同左 | 同左 | 同左 |
 | 拼音 | — | — | — | PingFang SC（字号+1档，色 #454f5f） |
 | UI | Sansation Light + PingFang | | | |

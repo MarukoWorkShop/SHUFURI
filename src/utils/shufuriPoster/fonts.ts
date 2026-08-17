@@ -34,12 +34,12 @@ export const KO_FONT_FAMILY_SYSTEM =
 
 /**
  * 韩文系统衬线字体栈（海报标题 + 主体歌词统一使用，首屏零下载）：
- * - macOS：Apple Myungjo（系统自带韩文衬线）
- * - Windows：Batang / Gungsuh（系统自带韩文衬线，非 HCR）
- * - 通用：Noto Serif KR 兜底，最终回落 serif 通用族
+ * - macOS / iOS：族名是 **AppleMyungjo**（无空格；`Apple Myungjo` 匹配失败会一路落到 PingFang）
+ * - Windows：Batang / Gungsuh
+ * - 其它：Nanum Myeongjo / Noto Serif KR；最后才回落 Apple SD Gothic Neo（无衬线，避免再掉进 PingFang）
  */
 export const KO_FONT_FAMILY_SYSTEM_SERIF =
-  '"Apple Myungjo", "Batang", "Gungsuh", "Noto Serif KR", serif';
+  '"AppleMyungjo", "Apple Myungjo", "Nanum Myeongjo", "Batang", "Gungsuh", "Noto Serif KR", "Apple SD Gothic Neo", serif';
 
 /** 向后兼容别名：默认走系统字体栈（零下载） */
 export const KO_FONT_FAMILY = KO_FONT_FAMILY_SYSTEM;
@@ -47,7 +47,6 @@ export const KO_FONT_FAMILY = KO_FONT_FAMILY_SYSTEM;
 /** 韩文海报歌名：汉字优先思源宋体，韩文走系统衬线（与主体歌词统一） */
 export const KO_POSTER_TITLE_FONT_FAMILY_SYSTEM =
   `${SOURCE_HAN_SERIF_SC_FAMILY}, "Songti SC", "STSong", "Songti TC", "SimSun", ${KO_FONT_FAMILY_SYSTEM_SERIF}`;
-
 /** 中文海报歌名 */
 export const ZH_POSTER_TITLE_FONT_FAMILY = ZH_SONGTI_FONT_FAMILY;
 
@@ -64,14 +63,6 @@ export function getPosterJapaneseRegularFontUrl(): string {
 /** @deprecated 使用 getPosterJapaneseRegularFontUrl */
 export function getPosterJapaneseFontUrl(): string {
   return getPosterJapaneseRegularFontUrl();
-}
-
-/** 韩文字体 URL */
-export function getPosterKoreanFontUrl(): string {
-  if (typeof window !== 'undefined' && window.location?.href) {
-    return new URL('assets/HCRBatang.ttf', window.location.href).href;
-  }
-  return './assets/HCRBatang.ttf';
 }
 
 /** 思源宋体 SC Regular URL */
@@ -129,14 +120,6 @@ export function getPosterJapaneseFontFaceCss(): string {
 /** 屏幕预览：日文字体（仅 KozMin Pro R） */
 export function getPosterJapaneseFontsFaceCss(): string {
   return getPosterJapaneseRegularFontFaceCss();
-}
-
-/**
- * 韩文 @font-face 注入。
- * 韩文统一使用系统衬线字体（Apple Myungjo / Batang 系统自带），无需下载外部字体，返回空。
- */
-export function getPosterKoreanFontFaceCss(): string {
-  return '';
 }
 
 /** 思源宋体 SC Regular — 歌名 / 中文衬线 */
@@ -199,14 +182,6 @@ export async function ensurePosterJapaneseFontLoaded(): Promise<void> {
   ]);
 }
 
-/**
- * 预加载韩文字体（系统衬线，无需下载外部字体）。
- * 韩文统一使用 Apple Myungjo / Batang 等系统自带字体，此函数为空操作。
- */
-export async function ensurePosterKoreanFontLoaded(): Promise<void> {
-  // 系统字体无需预加载
-}
-
 /** 预加载英文字体（PingFang Light） */
 export async function ensurePosterEnglishFontLoaded(): Promise<void> {
   if (!document.fonts?.load) return;
@@ -237,11 +212,10 @@ export function waitForPosterLayoutReady(): Promise<void> {
   });
 }
 
-/** 预加载海报所需字体（含思源宋体，避免歌名回退 PingFang） */
+/** 预加载海报所需字体（含思源宋体，避免歌名回退 PingFang；韩文走系统衬线无需下载） */
 export async function ensurePosterFontsLoaded(): Promise<void> {
   await Promise.all([
     ensurePosterJapaneseFontLoaded(),
-    ensurePosterKoreanFontLoaded(),
     ensurePosterEnglishFontLoaded(),
     ensurePosterSourceHanSerifScFontLoaded(),
   ]);

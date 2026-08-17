@@ -24,8 +24,9 @@ body,
   /* 核心一：禁止滚动、禁止溢出 */
   overflow: hidden;
 
-  /* 核心二：禁止缩放由 meta viewport user-scalable=no 控制 */
+  /* 核心二：禁止缩放由 meta viewport user-scalable=no 控制（浏览器与原生壳一致） */
   /* 不在此设置 touch-action:none，否则会阻止子元素（如波轮）的触控手势 */
+  touch-action: manipulation;
 
   /* 核心三：全面禁止系统级长按文字弹出拷贝气泡、禁止长按图片弹出保存菜单 */
   -webkit-user-select: none;

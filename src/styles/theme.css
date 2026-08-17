@@ -30,17 +30,10 @@
   font-display: swap;
 }
 
+/* 日文学习衬线：仅当 UI 实际使用 --font-serif-jp 时才会下载（学习卡等），勿 preload */
 @font-face {
   font-family: "Kozuka Mincho Pro R";
   src: url("/assets/KozMinPro-Regular.otf") format("opentype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "HCR Batang";
-  src: url("/assets/HCRBatang.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -57,7 +50,7 @@
   /** 日文/英文学习区衬线（词卡正面主标、例句等） */
   --font-serif-jp: "Kozuka Mincho Pro R", "Kozuka Mincho Pro", "YuMincho", "Yu Mincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", serif;
   /** 韩文学习区衬线（词卡） */
-  --font-serif-ko: "HCR Batang", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", serif;
+  --font-serif-ko: "AppleMyungjo", "Apple Myungjo", "Nanum Myeongjo", "Batang", "Gungsuh", "Noto Serif KR", "Apple SD Gothic Neo", serif;
   /** 中文学习区衬线 / 歌名汉字 / 背面汉语大号释义 — 随包思源宋体优先 */
   --font-serif-zh: "Source Han Serif SC", "Songti SC", "STSong", "Songti TC", "SimSun", serif;
   --font-brand: "Sansation Light", sans-serif;
@@ -503,7 +496,7 @@
   --ui-font-serif: var(--font-serif-jp);
   --ui-font-mono: var(--font-mono);
   /** 含韩文/日文 fallback 的 UI 字体 — 编辑弹窗等多语言输入框使用 */
-  --ui-font-mixed: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans CJK SC", "HCR Batang", "Malgun Gothic", sans-serif;
+  --ui-font-mixed: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans CJK SC", "Malgun Gothic", sans-serif;
 
   --ui-text-xs: var(--text-xs);
   --ui-text-2xs: var(--text-2xs);

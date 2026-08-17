@@ -724,7 +724,7 @@ G|1|ば形（假定形）|详解|7|译
 
 | 用途 | jp | ko | en | zh |
 |------|----|----|-----|-----|
-| 歌词 | Kozuka Mincho EL | HCR Batang | Sansation Light | 思源宋体（Source Han Serif） |
+| 歌词 | Kozuka Mincho EL | 系统衬线（AppleMyungjo 等） | Sansation Light | 思源宋体（Source Han Serif） |
 | 中文 | PingFang SC | 同左 | 同左 | 同左 |
 | 拼音 | — | — | — | PingFang SC（字号+1档，色 #454f5f） |
 | UI | Sansation Light + PingFang | | | |

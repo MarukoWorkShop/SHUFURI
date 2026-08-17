@@ -296,7 +296,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 语种衬线：jp/en→KozMin · ko→Batang · zh→宋体 */
+/* 语种衬线：jp/en→KozMin · ko→系统衬线 · zh→宋体 */
 .study-card-flip[data-lang='jp'],
 .study-card-flip[data-lang='en'] {
   --study-card-serif: var(--font-serif-jp);

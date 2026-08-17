@@ -187,7 +187,7 @@ export default function InkFineTunePopover({
             placeholder={koText ? undefined : '韩文歌词'}
             style={{
               fontFamily:
-                '"HCR Batang", "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans CJK SC", "PingFang SC", "Malgun Gothic", sans-serif',
+                '"AppleMyungjo", "Apple Myungjo", "Nanum Myeongjo", "Batang", "Gungsuh", "Noto Serif KR", "Apple SD Gothic Neo", serif',
               color: 'var(--ui-fg, #1a1a1a)',
             }}
             autoFocus

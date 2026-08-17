@@ -305,7 +305,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   const rubyBaseGapCss = rubyBaseGapEm > 0 ? `padding-bottom: ${rubyBaseGapEm}em;` : '';
 
   const titleFont = R.posterTitle.fontFamily;
-  /** 韩文主体/词汇/语法强制字体：跟随 resolver 的 posterFontStyle 决策（system 系统衬线 / batang HCR Batang） */
+  /** 韩文主体/词汇/语法强制字体：跟随 resolver 的 lyricPrimary（系统衬线） */
   const koFontFamily = R.lyricPrimary.fontFamily;
   const titleWght = R.posterTitle.fontWeight;
   const artistWght = R.posterArtist.fontWeight;

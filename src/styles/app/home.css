@@ -702,7 +702,8 @@
   border-radius: 0 !important;
   background: transparent !important;
   font-family: var(--ui-font-sans);
-  font-size: 13.5px;
+  /* ≥16px：杜绝 iOS 聚焦小字号时页面放大 */
+  font-size: 16px;
   font-weight: 400;
   line-height: 1.2;
   letter-spacing: 0.01em;
@@ -711,6 +712,8 @@
   -webkit-appearance: none !important;
   appearance: none !important;
   box-shadow: none !important;
+  caret-color: transparent;
+  touch-action: manipulation;
 }
 
 .ext-pipeline__share-fill-input:focus,
@@ -2733,5 +2736,15 @@
 
   .app--home .ext-pipeline__field--lang {
     width: 150px;
+  }
+}
+
+/* 手机：输入框 ≥16px，杜绝 iOS 聚焦时页面放大（与 user-scalable=no 双保险） */
+@media (max-width: 767px) {
+  .ext-pipeline__input,
+  .ext-pipeline__select,
+  .ext-pipeline__share-fill-input,
+  .app--home .ext-pipeline__input {
+    font-size: 16px !important;
   }
 }

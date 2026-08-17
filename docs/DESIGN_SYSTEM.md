@@ -14,7 +14,7 @@
 |------|------|
 | **纸感稳定** | 全屏 `overflow: hidden`，内部区域滚动；模拟铜版纸/App 壳，非网页 |
 | **无滚动条** | 所有可滚动区域隐藏滚动条（全局策略），触控/滚轮滚动照常 |
-| **字音优先** | UI 用现代无衬线（Sansation + PingFang）；海报正文用明朝/ Batang 等学习字体 |
+| **字音优先** | UI 用现代无衬线（Sansation + PingFang）；海报正文用明朝 / 系统韩文衬线等学习字体 |
 | **轻触反馈** | 按键 scale 0.965 + 可选触觉 + 「カタ」声，强调物理质感 |
 | **克制强调** | 主色用于关键 CTA；词汇/语法用深蓝绀色标识，不用粗体 |
 | **三主题换肤** | 墨 / 绀 / 赤，语义令牌驱动，非硬编码色值 |
@@ -182,7 +182,7 @@ App 壳层**不得**显示可见滚动条（含抽屉、下拉列表、文本域
 |------|------|------|
 | 日文歌词主文 | Kozuka Mincho Pro R (Regular) | `KozMinPro-Regular.otf` |
 | 日文注音 rt | Kozuka Mincho Pro R (Regular) | `KozMinPro-Regular.otf` |
-| 韩文歌词 | HCR Batang | `HCRBatang.ttf` |
+| 韩文歌词 | 系统衬线（AppleMyungjo / Batang / Gungsuh） | 零下载 |
 | 英文歌词 | Sansation Light | `Sansation-Light.ttf` |
 | 中文翻译/释义 | PingFang SC | 系统 |
 | Ruby 注音 | 与正文同族，0.54–0.58em，色 `#64748b` |

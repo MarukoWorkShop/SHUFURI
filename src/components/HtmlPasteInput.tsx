@@ -21,7 +21,7 @@ const LANG_LABELS: Record<string, string> = {
 
 /** 音乐分享链接域名白名单（剪贴板自动读取时过滤非音乐链接） */
 const MUSIC_LINK_PATTERN =
-  /https?:\/\/(c\.|i\.)?y\.qq\.com|music\.163\.com|kugou\.com|kuwo\.cn|migu\.cn|music\.apple\.com/i;
+  /https?:\/\/(?:[a-z]\d\.)?y\.qq\.com|163cn\.tv|music\.163\.com|kugou\.com|kuwo\.cn|migu\.cn|music\.apple\.com/i;
 
 /** AI 口令指纹：复制「去生成AI口令」后，剪贴板里是一段带固定头的指令文本，
  *  不应被当作音乐分享链接填入粘贴框。命中则静默忽略（方案 2：代码杜绝）。 */
@@ -120,60 +120,124 @@ export default function HtmlPasteInput({
 
   const pasteInputRef = useRef<HTMLInputElement>(null);
   const pasteActiveRef = useRef(false);
+  const pasteValueRef = useRef('');
+  const pendingFocusPasteRef = useRef(false);
   pasteActiveRef.current = pasteActive;
+  pasteValueRef.current = pasteValue;
+
+  /** 是否像可解析的音乐分享文案（含 QQ/网易云域名或分享尾巴） */
+  const isLikelyMusicShare = useCallback((raw: string): boolean => {
+    const t = raw.trim();
+    if (!t || AI_PROMPT_RE.test(t)) return false;
+    if (MUSIC_LINK_PATTERN.test(t)) return true;
+    if (/https?:\/\//i.test(t) && /@QQ音乐|网易云|QQ音乐|Kugou|酷狗|酷我|咪咕|Apple Music/i.test(t)) {
+      return true;
+    }
+    return false;
+  }, []);
+
+  const ingestShareText = useCallback(
+    (raw: string, autoSubmit: boolean): boolean => {
+      const trimmed = raw.trim();
+      if (!isLikelyMusicShare(trimmed)) return false;
+      setPasteValue(trimmed);
+      if (autoSubmit && onParseMusicShareText) {
+        onParseMusicShareText(trimmed);
+      }
+      return true;
+    },
+    [isLikelyMusicShare, onParseMusicShareText],
+  );
+
+  /** 展开后聚焦输入框；inputMode=none 多数机型不弹键盘，仍可长按系统粘贴 */
+  const focusPasteFieldWithoutKeyboard = useCallback(() => {
+    pendingFocusPasteRef.current = true;
+    queueMicrotask(() => {
+      if (!pendingFocusPasteRef.current) return;
+      const el = pasteInputRef.current;
+      if (!el) return; // 尚未展开挂载 → 交给下方 pasteActive effect
+      el.focus({ preventScroll: true });
+      pendingFocusPasteRef.current = false;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!pasteActive || !pendingFocusPasteRef.current) return;
+    pendingFocusPasteRef.current = false;
+    pasteInputRef.current?.focus({ preventScroll: true });
+  }, [pasteActive]);
 
   const handlePasteAreaClick = useCallback(async () => {
-    // 先展开输入框（保证点击必有可见反馈），但**不**立即聚焦 textarea，
-    // 否则 iOS Safari 会因 textarea 获得焦点而弹出系统「粘贴」浮层。
-    // busy 只阻止重复读剪贴板，绝不阻止展开，避免「点击毫无反应」。
     setPasteActive(true);
     if (parseMusicShareBusy) return;
-    // 在用户手势的同步上下文内先尝试读剪贴板：读成功就直接填入，
-    // 此时 textarea 未被聚焦，iOS 不会弹出系统粘贴浮层（浮层完全消除）。
-    // 仅当读剪贴板失败/不支持/为空 时，才聚焦 textarea 让用户手动粘贴（浮层作为降级）。
+
+    // 1) 用户手势内尝试读剪贴板（HTTPS + 手势时 iOS/Android 通常可用）
     if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
       try {
         const text = await navigator.clipboard.readText();
         if (text && text.trim()) {
-          // 方案 2：剪贴板是 AI 口令（刚点过「去生成AI口令」）→ 静默忽略，不填入
-          if (isSilentIgnoreText(text)) return;
-          setPasteValue(text.trim());
-          return; // 已成功填入，不聚焦 → 不弹系统浮层
+          if (isSilentIgnoreText(text)) {
+            // AI 口令等：静默忽略，不挡后续手势
+            return;
+          }
+          if (ingestShareText(text, true)) return;
+          showAppToast(
+            L(
+              '剪贴板不是音乐分享链接，请先在 QQ/网易云复制分享文案',
+              'Clipboard is not a music share link. Copy a share text from QQ/NetEase first.',
+            ),
+          );
+          focusPasteFieldWithoutKeyboard();
+          return;
         }
       } catch {
-        // 读剪贴板失败（无权限/被拒）→ 降级为手动粘贴
+        /* 权限不足 → 降级长按粘贴 */
       }
     }
-    // 降级：聚焦 textarea，让用户手动粘贴（此时 iOS 弹系统浮层是预期的）
-    requestAnimationFrame(() => pasteInputRef.current?.focus());
-  }, [parseMusicShareBusy]);
+
+    // 2) 读不到：展开后引导长按粘贴（不弹全键盘）
+    showAppToast(
+      L('请长按输入框，选择「粘贴」', 'Long-press the field and choose Paste.'),
+    );
+    focusPasteFieldWithoutKeyboard();
+  }, [
+    parseMusicShareBusy,
+    ingestShareText,
+    showAppToast,
+    focusPasteFieldWithoutKeyboard,
+  ]);
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLInputElement>) => {
       const text = e.clipboardData.getData('text/plain');
-      if (text) {
-        const trimmed = text.trim();
-        // 方案 2：AI 口令（刚点过「去生成AI口令」）→ 静默忽略，不填入
-        if (AI_PROMPT_RE.test(trimmed)) {
-          e.preventDefault();
-          return;
-        }
-        // 非音乐链接静默忽略
-        if (!MUSIC_LINK_PATTERN.test(trimmed)) {
-          e.preventDefault();
-          return;
-        }
+      if (!text) return;
+      const trimmed = text.trim();
+      if (AI_PROMPT_RE.test(trimmed)) {
         e.preventDefault();
-        setPasteValue(trimmed);
+        return;
+      }
+      if (!isLikelyMusicShare(trimmed)) {
+        e.preventDefault();
+        showAppToast(
+          L(
+            '请粘贴 QQ/网易云等音乐 App 的分享链接',
+            'Please paste a share link from QQ Music / NetEase / similar apps.',
+          ),
+        );
+        return;
+      }
+      e.preventDefault();
+      setPasteValue(trimmed);
+      if (onParseMusicShareText) {
+        onParseMusicShareText(trimmed);
       }
     },
-    [],
+    [isLikelyMusicShare, onParseMusicShareText, showAppToast],
   );
 
   const submitPaste = useCallback(() => {
     const text = pasteValue.trim();
     if (!text || !onParseMusicShareText) return;
-    // 失焦 textarea，避免点击「解析」后 iOS 因 textarea 仍聚焦而弹出系统「粘贴」浮层。
     pasteInputRef.current?.blur();
     onParseMusicShareText(text);
   }, [pasteValue, onParseMusicShareText]);
@@ -183,13 +247,22 @@ export default function HtmlPasteInput({
     setPasteValue('');
   }, []);
 
-  const handlePasteBlur = useCallback(() => {
-    requestAnimationFrame(() => {
-      if (pasteActiveRef.current) {
+  const handlePasteBlur = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      const capsule = e.currentTarget.closest('.ext-pipeline__capsule');
+      const next = e.relatedTarget as Node | null;
+      if (capsule && next && capsule.contains(next)) return;
+      // 延迟关闭：给系统「粘贴」菜单留时间，避免刚 focus 就塌缩
+      window.setTimeout(() => {
+        if (!pasteActiveRef.current) return;
+        if (pasteValueRef.current.trim()) return;
+        const active = document.activeElement;
+        if (active && capsule?.contains(active)) return;
         resetPaste();
-      }
-    });
-  }, [resetPaste]);
+      }, 400);
+    },
+    [resetPaste],
+  );
 
   const handlePasteKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -398,43 +471,23 @@ export default function HtmlPasteInput({
                       <span className="ext-pipeline__share-fill-btn-badge">{L('QQ音乐 / 网易云', 'QQ Music / NetEase')}</span>
                     </button>
                   ) : (
-                    <div
-                      className="ext-pipeline__capsule-expanded"
-                      onClick={async () => {
-                        // 用户手势内尝试读取剪贴板（避免 iOS 弹出系统粘贴菜单）
-                        if (parseMusicShareBusy || pasteValue.trim()) return;
-                        let text = '';
-                        if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
-                          try {
-                            text = await navigator.clipboard.readText();
-                          } catch {
-                            text = '';
-                          }
-                        }
-                        if (text && text.trim()) {
-                          const trimmed = text.trim();
-                          // 方案 2：AI 口令（刚点过「去生成AI口令」）→ 静默忽略
-                          if (AI_PROMPT_RE.test(trimmed)) return;
-                          // 非音乐链接静默忽略，不填入输入框
-                          if (!MUSIC_LINK_PATTERN.test(trimmed)) return;
-                          setPasteValue(trimmed);
-                        } else {
-                          // 读取失败 / 不支持 → 回退手动粘贴（确保光标在输入框）
-                          pasteInputRef.current?.focus();
-                        }
-                      }}
-                    >
+                    <div className="ext-pipeline__capsule-expanded">
                       <input
                         ref={pasteInputRef}
                         className="ext-pipeline__share-fill-input"
-                        placeholder={L('粘贴分享链接…', 'Paste share link…')}
+                        placeholder={L('长按此处粘贴分享链接…', 'Long-press to paste share link…')}
                         value={pasteValue}
+                        inputMode="none"
+                        enterKeyHint="done"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
                         onChange={(e) => setPasteValue(e.target.value)}
                         onPaste={handlePaste}
                         onBlur={handlePasteBlur}
                         onKeyDown={handlePasteKeyDown}
                         disabled={parseMusicShareBusy}
-                        autoFocus
                       />
                       <AnimatePresence initial={false}>
                         {pasteValue.trim() && !parseMusicShareBusy ? (
@@ -471,7 +524,24 @@ export default function HtmlPasteInput({
                               {L('解析', 'Analyze')}
                             </motion.button>
                           </>
-                        ) : null}
+                        ) : (
+                          <motion.button
+                            key="cancel"
+                            type="button"
+                            layout
+                            initial={{ opacity: 0, width: 0, marginLeft: 0 }}
+                            animate={{ opacity: 1, width: 'auto', marginLeft: 8 }}
+                            exit={{ opacity: 0, width: 0, marginLeft: 0 }}
+                            transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+                            className="ext-pipeline__share-fill-clear"
+                            onClick={resetPaste}
+                            onPointerDown={(e) => e.preventDefault()}
+                            title={L('取消', 'Cancel')}
+                            aria-label={L('取消', 'Cancel')}
+                          >
+                            <X size={14} strokeWidth={2} />
+                          </motion.button>
+                        )}
                       </AnimatePresence>
                     </div>
                   )}

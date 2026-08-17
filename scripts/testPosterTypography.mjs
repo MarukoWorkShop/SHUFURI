@@ -169,11 +169,11 @@ for (const [lang, family] of [
 
 assert(
   mobileKo.roles.posterTitle.fontFamily.includes('Songti SC'),
-  'ko posterTitle stacks Songti SC before Batang for Han',
+  'ko posterTitle stacks Songti SC before system serif for Han',
 );
 assert(
-  mobileKo.roles.posterTitle.fontFamily.includes('HCR Batang'),
-  'ko posterTitle keeps Batang for Hangul fallback',
+  mobileKo.roles.posterTitle.fontFamily.includes('AppleMyungjo'),
+  'ko posterTitle keeps AppleMyungjo for Hangul fallback',
 );
 
 console.log('testPosterTypography: OK');
