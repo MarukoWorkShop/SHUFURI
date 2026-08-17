@@ -3,8 +3,6 @@ import type { LangCode, LyricsLanguage } from '../services/appSettings';
 import type { SavedLyricsProject } from '../services/savedLyricsStore';
 import { createStudyCardsBundleId } from '../studyCards/syncStudyCards';
 import { resolveDocumentLang } from '../services/documentLang';
-import { ensurePosterFontsLoaded } from '../utils/shufuriPoster/fonts';
-import { buildPosterPagesFromBody } from '../utils/shufuriPoster/buildPosterPages';
 import { resetPosterPageRefs } from '../utils/posterPageRefs';
 import {
   prepareBodyHtmlForPreview,
@@ -43,6 +41,18 @@ type UsePosterWorkspaceOptions = {
   onAfterEnterEdit: () => void;
   onAfterReset: () => void;
 };
+
+async function loadPosterFonts() {
+  const { ensurePosterFontsLoaded } = await import('../utils/shufuriPoster/fonts');
+  await ensurePosterFontsLoaded();
+}
+
+async function buildPages(
+  ...args: Parameters<typeof import('../utils/shufuriPoster/buildPosterPages').buildPosterPagesFromBody>
+) {
+  const { buildPosterPagesFromBody } = await import('../utils/shufuriPoster/buildPosterPages');
+  return buildPosterPagesFromBody(...args);
+}
 
 export function usePosterWorkspace({
   editLayoutProfile,
@@ -91,7 +101,7 @@ export function usePosterWorkspace({
       nextLang?: LangCode,
       nextTitleMarkupHtml?: string,
     ) => {
-      await ensurePosterFontsLoaded();
+      await loadPosterFonts();
       const normalized = ensureStudyItemIdsInBodyHtml(
         ensureExplainNoteIdsInBodyHtml(prepareBodyHtmlForPreview(nextBodyHtml)),
       );
@@ -123,8 +133,8 @@ export function usePosterWorkspace({
 
   const enterExportFlow = useCallback(async () => {
     if (!bodyHtml.trim()) return;
-    await ensurePosterFontsLoaded();
-    const pageHtmls = buildPosterPagesFromBody(
+    await loadPosterFonts();
+    const pageHtmls = await buildPages(
       bodyHtml,
       title,
       editLayoutProfile,
@@ -219,8 +229,8 @@ export function usePosterWorkspace({
   const handleLayoutChange = useCallback(
     async (profile: PosterLayoutProfile) => {
       if (profile === layoutProfile || !bodyHtml.trim()) return;
-      await ensurePosterFontsLoaded();
-      const pageHtmls = buildPosterPagesFromBody(
+      await loadPosterFonts();
+      const pageHtmls = await buildPages(
         bodyHtml,
         title,
         profile,

@@ -34,6 +34,10 @@ import {
 } from '../../utils/studySectionItems';
 import { extractLyricsOnlyBodyHtml } from '../../utils/lyricsOnlyBodyHtml';
 import { L } from '../../utils/i18n';
+import '../../styles/posterFonts.css';
+import '../../styles/app/export-preview.css';
+import '../../styles/app/edit-presentation.css';
+import '../../styles/app/export-ink.css';
 
 type StudyEditorKind = 'vocab' | 'grammar';
 

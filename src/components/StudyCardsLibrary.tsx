@@ -9,6 +9,7 @@ import { L } from '../utils/i18n';
 import { useDrawer } from '../hooks/useDrawer';
 import SkeletonCard from './SkeletonCard';
 import './StudyCardsLibrary.css';
+import '../styles/posterFonts.css';
 
 type Props = Record<string, never>;
 

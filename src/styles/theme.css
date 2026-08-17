@@ -12,7 +12,7 @@
 /* 1. 静态基元                                                         */
 /* ------------------------------------------------------------------ */
 
-/* 品牌字标 Sansation Light（SIL Open Font License 1.1） */
+/* 品牌字标 Sansation Light（SIL Open Font License 1.1）— 首屏唯一自定义字体 */
 @font-face {
   font-family: "Sansation Light";
   src: url("/assets/Sansation-Light.ttf") format("truetype");
@@ -21,23 +21,7 @@
   font-display: swap;
 }
 
-/* 海报水印 / 页码 Sansation Regular */
-@font-face {
-  font-family: "Sansation";
-  src: url("/assets/Sansation-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* 日文学习衬线：仅当 UI 实际使用 --font-serif-jp 时才会下载（学习卡等），勿 preload */
-@font-face {
-  font-family: "Kozuka Mincho Pro R";
-  src: url("/assets/KozMinPro-Regular.otf") format("opentype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+/* Sansation Regular / KozMin：见 styles/posterFonts.css（编辑/导出/学习卡按需加载） */
 
 :root {
   /* 桌面编辑双栏断点（与 useMediaQuery / CSS 900px 对齐） */

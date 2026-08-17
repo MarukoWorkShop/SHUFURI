@@ -15,5 +15,7 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
-// React 已挂上即收起 boot（不等待首页 effect），减少「有内容但仍转圈」错觉
+// 尽早收起 boot：勿等 rAF（慢设备上易出现「内容已出仍转圈」）
+hideAppBootLoader();
+// 再补一帧，覆盖 StrictMode 双挂 / 首帧样式变量未就绪
 requestAnimationFrame(() => hideAppBootLoader());
