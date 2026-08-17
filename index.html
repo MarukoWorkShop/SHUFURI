@@ -16,7 +16,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.tcloudbaseapp.com https://*.tcb-api.tencentcloudapi.com https://*.tcloudbasegateway.com https://*.api.tcloudbase.com https://*.tcb.cloud.tencent.com; media-src 'self'; frame-ancestors 'none';"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.tcloudbaseapp.com https://*.tcb-api.tencentcloudapi.com https://*.tcloudbasegateway.com https://*.api.tcloudbasegateway.com https://*.api.tcloudbase.com https://*.tcb.cloud.tencent.com; media-src 'self'; frame-ancestors 'none';"
     />
     <meta name="description" content="SHUFURI — 多语歌词释音与排版助手。支持日语、韩语、英语、中文歌词的发音标注、双语翻译与海报排版导出。" />
     <title>SHUFURI — 多语歌词释音与排版助手</title>
@@ -31,27 +31,120 @@
         background: #f7f7f7;
         transition: opacity 0.28s ease, visibility 0.28s ease;
       }
+      html[data-theme='dark'] #app-boot {
+        background: #121212;
+      }
       #app-boot.app-boot--hide {
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
       }
-      .app-boot__spinner {
-        width: 28px;
-        height: 28px;
-        border: 2px solid #e0e0e0;
-        border-top-color: #000000;
-        border-radius: 50%;
-        animation: app-boot-spin 0.8s linear infinite;
+      .app-boot__panel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding: 0 28px;
+        text-align: center;
       }
-      @keyframes app-boot-spin {
-        to { transform: rotate(360deg); }
+      /* KINARI 胶囊加载提示（首屏空白页，不依赖主题 CSS） */
+      .app-boot__pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin: 0;
+        padding: 12px 22px;
+        border-radius: 999px;
+        background: #EAE370;
+        color: #2B2B1A;
+        font: 600 15px/1.3 -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+          'Noto Sans SC', sans-serif;
+        letter-spacing: 0.02em;
+        box-shadow: 0 1px 2px rgba(43, 43, 26, 0.06);
+      }
+      .app-boot__pill-text {
+        margin: 0;
+      }
+      /* 与 src/components/PulsatingDots.css 同参：依次脉动 */
+      .app-boot__dots {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        --pulsating-dot-color: currentColor;
+      }
+      .app-boot__dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 9999px;
+        background-color: var(--pulsating-dot-color);
+        display: inline-block;
+        animation: pulsating-dots-bounce 1.2s infinite ease-in-out both;
+      }
+      .app-boot__dot:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+      .app-boot__dot:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+      @keyframes pulsating-dots-bounce {
+        0%,
+        80%,
+        100% {
+          transform: scale(0.6);
+          opacity: 0.45;
+        }
+        40% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .app-boot__dot {
+          animation: none;
+          opacity: 0.8;
+        }
+      }
+      .app-boot__reload {
+        display: none;
+        margin: 0;
+        padding: 10px 18px;
+        border: 1px solid #ccc;
+        border-radius: 999px;
+        background: #fff;
+        font: 14px/1 -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+        color: #111;
+        cursor: pointer;
+      }
+      .app-boot__reload.is-visible {
+        display: inline-flex;
       }
     </style>
+    <script>
+      // 慢网超时仅提供刷新入口；勿过早拆掉 boot。真正收起由 hideAppBootLoader 负责。
+      (function () {
+        window.setTimeout(function () {
+          var boot = document.getElementById('app-boot');
+          if (!boot || boot.classList.contains('app-boot--hide') || !boot.parentNode) return;
+          var reload = boot.querySelector('.app-boot__reload');
+          if (reload) reload.classList.add('is-visible');
+        }, 20000);
+      })();
+    </script>
   </head>
   <body>
-    <div id="app-boot" aria-live="polite" aria-busy="true" aria-label="加载中">
-      <div class="app-boot__spinner" role="progressbar" aria-hidden="true"></div>
+    <div id="app-boot" aria-live="polite" aria-busy="true" aria-label="加载中，请稍候">
+      <div class="app-boot__panel">
+        <p class="app-boot__pill" role="status">
+          <span class="app-boot__pill-text">加载中，请稍候</span>
+          <span class="app-boot__dots" aria-hidden="true">
+            <span class="app-boot__dot"></span>
+            <span class="app-boot__dot"></span>
+            <span class="app-boot__dot"></span>
+          </span>
+        </p>
+        <button type="button" class="app-boot__reload" onclick="location.reload()">刷新重试</button>
+      </div>
     </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

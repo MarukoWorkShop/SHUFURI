@@ -1,42 +1,30 @@
-import { useCallback, useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
-import type { ColorTheme, LyricsLanguage, PedagogicalLevel } from '../services/appSettings';
-import { usePosterPreviewFitScale } from '../hooks/usePosterPreviewFitScale';
-import { useInkEditSession } from '../hooks/useInkEditSession';
-import { usePosterTypography } from '../hooks/usePosterTypography';
-import { usePosterExport } from '../hooks/usePosterExport';
+/**
+ * 首屏轻量 Document 壳：仅挂 usePosterWorkspace。
+ * ink / typography / export / save 在 mode !== 'input' 时懒加载 PosterEditSessionProvider。
+ */
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from 'react';
+import type { ColorTheme, LyricsLanguage, PedagogicalLevel, LangCode } from '../services/appSettings';
 import { useNativeBridge } from '../hooks/useNativeBridge';
-import { usePosterSave } from '../hooks/usePosterSave';
 import { usePosterWorkspace } from '../hooks/usePosterWorkspace';
 import {
   DEFAULT_PREVIEW_TYPOGRAPHY,
   buildPosterRenderOptions,
   type PosterLayoutProfile,
 } from '../utils/shufuriPoster/types';
-import {
-  PosterDocumentContext,
-  PosterInkContext,
-  PosterTypographyContext,
-  PosterWorkspaceContext,
-  type PosterDocumentContextValue,
-  type PosterInkContextValue,
-  type PosterTypographyContextValue,
-  type PosterWorkspaceContextValue,
-} from './PosterWorkspaceContext';
-import type { LangCode } from '../services/appSettings';
+import { PosterDocumentContext, type PosterDocumentContextValue } from './PosterWorkspaceContext';
 import type { ShowAppToast } from './AppToastContext';
-import {
-  commitExplainNoteToBody,
-  deleteExplainNoteFromBodyHtml,
-  updateExplainNoteInBodyHtml,
-  ensureExplainNoteIdsInBodyHtml,
-} from '../utils/appendExplainNoteToBody';
-import {
-  ensureStudyItemIdsInBodyHtml,
-  deleteStudyItemFromBodyHtml,
-  updateVocabItemInBodyHtml,
-  updateGrammarItemInBodyHtml,
-  commitGrammarStudyItemToBody,
-} from '../utils/studySectionItems';
+import type { WorkspaceSessionOps } from './PosterEditSessionProvider';
+
+const PosterEditSessionProvider = lazy(() => import('./PosterEditSessionProvider'));
 
 const EDIT_LAYOUT: PosterLayoutProfile = 'mobilePoster';
 
@@ -51,12 +39,6 @@ type SyncStudyCardsFn = (
   },
 ) => Promise<number>;
 
-type WorkspaceSessionOps = {
-  resetInkSession: () => void;
-  clearInkTarget: () => void;
-  resetTypographyPreview: () => void;
-};
-
 type Props = {
   children: ReactNode;
   lyricsLanguage: LyricsLanguage;
@@ -69,6 +51,9 @@ type Props = {
   onLibrarySaved: () => void;
   showToast: ShowAppToast;
 };
+
+const noop = () => {};
+const noopAsync = async () => {};
 
 export default function PosterWorkspaceProvider({
   children,
@@ -90,9 +75,9 @@ export default function PosterWorkspaceProvider({
   const previewTypographyRef = useRef(DEFAULT_PREVIEW_TYPOGRAPHY);
   const nativeExportingRef = useRef(false);
   const workspaceSessionRef = useRef<WorkspaceSessionOps>({
-    resetInkSession: () => {},
-    clearInkTarget: () => {},
-    resetTypographyPreview: () => {},
+    resetInkSession: noop,
+    clearInkTarget: noop,
+    resetTypographyPreview: noop,
   });
 
   const onAfterEnterEdit = useCallback(() => {
@@ -152,123 +137,15 @@ export default function PosterWorkspaceProvider({
     enterWorkspaceFromBridge,
   } = workspace;
 
-  useEffect(() => { titleMarkupHtmlRef.current = titleMarkupHtml; }, [titleMarkupHtml]);
-
-  const inkSession = useInkEditSession({
-    bodyHtml,
-    savedProjectId,
-    bodyHtmlRef,
-    titleRef,
-    artistRef,
-    titleMarkupHtmlRef,
-    setBodyHtml,
-    setTitle,
-    setArtist,
-    setTitleMarkupHtml,
-  });
-
-  const typography = usePosterTypography({
-    mode,
-    lang,
-    bodyHtml,
-    title,
-    artist,
-    layoutProfile,
-    titleMarkupHtml,
-    lyricsLanguage,
-    setPages,
-    pageRefs,
-  });
-
-  const {
-    showRubyAnnotations,
-    previewTypography,
-    repaginating,
-    rubyToggleSupported,
-    posterRenderOpts,
-    handleShowRubyChange,
-    resetTypographyPreview,
-  } = typography;
-
-  useEffect(() => { showRubyRef.current = showRubyAnnotations; }, [showRubyAnnotations]);
-  useEffect(() => { previewTypographyRef.current = previewTypography; }, [previewTypography]);
-
-  workspaceSessionRef.current = {
-    resetInkSession: inkSession.resetInkSession,
-    clearInkTarget: inkSession.clearInkTarget,
-    resetTypographyPreview,
-  };
-
-  const exportCtrl = usePosterExport({
-    pages,
-    title,
-    layoutProfile,
-    artist,
-    lyricsLanguage,
-    lang,
-    posterRenderOpts,
-    bodyHtmlRef,
-    titleRef,
-    artistRef,
-    pagesRef,
-    layoutProfileRef,
-    titleMarkupHtmlRef,
-    showRubyRef,
-    previewTypographyRef,
-    getPosterRenderOpts,
-    setPages,
-    nativeExportingRef,
-    showToast,
-  });
+  useEffect(() => {
+    titleMarkupHtmlRef.current = titleMarkupHtml;
+  }, [titleMarkupHtml]);
 
   useNativeBridge({
     onSetContent: enterWorkspaceFromBridge,
     onReset: handleReset,
-    onNativeExport: exportCtrl.handleNativeExport,
+    onNativeExport: noopAsync,
   });
-
-  const { saving, handleSave } = usePosterSave({
-    mode,
-    bodyHtml,
-    title,
-    artist,
-    lyrics,
-    layoutProfile,
-    lang,
-    titleMarkupHtml,
-    savedProjectId,
-    lyricsLanguage,
-    posterRenderOpts,
-    defaultIncludeVocabAndGrammar,
-    defaultPedagogicalLevel,
-    studyCardsBundleIdRef,
-    lyricsRef,
-    pageRefs,
-    setPages,
-    setSavedProjectId,
-    showToast,
-    onLibrarySaved,
-  });
-
-  const handleBackToEdit = useCallback(() => {
-    workspaceBackToEdit();
-    inkSession.clearInkTarget();
-  }, [workspaceBackToEdit, inkSession.clearInkTarget]);
-
-  const editScale = usePosterPreviewFitScale(
-    EDIT_LAYOUT,
-    editCanvasRef,
-    mode === 'edit',
-    `${savedProjectId ?? 'new'}:edit`,
-  );
-
-  const exportScale = usePosterPreviewFitScale(
-    layoutProfile,
-    exportPagesRef,
-    mode === 'export',
-    `${pages.length}:${savedProjectId ?? 'new'}:${layoutProfile}`,
-    exportCtrl.exporting || saving,
-  );
 
   const capturePageRef = useCallback(
     (index: number) => (el: HTMLDivElement | null) => {
@@ -277,208 +154,7 @@ export default function PosterWorkspaceProvider({
     [],
   );
 
-  const inkValue: PosterInkContextValue = useMemo(
-    () => ({
-      inkToolboxOpen: inkSession.inkToolboxOpen,
-      setInkToolboxOpen: inkSession.setInkToolboxOpen,
-      inkEditMode: inkSession.inkEditMode,
-      setInkEditMode: inkSession.setInkEditMode,
-      canUndoInkEdit: inkSession.canUndoInkEdit,
-      inkFocusGroupIndex: inkSession.inkFocusGroupIndex,
-      inkEditTarget: inkSession.inkEditTarget,
-      inkPopoverClosing: inkSession.inkPopoverClosing,
-      inkDraftKanji: inkSession.inkDraftKanji,
-      inkDraftKana: inkSession.inkDraftKana,
-      inkDraftZh: inkSession.inkDraftZh,
-      inkDraftKo: inkSession.inkDraftKo,
-      inkDraftTitle: inkSession.inkDraftTitle,
-      inkDraftArtist: inkSession.inkDraftArtist,
-      inkDraftJp: inkSession.inkDraftJp,
-      setInkDraftKanji: inkSession.setInkDraftKanji,
-      setInkDraftKana: inkSession.setInkDraftKana,
-      setInkDraftZh: inkSession.setInkDraftZh,
-      setInkDraftKo: inkSession.setInkDraftKo,
-      setInkDraftTitle: inkSession.setInkDraftTitle,
-      setInkDraftArtist: inkSession.setInkDraftArtist,
-      setInkDraftJp: inkSession.setInkDraftJp,
-      handleInkUndo: inkSession.handleInkUndo,
-      handleInkOpenTarget: inkSession.handleInkOpenTarget,
-      closeInkPopover: inkSession.closeInkPopover,
-      handleInkConfirm: inkSession.handleInkConfirm,
-      handleInkRemoveRuby: inkSession.handleInkRemoveRuby,
-    }),
-    [
-      inkSession.inkToolboxOpen,
-      inkSession.setInkToolboxOpen,
-      inkSession.inkEditMode,
-      inkSession.setInkEditMode,
-      inkSession.canUndoInkEdit,
-      inkSession.inkFocusGroupIndex,
-      inkSession.inkEditTarget,
-      inkSession.inkPopoverClosing,
-      inkSession.inkDraftKanji,
-      inkSession.inkDraftKana,
-      inkSession.inkDraftZh,
-      inkSession.inkDraftKo,
-      inkSession.inkDraftTitle,
-      inkSession.inkDraftArtist,
-      inkSession.inkDraftJp,
-      inkSession.setInkDraftKanji,
-      inkSession.setInkDraftKana,
-      inkSession.setInkDraftZh,
-      inkSession.setInkDraftKo,
-      inkSession.setInkDraftTitle,
-      inkSession.setInkDraftArtist,
-      inkSession.setInkDraftJp,
-      inkSession.handleInkUndo,
-      inkSession.handleInkOpenTarget,
-      inkSession.closeInkPopover,
-      inkSession.handleInkConfirm,
-      inkSession.handleInkRemoveRuby,
-    ],
-  );
-
-  const appendExplainNote = useCallback(
-    (payload: {
-      id: string;
-      term: string;
-      contextSense: string;
-      grammar?: string;
-      formula?: string;
-      mood?: string;
-    }) => {
-      const next = commitExplainNoteToBody(bodyHtmlRef.current, payload, lang);
-      bodyHtmlRef.current = next;
-      setBodyHtml(next);
-    },
-    [bodyHtmlRef, lang, setBodyHtml],
-  );
-
-  const removeExplainNote = useCallback(
-    (noteId: string) => {
-      const next = deleteExplainNoteFromBodyHtml(bodyHtmlRef.current, noteId);
-      if (next === bodyHtmlRef.current) return;
-      bodyHtmlRef.current = next;
-      setBodyHtml(next);
-    },
-    [bodyHtmlRef, setBodyHtml],
-  );
-
-  const updateExplainNote = useCallback(
-    (
-      noteId: string,
-      payload: {
-        term: string;
-        contextSense: string;
-        grammar?: string;
-        mood?: string;
-      },
-    ) => {
-      const next = updateExplainNoteInBodyHtml(bodyHtmlRef.current, noteId, payload, lang);
-      if (next === bodyHtmlRef.current) return;
-      bodyHtmlRef.current = next;
-      setBodyHtml(next);
-    },
-    [bodyHtmlRef, lang, setBodyHtml],
-  );
-
-  const ensureExplainNoteIds = useCallback(() => {
-    const next = ensureExplainNoteIdsInBodyHtml(bodyHtmlRef.current);
-    if (next === bodyHtmlRef.current) return;
-    bodyHtmlRef.current = next;
-    setBodyHtml(next);
-  }, [bodyHtmlRef, setBodyHtml]);
-
-  const ensureStudyItemIds = useCallback(() => {
-    const next = ensureStudyItemIdsInBodyHtml(bodyHtmlRef.current);
-    if (next === bodyHtmlRef.current) return;
-    bodyHtmlRef.current = next;
-    setBodyHtml(next);
-  }, [bodyHtmlRef, setBodyHtml]);
-
-  const removeStudyItem = useCallback(
-    (itemId: string) => {
-      const next = deleteStudyItemFromBodyHtml(bodyHtmlRef.current, itemId);
-      if (next === bodyHtmlRef.current) return;
-      bodyHtmlRef.current = next;
-      setBodyHtml(next);
-    },
-    [bodyHtmlRef, setBodyHtml],
-  );
-
-  const updateVocabItem = useCallback(
-    (
-      itemId: string,
-      payload: {
-        term: string;
-        meaning: string;
-        example: string;
-        translation: string;
-      },
-    ) => {
-      const next = updateVocabItemInBodyHtml(bodyHtmlRef.current, itemId, payload);
-      if (next === bodyHtmlRef.current) return;
-      bodyHtmlRef.current = next;
-      setBodyHtml(next);
-    },
-    [bodyHtmlRef, setBodyHtml],
-  );
-
-  const updateGrammarItem = useCallback(
-    (
-      itemId: string,
-      payload: {
-        titlePrimary: string;
-        titleSecondary: string;
-        detail: string;
-        example: string;
-        translation: string;
-      },
-    ) => {
-      const next = updateGrammarItemInBodyHtml(bodyHtmlRef.current, itemId, payload);
-      if (next === bodyHtmlRef.current) return;
-      bodyHtmlRef.current = next;
-      setBodyHtml(next);
-    },
-    [bodyHtmlRef, setBodyHtml],
-  );
-
-  const appendGrammarStudyItem = useCallback(
-    (payload: {
-      id: string;
-      titlePrimary: string;
-      titleSecondary: string;
-      detail: string;
-      example: string;
-      translation: string;
-    }) => {
-      const next = commitGrammarStudyItemToBody(bodyHtmlRef.current, payload, lang);
-      bodyHtmlRef.current = next;
-      setBodyHtml(next);
-    },
-    [bodyHtmlRef, lang, setBodyHtml],
-  );
-
-  const typographyValue: PosterTypographyContextValue = useMemo(
-    () => ({
-      showRubyAnnotations,
-      previewTypography,
-      repaginating,
-      rubyToggleSupported,
-      posterRenderOpts,
-      handleShowRubyChange,
-    }),
-    [
-      showRubyAnnotations,
-      previewTypography,
-      repaginating,
-      rubyToggleSupported,
-      posterRenderOpts,
-      handleShowRubyChange,
-    ],
-  );
-
-  const documentValue: PosterDocumentContextValue = useMemo(
+  const lightDocumentValue: PosterDocumentContextValue = useMemo(
     () => ({
       mode,
       lyrics,
@@ -492,31 +168,31 @@ export default function PosterWorkspaceProvider({
       titleMarkupHtml,
       lyricsLanguage,
       colorTheme,
-      exporting: exportCtrl.exporting,
-      saving,
+      exporting: false,
+      saving: false,
       editCanvasRef,
       exportPagesRef,
-      editScale,
-      exportScale,
+      editScale: 1,
+      exportScale: 1,
       capturePageRef,
       enterExportFlow,
       handleReset,
-      handleBackToEdit,
+      handleBackToEdit: workspaceBackToEdit,
       handleLayoutChange,
       handleLayoutFromHtml,
       openProject,
       isOpeningProject,
-      handleSave,
-      handleExportPdf: exportCtrl.handleExportPdf,
-      appendExplainNote,
-      removeExplainNote,
-      updateExplainNote,
-      ensureExplainNoteIds,
-      ensureStudyItemIds,
-      removeStudyItem,
-      updateVocabItem,
-      updateGrammarItem,
-      appendGrammarStudyItem,
+      handleSave: noopAsync,
+      handleExportPdf: noopAsync,
+      appendExplainNote: noop,
+      removeExplainNote: noop,
+      updateExplainNote: noop,
+      ensureExplainNoteIds: noop,
+      ensureStudyItemIds: noop,
+      removeStudyItem: noop,
+      updateVocabItem: noop,
+      updateGrammarItem: noop,
+      appendGrammarStudyItem: noop,
     }),
     [
       mode,
@@ -531,46 +207,75 @@ export default function PosterWorkspaceProvider({
       titleMarkupHtml,
       lyricsLanguage,
       colorTheme,
-      exportCtrl.exporting,
-      exportCtrl.handleExportPdf,
-      saving,
-      editScale,
-      exportScale,
       capturePageRef,
       enterExportFlow,
       handleReset,
-      handleBackToEdit,
+      workspaceBackToEdit,
       handleLayoutChange,
       handleLayoutFromHtml,
       openProject,
       isOpeningProject,
-      handleSave,
-      appendExplainNote,
-      removeExplainNote,
-      updateExplainNote,
-      ensureExplainNoteIds,
-      ensureStudyItemIds,
-      removeStudyItem,
-      updateVocabItem,
-      updateGrammarItem,
-      appendGrammarStudyItem,
     ],
   );
 
-  const legacyValue: PosterWorkspaceContextValue = useMemo(
-    () => ({ ...documentValue, ...typographyValue, ink: inkValue }),
-    [documentValue, typographyValue, inkValue],
+  const editSession = mode !== 'input' && (
+    <Suspense fallback={null}>
+      <PosterEditSessionProvider
+        mode={mode}
+        lyrics={lyrics}
+        title={title}
+        artist={artist}
+        bodyHtml={bodyHtml}
+        setBodyHtml={setBodyHtml}
+        pages={pages}
+        setPages={setPages}
+        layoutProfile={layoutProfile}
+        savedProjectId={savedProjectId}
+        setSavedProjectId={setSavedProjectId}
+        lang={lang}
+        titleMarkupHtml={titleMarkupHtml}
+        setTitleMarkupHtml={setTitleMarkupHtml}
+        setTitle={setTitle}
+        setArtist={setArtist}
+        lyricsLanguage={lyricsLanguage}
+        colorTheme={colorTheme}
+        defaultIncludeVocabAndGrammar={defaultIncludeVocabAndGrammar}
+        defaultPedagogicalLevel={defaultPedagogicalLevel}
+        studyCardsBundleIdRef={studyCardsBundleIdRef}
+        onLibrarySaved={onLibrarySaved}
+        showToast={showToast}
+        pageRefs={pageRefs}
+        bodyHtmlRef={bodyHtmlRef}
+        titleRef={titleRef}
+        artistRef={artistRef}
+        pagesRef={pagesRef}
+        layoutProfileRef={layoutProfileRef}
+        lyricsRef={lyricsRef}
+        titleMarkupHtmlRef={titleMarkupHtmlRef}
+        showRubyRef={showRubyRef}
+        previewTypographyRef={previewTypographyRef}
+        nativeExportingRef={nativeExportingRef}
+        editCanvasRef={editCanvasRef}
+        exportPagesRef={exportPagesRef}
+        enterExportFlow={enterExportFlow}
+        handleReset={handleReset}
+        handleLayoutChange={handleLayoutChange}
+        handleLayoutFromHtml={handleLayoutFromHtml}
+        openProject={openProject}
+        isOpeningProject={isOpeningProject}
+        workspaceBackToEdit={workspaceBackToEdit}
+        enterWorkspaceFromBridge={enterWorkspaceFromBridge}
+        workspaceSessionRef={workspaceSessionRef}
+        getPosterRenderOpts={getPosterRenderOpts}
+      >
+        {children}
+      </PosterEditSessionProvider>
+    </Suspense>
   );
 
   return (
-    <PosterDocumentContext.Provider value={documentValue}>
-      <PosterTypographyContext.Provider value={typographyValue}>
-        <PosterInkContext.Provider value={inkValue}>
-          <PosterWorkspaceContext.Provider value={legacyValue}>
-            {children}
-          </PosterWorkspaceContext.Provider>
-        </PosterInkContext.Provider>
-      </PosterTypographyContext.Provider>
+    <PosterDocumentContext.Provider value={lightDocumentValue}>
+      {mode === 'input' ? children : editSession}
     </PosterDocumentContext.Provider>
   );
 }

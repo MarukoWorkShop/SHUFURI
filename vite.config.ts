@@ -46,11 +46,35 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       assetsDir: 'assets',
+      // 勿把 html2canvas/jspdf 打进会与入口静态共享的 chunk：
+      // 否则 Vite preload helper 可能落在 vendor-pdf，导致首屏 modulepreload 整包。
+      // PDF 栈仅通过 await import(pdfExport/batchExport) 异步拉取即可。
+      modulePreload: {
+        resolveDependencies: (_filename, deps) =>
+          deps.filter(
+            (dep) =>
+              !dep.includes('vendor-cloudbase') &&
+              !dep.includes('pdfExport') &&
+              !dep.includes('batchExport') &&
+              !dep.includes('exportPosterPdf'),
+          ),
+      },
       rollupOptions: {
         output: {
           manualChunks(id) {
             if (id.includes('printFontBase64.generated')) {
               return 'print-fonts';
+            }
+            if (id.includes('node_modules')) {
+              if (id.includes('@cloudbase') || id.includes('bson')) {
+                return 'vendor-cloudbase';
+              }
+              if (id.includes('framer-motion') || id.includes('motion-dom') || id.includes('motion-utils')) {
+                return 'vendor-motion';
+              }
+              if (id.includes('/react-dom') || id.includes('/react/') || id.includes('\\react\\') || id.includes('scheduler')) {
+                return 'vendor-react';
+              }
             }
           },
         },

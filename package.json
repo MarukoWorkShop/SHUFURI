@@ -18,7 +18,7 @@
     "log:stats": "echo \"=== 本周提交统计 ===\" && git shortlog -sn --since=\"7 days ago\" | cat",
     "lint:commits": "echo \"=== 检查最近 5 条提交规范 ===\" && git log -5 --format=\"%s\" | while read msg; do echo \"$msg\" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|merge)(\\(.+\\))?: ' && echo \"  ✅ $msg\" || echo \"  ❌ $msg\"; done",
     "prepare": "node scripts/setupGitHooks.mjs",
-    "build:web": "npm run generate:print-font && tsc -b && vite build",
+    "build:web": "npm run generate:print-font && tsc -b && vite build && node scripts/gzipDist.mjs",
     "build": "npm run build:web",
     "test:codec": "node scripts/testInferPosterLang.mjs && tsx scripts/testStreamCodec.mjs && tsx scripts/testPaginateCodecBody.mjs && tsx scripts/testMatchLyricCitation.mjs && tsx scripts/testUserAkizakuraPaste.mjs && tsx scripts/testShowRubyPagination.mjs && tsx scripts/testEncoderPrompt.mjs && tsx scripts/testEncoderPromptMatrix.mjs && tsx scripts/testPedagogicalLevelMatrix.mjs && tsx scripts/testPedagogicalLint.mjs && tsx scripts/testDeepSeekPrompt.mjs && tsx scripts/testZhPipeline.mjs && tsx scripts/testQwenPasteRepair.mjs",
     "test": "vitest run",

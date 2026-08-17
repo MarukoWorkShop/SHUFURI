@@ -1,4 +1,4 @@
-import cloudbase from '@cloudbase/js-sdk';
+import { ensureCloudbaseApp } from '../cloudbaseClient';
 import type {
   AiGateway,
   AiGatewayRequest,
@@ -6,12 +6,6 @@ import type {
   ArkProxyRequest,
   ArkProxyResponse,
 } from './types';
-
-/**
- * CloudBase 环境 ID。
- * 从腾讯云 CloudBase 控制台获取，当前为设计文档记录值。
- */
-const CLOUDBASE_ENV_ID = 'ai-native-d5gtc59uc47601f23';
 
 /**
  * 云函数名称：arkProxy
@@ -25,34 +19,18 @@ const CLOUDBASE_FUNCTION_NAME = 'arkProxy';
  */
 const REQUEST_TIMEOUT_MS = 190_000;
 
-let app: cloudbase.app.App | null = null;
-let auth: cloudbase.auth.App | null = null;
-
-async function ensureAuth(): Promise<void> {
-  if (!app) {
-    app = cloudbase.init({ env: CLOUDBASE_ENV_ID });
-  }
-  if (!auth) {
-    auth = app.auth({ persistence: 'local' });
-  }
-
-  const loginState = await auth.getLoginState();
-  if (loginState) return; // 已登录
-
-  // 匿名登录
-  await auth.signInAnonymously();
-}
-
 /**
  * 获取当前 CloudBase 匿名用户 UID，用于后端硬配额校验。
  * 获取失败返回 undefined（不阻塞主流程，由 IP 限流兜底）。
  */
 export async function getCloudbaseUserId(): Promise<string | undefined> {
   try {
-    await ensureAuth();
-    const loginState = await auth!.getLoginState();
+    const app = await ensureCloudbaseApp();
+    const auth = app.auth({ persistence: 'local' });
+    const loginState = await auth.getLoginState();
     if (loginState) {
-      return (loginState as any).user?.uid || (loginState as any).uid;
+      return (loginState as { user?: { uid?: string }; uid?: string }).user?.uid
+        || (loginState as { uid?: string }).uid;
     }
   } catch {
     // 静默
@@ -88,16 +66,11 @@ async function callCloudFunction(
   data: Record<string, unknown>,
   signal?: AbortSignal,
 ): Promise<unknown> {
-  // 调用前确保匿名登录；否则 callFunction 常以非 Error 对象失败
-  await ensureAuth();
-  if (!app) {
-    app = cloudbase.init({ env: CLOUDBASE_ENV_ID });
-  }
+  const app = await ensureCloudbaseApp();
 
   return new Promise((resolve, reject) => {
     let settled = false;
 
-    // AbortController 超时/取消
     const onAbort = () => {
       if (settled) return;
       settled = true;
@@ -120,9 +93,9 @@ async function callCloudFunction(
       }, { once: true });
     }
 
-    app!
+    app
       .callFunction({ name, data })
-      .then((res: any) => {
+      .then((res: { result?: unknown }) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
@@ -139,14 +112,12 @@ async function callCloudFunction(
 
 export const cloudbaseGateway: AiGateway = {
   async init(): Promise<void> {
-    await ensureAuth();
+    await ensureCloudbaseApp();
   },
 
   async send(req: AiGatewayRequest, signal?: AbortSignal): Promise<AiGatewayResponse> {
-    // 获取 CloudBase 匿名用户 UID，用于后端硬配额校验
     const userId = await getCloudbaseUserId();
 
-    // 构建云函数兼容的请求体
     const cloudFuncData: ArkProxyRequest = {
       action: req.action,
       requestId: req.requestId,

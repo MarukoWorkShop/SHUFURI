@@ -11,6 +11,7 @@ import { L } from '../utils/i18n';
 import BatchExportPanel from './BatchExportPanel';
 import { useDrawer } from '../hooks/useDrawer';
 import SkeletonCard from './SkeletonCard';
+import '../styles/app/drawer.css';
 
 type SavedLyricsLibraryProps = {
   onOpen: (project: SavedLyricsProject) => void;

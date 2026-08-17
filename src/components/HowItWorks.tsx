@@ -170,7 +170,9 @@ export default function HowItWorks({ className }: HowItWorksProps) {
         onClick={toggleCollapsed}
         aria-expanded={!collapsed}
       >
-        <span className="hiw__pill-label">SHUFURI · 使用流程 4 步</span>
+        <span className="hiw__pill-label">
+          {L('SHUFURI · 使用流程', 'SHUFURI · How it works')}
+        </span>
         <span className={`hiw__chevron hiw__chevron--${collapsed ? 'down' : 'up'}`} aria-hidden />
       </button>
 

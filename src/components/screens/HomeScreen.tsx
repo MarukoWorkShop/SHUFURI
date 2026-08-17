@@ -5,12 +5,15 @@ import { useClipboardDetection } from '../../hooks/useClipboardDetection';
 import { useDesktopMusicShareDetection } from '../../hooks/useDesktopMusicShareDetection';
 import { useFillMusicShareFromClipboard } from '../../hooks/useFillMusicShareFromClipboard';
 import HtmlPasteInput from '../HtmlPasteInput';
-import SavedLyricsLibrary from '../SavedLyricsLibrary';
-import StudyCardsLibrary from '../StudyCardsLibrary';
-import HomeDailyLyricQuote from '../HomeDailyLyricQuote';
-import HowItWorks from '../HowItWorks';
-import HomeFaqSection from '../HomeFaqSection';
-import { useLayoutEffect, useState, type RefObject, type Dispatch, type SetStateAction } from 'react';
+import {
+  useLayoutEffect,
+  useState,
+  lazy,
+  Suspense,
+  type RefObject,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import type { SavedLyricsProject } from '../../services/savedLyricsStore';
 import { hideAppBootLoader } from '../../utils/hideAppBootLoader';
 import type { ExternalPromptRequest } from '../../hooks/useStructuredLyricsClipboardCard';
@@ -18,6 +21,14 @@ import type { ShareOcrData } from '../../context/HomeSessionContext';
 import { shareOcrToEncoderContext } from '../../utils/shareOcrToEncoderContext';
 import { useAppToast } from '../../context/AppToastContext';
 import { L } from '../../utils/i18n';
+// Q&A 胶囊在 HomeScreen 常驻渲染；样式不能跟着 FAQ 内容 chunk 懒加载，否则会丢位置/字号/胶囊外观
+import '../HomeFaqSection.css';
+
+const HowItWorks = lazy(() => import('../HowItWorks'));
+const SavedLyricsLibrary = lazy(() => import('../SavedLyricsLibrary'));
+const StudyCardsLibrary = lazy(() => import('../StudyCardsLibrary'));
+const HomeDailyLyricQuote = lazy(() => import('../HomeDailyLyricQuote'));
+const HomeFaqSection = lazy(() => import('../HomeFaqSection'));
 
 type Props = {
   inputResetKey: number;
@@ -66,10 +77,9 @@ export default function HomeScreen({
   const [faqOpen, setFaqOpen] = useState(false);
 
   useLayoutEffect(() => {
-    // 首页 UI 只用系统字体（PingFang / Hiragino），不等待海报专用字体
-    // （KozMin / SourceHanSerif 仅海报排版/导出时才按需加载；韩文走系统衬线）。
-    // 直接淡出 boot loader，避免首屏被字体请求阻塞。
-    requestAnimationFrame(() => hideAppBootLoader());
+    // 首页 UI 只用系统字体（PingFang / Hiragino），不等待海报专用字体。
+    // layout 阶段立刻收起 boot，避免「DOM 已出、遮罩仍挡」的假死感。
+    hideAppBootLoader();
   }, []);
 
   useClipboardDetection({
@@ -114,48 +124,61 @@ export default function HomeScreen({
             : '把喜欢的歌，变成带注音与语法解析的学习材料'}
         </p>
       </div>
-      <HowItWorks />
+      <Suspense fallback={null}>
+        <HowItWorks />
+      </Suspense>
       <div className="home-form-card">
         <HtmlPasteInput
-        key={inputResetKey}
-        includeVocabAndGrammar={appSettings.defaultIncludeVocabAndGrammar}
-        pedagogicalLevel={appSettings.defaultPedagogicalLevel}
-        language={appSettings.lyricsLanguage}
-        matrix={languageMatrixContext}
-        onLanguageChange={onLanguageChange}
-        initialTitle={shareOcrData?.title}
-        initialArtist={shareOcrData?.artist}
-        ocrDetectedLanguage={shareOcrData?.detectedLanguage}
-        ocrContext={shareOcrToEncoderContext(shareOcrData)}
-        pasteLayoutReady={pasteLayoutReady}
-        clipboardStreamTitle={clipboardStreamTitle}
-        onActivatePasteLayout={onActivatePasteLayout}
-        onParseMusicShareText={parseShareText}
-        parseMusicShareBusy={parseMusicShareBusy}
-        onFormMetaChange={onFormMetaChange}
-        externalPrompt={externalPrompt}
-        onExternalPromptHandled={onExternalPromptHandled}
-      />
+          key={inputResetKey}
+          includeVocabAndGrammar={appSettings.defaultIncludeVocabAndGrammar}
+          pedagogicalLevel={appSettings.defaultPedagogicalLevel}
+          language={appSettings.lyricsLanguage}
+          matrix={languageMatrixContext}
+          onLanguageChange={onLanguageChange}
+          initialTitle={shareOcrData?.title}
+          initialArtist={shareOcrData?.artist}
+          ocrDetectedLanguage={shareOcrData?.detectedLanguage}
+          ocrContext={shareOcrToEncoderContext(shareOcrData)}
+          pasteLayoutReady={pasteLayoutReady}
+          clipboardStreamTitle={clipboardStreamTitle}
+          onActivatePasteLayout={onActivatePasteLayout}
+          onParseMusicShareText={parseShareText}
+          parseMusicShareBusy={parseMusicShareBusy}
+          onFormMetaChange={onFormMetaChange}
+          externalPrompt={externalPrompt}
+          onExternalPromptHandled={onExternalPromptHandled}
+        />
       </div>
-      <div className="home-libraries-grid">
-        <SavedLyricsLibrary onOpen={onOpenProject} refreshKey={libraryRefreshKey} />
-        <StudyCardsLibrary />
-      </div>
-      <HomeDailyLyricQuote refreshKey={libraryRefreshKey} onOpenProject={onOpenProject} />
+      <Suspense fallback={null}>
+        <div className="home-libraries-grid">
+          <SavedLyricsLibrary onOpen={onOpenProject} refreshKey={libraryRefreshKey} />
+          <StudyCardsLibrary />
+        </div>
+        <HomeDailyLyricQuote refreshKey={libraryRefreshKey} onOpenProject={onOpenProject} />
+      </Suspense>
       <div className="home-faq__pill-wrapper">
         {faqOpen ? (
           <div className="home-faq__pill-row">
-            <span className="home-faq__pill home-faq__pill--label">SHUFURI · Q&A</span>
+            <span className="home-faq__pill home-faq__pill--label">
+              {L('SHUFURI · Q&A', 'SHUFURI · Q&A')}
+            </span>
             <button
               type="button"
               className="home-faq__toggle"
               onClick={() => setFaqOpen(false)}
               aria-expanded={true}
-              aria-label="收起常见答疑"
-              title="收起"
+              aria-label={L('收起常见答疑', 'Collapse Q&A')}
+              title={L('收起', 'Collapse')}
             >
               <svg className="home-faq__toggle-icon" viewBox="0 0 24 24" aria-hidden>
-                <path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M6 15l6-6 6 6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
           </div>
@@ -165,24 +188,34 @@ export default function HomeScreen({
             className="home-faq__pill"
             onClick={() => setFaqOpen(true)}
             aria-expanded={false}
-            title="展开常见答疑"
+            title={L('展开常见答疑', 'Expand Q&A')}
           >
-            Q&A
+            {L('SHUFURI · Q&A', 'SHUFURI · Q&A')}
           </button>
         )}
       </div>
-      {faqOpen && <HomeFaqSection />}
+      {faqOpen && (
+        <Suspense fallback={null}>
+          <HomeFaqSection />
+        </Suspense>
+      )}
       <footer className="home-footer">
         <div className="home-footer__left">
-          <span className="home-footer__copy">
-            Copyright © 2020 – 2026 Wanderful Studio
-          </span>
+          <span className="home-footer__copy">Copyright © 2020 – 2026 Wanderful Studio</span>
         </div>
         <div className="home-footer__right">
-          <a className="home-footer__link" href="/terms">{L('服务协议', 'Terms of Service')}</a>
-          <span className="home-footer__sep" aria-hidden="true">|</span>
-          <a className="home-footer__link" href="/privacy">{L('隐私政策', 'Privacy Policy')}</a>
-          <span className="home-footer__sep" aria-hidden="true">|</span>
+          <a className="home-footer__link" href="/terms">
+            {L('服务协议', 'Terms of Service')}
+          </a>
+          <span className="home-footer__sep" aria-hidden="true">
+            |
+          </span>
+          <a className="home-footer__link" href="/privacy">
+            {L('隐私政策', 'Privacy Policy')}
+          </a>
+          <span className="home-footer__sep" aria-hidden="true">
+            |
+          </span>
           <a
             className="home-footer__link"
             href="https://beian.miit.gov.cn/"
@@ -191,7 +224,9 @@ export default function HomeScreen({
           >
             粤ICP备2026114306号
           </a>
-          <span className="home-footer__sep" aria-hidden="true">|</span>
+          <span className="home-footer__sep" aria-hidden="true">
+            |
+          </span>
           <span className="home-footer__meta">粤公网安备 XXXXXXXXXXXX号</span>
         </div>
       </footer>

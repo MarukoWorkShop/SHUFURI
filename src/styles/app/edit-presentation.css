@@ -1,10 +1,74 @@
-/* —— 编辑页全屏模式 / 极简分栏 / 聚光灯（一期）—— */
+/* —— 编辑页全屏模式 / 极简分栏 / 聚光灯（一期）——
+ * 注意：桌面双栏布局的 display/flex-direction 必须写在本文件。
+ * export-preview.css 会被 Vite 抽成「导出页才加载」的共享 CSS chunk，
+ * 仅编辑进页时拿不到，会导致歌词|笔记本上下堆叠。
+ */
 
 .edit-area {
   --edit-split-left: 50%;
   --edit-present-font-scale-left: 1.5;
   --edit-present-font-scale-right: 1.5;
   --edit-spotlight-focus-scale: 1.5;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  position: relative;
+  background: var(--color-edit-canvas-bg);
+}
+
+.edit-area__workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.edit-area__lyrics-pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.edit-area__lyrics-pane > .edit-canvas-scroll {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 桌面双栏：歌词 | 笔记本（与 EDIT_DESKTOP_SPLIT_QUERY / 900px 对齐） */
+@media (min-width: 900px) {
+  .edit-area--desktop-split .edit-area__workspace {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .edit-area--desktop-split .edit-area__lyrics-pane {
+    flex: 1 1 var(--edit-split-left);
+    max-width: var(--edit-split-left);
+    min-width: 0;
+  }
+
+  .edit-area--desktop-split .edit-notebook {
+    flex: 1 1 calc(100% - var(--edit-split-left));
+    max-width: calc(100% - var(--edit-split-left));
+    min-width: 0;
+    align-self: stretch;
+  }
+
+  .edit-area--desktop-split .ink-toolbox {
+    position: absolute;
+    right: var(--ui-space-1, 8px);
+    top: 50%;
+    transform: translateY(-50%);
+  }
 }
 
 /* 全屏态：藏顶栏 */
@@ -150,20 +214,6 @@ body.is-resizing-edit-split {
 body.is-resizing-edit-split * {
   cursor: col-resize !important;
   user-select: none !important;
-}
-
-@media (min-width: 900px) {
-  .edit-area--desktop-split .edit-area__lyrics-pane {
-    flex: 1 1 var(--edit-split-left);
-    max-width: var(--edit-split-left);
-    min-width: 0;
-  }
-
-  .edit-area--desktop-split .edit-notebook {
-    flex: 1 1 calc(100% - var(--edit-split-left));
-    max-width: calc(100% - var(--edit-split-left));
-    min-width: 0;
-  }
 }
 
 /* —— 分栏字号（仅全屏态；不碰导出）。50:50 → 1.5×，栏越宽越大。

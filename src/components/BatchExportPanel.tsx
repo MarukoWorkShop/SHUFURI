@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { L } from '../utils/i18n';
 import type { PosterLayoutProfile } from '../utils/shufuriPoster/types';
-import { executeBatchExport } from '../utils/batchExportPdf';
 import type { BatchExportProgress } from '../utils/batchExportPdf';
 
 /* ---------- 尺寸选项 ---------- */
@@ -66,6 +65,7 @@ export default function BatchExportPanel({ open, onClose }: BatchExportPanelProp
     setProgress(null);
 
     try {
+      const { executeBatchExport } = await import('../utils/batchExportPdf');
       await executeBatchExport(selectedProfile, (p) => setProgress({ ...p }));
       setPhase('done');
     } catch (e) {

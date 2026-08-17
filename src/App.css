@@ -4,12 +4,8 @@
  */
 @import './styles/app/layout.css';
 @import './styles/app/buttons.css';
-@import './styles/app/export-preview.css';
-@import './styles/app/edit-presentation.css';
-@import './styles/app/drawer.css';
-@import './styles/app/export-poster.css';
 @import './styles/app/home.css';
-@import './styles/app/export-ink.css';
 @import './styles/app/modals.css';
 @import './styles/app/toast.css';
 @import './styles/app/manual-paste-modal.css';
+/* drawer / export-* / edit-presentation：随歌词库或编辑/导出屏懒加载，勿打进首屏 CSS */
