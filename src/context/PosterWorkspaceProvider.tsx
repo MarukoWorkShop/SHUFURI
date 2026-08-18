@@ -23,7 +23,9 @@ import {
 import { PosterDocumentContext, type PosterDocumentContextValue } from './PosterWorkspaceContext';
 import type { ShowAppToast } from './AppToastContext';
 import type { WorkspaceSessionOps } from './PosterEditSessionProvider';
-import GlobalChunkLoading from '../components/GlobalChunkLoading';
+import GlobalChunkLoading, {
+  EDIT_ENTRY_LOADING_TIPS,
+} from '../components/GlobalChunkLoading';
 
 const PosterEditSessionProvider = lazy(() => import('./PosterEditSessionProvider'));
 
@@ -222,7 +224,7 @@ export default function PosterWorkspaceProvider({
   const editSession = mode !== 'input' && (
     <Suspense
       fallback={
-        <GlobalChunkLoading messageZh="正在打开编辑页…" messageEn="Opening editor…" />
+        <GlobalChunkLoading tips={EDIT_ENTRY_LOADING_TIPS} />
       }
     >
       <PosterEditSessionProvider

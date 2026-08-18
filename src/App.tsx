@@ -2,8 +2,9 @@ import { useEffect, useState, lazy, Suspense } from 'react';
 import './App.css';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/app/AppLayout';
-import { PulsatingDots } from './components/PulsatingDots';
-import GlobalChunkLoading from './components/GlobalChunkLoading';
+import GlobalChunkLoading, {
+  EDIT_ENTRY_LOADING_TIPS,
+} from './components/GlobalChunkLoading';
 import HomeScreen from './components/screens/HomeScreen';
 // Edit/Export 屏体积大（海报排版、导出、字典等），按需懒加载以缩小首屏
 const EditScreen = lazy(() => import('./components/screens/EditScreen'));
@@ -144,11 +145,7 @@ function AppShell({
             </div>
           }
         >
-          <Suspense
-            fallback={
-              <GlobalChunkLoading messageZh="正在打开编辑页…" messageEn="Opening editor…" />
-            }
-          >
+          <Suspense fallback={<GlobalChunkLoading tips={EDIT_ENTRY_LOADING_TIPS} />}>
             <EditScreen />
           </Suspense>
         </ErrorBoundary>
@@ -164,26 +161,10 @@ function AppShell({
       )}
 
       {mode === 'input' && homeSession.isLayouting && (
-        <div className="global-layout-loading" role="status" aria-live="polite">
-          <div className="global-layout-loading__inner">
-            <PulsatingDots size={12} />
-            <p className="global-layout-loading__text">
-              {L('正在生成歌词学习页面…', 'Generating lyrics study page…')}
-            </p>
-          </div>
-        </div>
+        <GlobalChunkLoading tips={EDIT_ENTRY_LOADING_TIPS} />
       )}
 
-      {isOpeningProject && (
-        <div className="global-layout-loading" role="status" aria-live="polite">
-          <div className="global-layout-loading__inner">
-            <PulsatingDots size={12} />
-            <p className="global-layout-loading__text">
-              {L('正在打开歌词…', 'Opening lyrics…')}
-            </p>
-          </div>
-        </div>
-      )}
+      {isOpeningProject && <GlobalChunkLoading tips={EDIT_ENTRY_LOADING_TIPS} />}
     </AppLayout>
   );
 }
