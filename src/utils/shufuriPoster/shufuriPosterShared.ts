@@ -8,7 +8,7 @@ import {
   compileEditCssOverrides,
 } from '../posterTypography/index.ts';
 import { POSTER_BG_COLOR } from '../posterTypography/typographyConstants.ts';
-import { WATERMARK_BAR_HEIGHT_PX, WATERMARK_TEXT_CLEARANCE_PX, watermarkDesignScale } from './posterWatermark.ts';
+import { WATERMARK_TEXT_CLEARANCE_PX, watermarkDesignScale } from './posterWatermark.ts';
 
 export { dimForFuriganaPoster };
 
