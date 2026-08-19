@@ -3,6 +3,7 @@ import {
   buildShufuriPosterInnerCss,
   buildShufuriPosterRootStyle,
   getShufuriPosterCanvasDimensions,
+  RASTER_SAFE_CSS,
 } from './shufuriPoster/shufuriPosterShared';
 import type { PosterLayoutProfile, PosterRenderOptions } from './shufuriPoster/types';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
@@ -10,6 +11,7 @@ import { getAppSettings } from '../services/appSettings';
 import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
 import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
 import { appendPosterWatermark } from './shufuriPoster/posterWatermark';
+import { getPosterBackgroundUrl } from '../config/posterBackgrounds';
 
 /**
  * 导出 html2canvas 渲染补偿因子。
@@ -20,52 +22,7 @@ import { appendPosterWatermark } from './shufuriPoster/posterWatermark';
  */
 const EXPORT_HTML2CANVAS_SCALE_FUDGE = 0.98;
 
-/**
- * 导出专用 CSS（仅挂载 DOM，不影响屏幕预览）。
- *
- * html2canvas 1.4.x 用拉丁样本 "Hidden Text" 测 font baseline，对 CJK
- * （PingFang / Apple Myungjo / 思源）基线常偏大，字形画到行盒下方；
- * 任一祖先 overflow≠visible 或 contain:paint 都会把下半截裁掉
- * （表现为中文行底部切边，韩文略好、标题因行高更大常幸免）。
- */
-const EXPORT_RASTER_SAFE_CSS = `
-.fv-html-poster-root[data-export-raster="1"],
-.fv-html-poster-root[data-export-raster="1"] .fv-body-h,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-group,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-group .jp-line,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-group .ko-line,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-group .cn-line,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-group .gloss-line,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-line1,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-ja,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-ko,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-zh,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-cn,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-gloss,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit h3.grammar-point-title,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-detail,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-ja,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-ko,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-zh,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-cn,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-gloss {
-  overflow: visible !important;
-}
-.fv-html-poster-root[data-export-raster="1"] .lyrics-group .jp-line,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-group .ko-line,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-group .cn-line,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-group .gloss-line {
-  padding-bottom: 0.22em !important;
-  line-height: 1.55 !important;
-}
-.fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line,
-.fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line * {
-  line-height: 1.55 !important;
-}
-`;
+
 
 /** 导出 backdrop 完全移出左缘：画布宽 + 视口宽 + 余量（-200vw 不足以隐藏 1080px 手机竖屏画布） */
 function getExportBackdropOffscreenLeft(canvasW: number): number {
@@ -129,7 +86,8 @@ export function mountPosterExportPage(
   } = opts;
   void _pageCount;
   const { width: canvasW, height: canvasH } = getShufuriPosterCanvasDimensions(layoutProfile);
-  const rootStyle = buildShufuriPosterRootStyle(layoutProfile);
+  const backgroundImage = getPosterBackgroundUrl(renderOptions?.backgroundId);
+  const rootStyle = buildShufuriPosterRootStyle(layoutProfile, backgroundImage);
 
   // 离屏 backdrop：为 html2canvas 提供白底，尺寸与画布一致，永不移入视口。
   // 关键约束：
@@ -185,7 +143,8 @@ export function mountPosterExportPage(
       showRuby: renderOptions?.showRuby,
       userFontScale: renderOptions?.userFontScale,
       userLineHeightScale: renderOptions?.userLineHeightScale,
-    }) + EXPORT_RASTER_SAFE_CSS;
+      backgroundImage,
+    }) + RASTER_SAFE_CSS;
   shell.appendChild(styleEl);
 
   if (showTitle) {

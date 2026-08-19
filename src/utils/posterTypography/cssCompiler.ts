@@ -38,6 +38,8 @@ export type CompilePosterCssOptions = {
   spec?: PrintPageSpec;
   viewMode?: 'screen' | 'edit';
   includeFontFaces?: boolean;
+  /** 背景图 URL；为空时保持 POSTER_BG_COLOR 纯色背景 */
+  backgroundImage?: string;
   showRuby?: boolean;
 };
 
@@ -702,7 +704,10 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   }`;
 }
 
-function compilePrintPageShell(spec: PrintPageSpec): string {
+function compilePrintPageShell(spec: PrintPageSpec, backgroundImage?: string): string {
+  const pageBg = backgroundImage
+    ? `${POSTER_BG_COLOR} url('${backgroundImage}') center/cover no-repeat`
+    : POSTER_BG_COLOR;
   return `
   @page {
     size: ${spec.pageSizeCss};
@@ -716,7 +721,7 @@ function compilePrintPageShell(spec: PrintPageSpec): string {
     position: relative;
     box-sizing: border-box;
     padding: ${mm(spec.padTopMm)} ${mm(spec.padRightMm)} ${mm(spec.padBottomMm)} ${mm(spec.padLeftMm)};
-    background: ${POSTER_BG_COLOR};
+    background: ${pageBg};
     overflow: hidden;
     page-break-after: always;
     break-after: page;
@@ -760,12 +765,13 @@ export function compilePosterCss(
   const unit = options.unit ?? 'px';
   const spec = options.spec;
   const includeFontFaces = options.includeFontFaces ?? unit === 'px';
+  const backgroundImage = options.backgroundImage;
 
   const fontFaces = includeFontFaces
     ? `${getPosterJapaneseFontsFaceCss()}${getPosterSourceHanSerifScFontFaceCss()}${getPosterEnglishFontFaceCss()}${getPosterSansationFontFaceCss()}`
     : '';
 
-  const printShell = unit === 'mm' && spec ? compilePrintPageShell(spec) : '';
+  const printShell = unit === 'mm' && spec ? compilePrintPageShell(spec, backgroundImage) : '';
   const bodyRules = compileBodyRules(resolved, unit, spec);
   const zhRules = resolved.flags.isZhPipeline
     ? compileZhLayoutCss(resolved, unit, spec)

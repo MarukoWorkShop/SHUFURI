@@ -9,7 +9,10 @@
   font-size: var(--toast-font-size);
   font-weight: var(--toast-font-weight);
   letter-spacing: 0.03em;
-  white-space: nowrap;
+  max-width: min(90vw, 360px);
+  white-space: normal;
+  text-align: center;
+  line-height: 1.45;
   pointer-events: none;
   box-shadow: var(--toast-shadow);
   animation: app-toast-in 0.3s ease;

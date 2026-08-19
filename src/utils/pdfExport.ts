@@ -53,6 +53,55 @@ export async function waitForImagesInElement(root: HTMLElement): Promise<void> {
   );
 }
 
+/** 从 CSS background-image 值中提取 url(...) */
+function extractBackgroundImageUrls(value: string): string[] {
+  const urls: string[] = [];
+  const regex = /url\(\s*(['"]?)(.*?)\1\s*\)/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(value)) !== null) {
+    const url = match[2];
+    if (url) urls.push(url);
+  }
+  return urls;
+}
+
+/** 等待节点内 CSS 背景图加载完成（不阻塞导出：加载失败仍继续） */
+async function waitForBackgroundImagesInElement(root: HTMLElement): Promise<void> {
+  const urls = new Set<string>();
+  const nodes = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
+  for (const node of nodes) {
+    const bgImage = node.style.backgroundImage || node.style.background;
+    if (bgImage) {
+      for (const url of extractBackgroundImageUrls(bgImage)) {
+        urls.add(url);
+      }
+    }
+  }
+  try {
+    const computedBg = root.ownerDocument?.defaultView?.getComputedStyle(root).backgroundImage;
+    if (computedBg) {
+      for (const url of extractBackgroundImageUrls(computedBg)) {
+        urls.add(url);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  if (urls.size === 0) return;
+  await Promise.all(
+    Array.from(urls).map((src) => {
+      return new Promise<void>((resolve) => {
+        const img = new Image();
+        const done = () => resolve();
+        img.addEventListener('load', done, { once: true });
+        img.addEventListener('error', done, { once: true });
+        img.src = src;
+        if (img.complete) resolve();
+      });
+    }),
+  );
+}
+
 /** 将 blob/http 图片 src 转为 data URL，供 html2canvas 稳定栅格化 */
 async function srcToDataUrlForPdfRaster(src: string, baseUri: string): Promise<string | null> {
   if (src.startsWith('data:')) return src;
@@ -290,6 +339,7 @@ export async function rasterizePosterLayoutPageRoot(
   }
   await waitForLayoutStable(el);
   await waitForImagesInElement(el);
+  await waitForBackgroundImagesInElement(el);
   await preloadImagesInElementForPdf(el);
   await waitForLayoutStable(el);
   return await withDeadline(
@@ -719,6 +769,7 @@ export async function rasterizePageHtmlToBlob(
   try {
     await waitForLayoutStable(mount.root);
     await waitForImagesInElement(mount.root);
+    await waitForBackgroundImagesInElement(mount.root);
     await preloadImagesInElementForPdf(mount.root);
     await waitForLayoutStable(mount.root);
     const canvas = await withDeadline(

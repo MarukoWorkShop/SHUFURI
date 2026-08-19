@@ -1,11 +1,13 @@
 /** 排版模式：打印 B5、手机竖屏 9:16、1:1 方形、社媒竖版 3:4 */
 export type PosterLayoutProfile = 'clipPosterPrint' | 'mobilePoster' | 'squarePoster' | 'socialPoster';
 
-/** 海报渲染/分页选项（注音可见性 + 用户密度倍率） */
+/** 海报渲染/分页选项（注音可见性 + 用户密度倍率 + 背景图） */
 export type PosterRenderOptions = {
   showRuby?: boolean;
   userFontScale?: number;
   userLineHeightScale?: number;
+  /** 背景图 ID，对应 src/config/posterBackgrounds.ts；空/undefined 表示纯白背景 */
+  backgroundId?: string;
 };
 
 export type PreviewTypography = {
@@ -22,11 +24,13 @@ export const DEFAULT_PREVIEW_TYPOGRAPHY: PreviewTypography = {
 export function buildPosterRenderOptions(
   showRuby: boolean,
   typography: PreviewTypography,
+  backgroundId?: string,
 ): PosterRenderOptions {
   return {
     showRuby,
     userFontScale: typography.fontScale,
     userLineHeightScale: typography.lineHeightScale,
+    backgroundId,
   };
 }
 

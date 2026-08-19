@@ -185,7 +185,9 @@ export default function PosterEditSessionProvider({
     repaginating,
     rubyToggleSupported,
     posterRenderOpts,
+    backgroundId,
     handleShowRubyChange,
+    handleBackgroundChange,
     resetTypographyPreview,
   } = typography;
 
@@ -452,7 +454,9 @@ export default function PosterEditSessionProvider({
       repaginating,
       rubyToggleSupported,
       posterRenderOpts,
+      backgroundId,
       handleShowRubyChange,
+      handleBackgroundChange,
     }),
     [
       showRubyAnnotations,
@@ -460,7 +464,9 @@ export default function PosterEditSessionProvider({
       repaginating,
       rubyToggleSupported,
       posterRenderOpts,
+      backgroundId,
       handleShowRubyChange,
+      handleBackgroundChange,
     ],
   );
 

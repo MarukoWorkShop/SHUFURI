@@ -453,7 +453,13 @@ export function useStructuredLyricsClipboardCard({
     void write
       .then(() => {
         pushExternalPrompt(prompt);
-        showToast(L('✓ 已复制加强完整口令，请重试后再粘贴', '✓ Enhanced prompt copied. Retry and paste again.'));
+        showToast(
+          L(
+            '已复制加强口令。请先打开联网搜索再粘贴',
+            'Enhanced prompt copied. Turn on web search before pasting.',
+          ),
+          4500,
+        );
       })
       .catch(() => {
         showToast(L('复制口令失败', 'Failed to copy prompt.'));

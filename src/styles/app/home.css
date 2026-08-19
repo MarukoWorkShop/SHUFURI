@@ -712,7 +712,7 @@
   -webkit-appearance: none !important;
   appearance: none !important;
   box-shadow: none !important;
-  caret-color: transparent;
+  caret-color: var(--ui-fg, #111827);
   touch-action: manipulation;
 }
 

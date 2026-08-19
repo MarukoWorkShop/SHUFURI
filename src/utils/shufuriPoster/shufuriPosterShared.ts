@@ -8,8 +8,56 @@ import {
   compileEditCssOverrides,
 } from '../posterTypography/index.ts';
 import { POSTER_BG_COLOR } from '../posterTypography/typographyConstants.ts';
+import { WATERMARK_BAR_HEIGHT_PX, WATERMARK_TEXT_CLEARANCE_PX, watermarkDesignScale } from './posterWatermark.ts';
 
 export { dimForFuriganaPoster };
+
+/**
+ * 导出/测量共享的栅格化安全 CSS。
+ * html2canvas 1.4.x 用拉丁样本 "Hidden Text" 测 font baseline，对 CJK 基线常偏大，
+ * 字形画到行盒下方；任一祖先 overflow≠visible 都会把下半截裁掉（中文行底部切边）。
+ * 通过 overflow:visible + padding-bottom + 抬高 line-height 补偿。
+ * 关键：createPosterMeasurer 也注入此规则并给 shell 设 data-export-raster="1"，
+ * 使分页测量的行高与导出栅格化完全一致，避免"测能装下、导出溢出压水印"。
+ */
+export const RASTER_SAFE_CSS = `
+.fv-html-poster-root[data-export-raster="1"],
+.fv-html-poster-root[data-export-raster="1"] .fv-body-h,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .jp-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .ko-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .cn-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .gloss-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-line1,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-ja,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-ko,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-zh,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-cn,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .vocab-ex-gloss,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit h3.grammar-point-title,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-detail,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-ja,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-ko,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-zh,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-cn,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-pagination-unit .grammar-ex-gloss {
+  overflow: visible !important;
+}
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .jp-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .ko-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .cn-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .gloss-line {
+  padding-bottom: 0.22em !important;
+  line-height: 1.55 !important;
+}
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line,
+.fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line * {
+  line-height: 1.55 !important;
+}
+`;
 
 /** 画布宽高 */
 export function getFuriganaPosterCanvasDimensions(profile: PosterLayoutProfile): {
@@ -31,17 +79,20 @@ export function getFuriganaCanvasInsets(profile: PosterLayoutProfile) {
   };
 }
 
-/** 页码区预留高度（供分页测量） */
+/** 页码区预留高度（供分页测量）。
+ *  返回"水印文字安全距离（缩放后）+ 正文底部内边距"，确保分页测量时为正文
+ *  预留出与水印文字不重叠的空间，修复导出时最后一行歌词压到水印的问题。 */
 export function getFuriganaPageNumberReservePx(profile: PosterLayoutProfile): number {
-  const d = dimForFuriganaPoster(profile);
-  return Math.round(d.textBottomClearance + 22);
+  const clearance = Math.round(WATERMARK_TEXT_CLEARANCE_PX * watermarkDesignScale(profile));
+  const bodyPad = getFuriganaBodyBottomPaddingPx(profile);
+  return clearance + bodyPad;
 }
 
 /** 正文底部内边距，避免最后一行贴边或被裁切 */
 export function getFuriganaBodyBottomPaddingPx(profile: PosterLayoutProfile): number {
-  if (profile === 'mobilePoster') return 64;
-  if (profile === 'squarePoster') return 48;
-  return 32;
+  if (profile === 'mobilePoster') return 24;
+  if (profile === 'squarePoster') return 20;
+  return 16;
 }
 
 /** 分页测量与预览共用的正文区安全余量（吸收 WebKit 字体/ruby 子像素误差） */
@@ -69,7 +120,10 @@ export function computePosterBodyMaxHeightPx(
   }
 
   const margin = getPosterBodySafetyMarginPx(profile);
-  return Math.max(0, shellInnerH - titleH - titleMB - margin);
+  // C-1: 额外扣除水印文字安全距离（缩放后），使正文 max-height 不进入水印文字区，
+  // 配合 getFuriganaPageNumberReservePx 的一致预留，避免导出末行压水印。
+  const clearance = Math.round(WATERMARK_TEXT_CLEARANCE_PX * watermarkDesignScale(profile));
+  return Math.max(0, shellInnerH - titleH - titleMB - margin - clearance);
 }
 
 export function applyPosterBodyMaxHeight(
@@ -133,6 +187,8 @@ export type FuriganaPosterCssOptions = {
   userLineHeightScale?: number;
   /** 默认 true；测量容器应 false，避免每个 measurer 再注入 @font-face 触发下载 */
   includeFontFaces?: boolean;
+  /** 背景图 URL；为空时保持 POSTER_BG_COLOR 纯色背景 */
+  backgroundImage?: string;
 };
 
 export function buildShufuriPosterInnerCss(
@@ -151,12 +207,15 @@ export function buildShufuriPosterInnerCss(
     userFontScale: options.userFontScale,
     userLineHeightScale: options.userLineHeightScale,
   });
-  return compilePosterCss(resolved, {
-    unit: 'px',
-    viewMode: 'screen',
-    showRuby,
-    includeFontFaces: options.includeFontFaces,
-  });
+  return (
+    compilePosterCss(resolved, {
+      unit: 'px',
+      viewMode: 'screen',
+      showRuby,
+      includeFontFaces: options.includeFontFaces,
+      backgroundImage: options.backgroundImage,
+    }) + RASTER_SAFE_CSS
+  );
 }
 
 /** @deprecated 使用 buildShufuriPosterInnerCss */
@@ -164,15 +223,19 @@ export const buildFuriganaPosterInnerCss = buildShufuriPosterInnerCss;
 
 export function buildFuriganaPosterRootStyle(
   profile: PosterLayoutProfile,
+  backgroundImage?: string,
 ): Record<string, string | number> {
   const { width: w, height: h } = getFuriganaPosterCanvasDimensions(profile);
   const pad = getFuriganaCanvasInsets(profile);
+  const bg = backgroundImage
+    ? `${POSTER_BG_COLOR} url('${backgroundImage}') center/cover no-repeat`
+    : POSTER_BG_COLOR;
   return {
     width: `${w}px`,
     height: `${h}px`,
     boxSizing: 'border-box',
     padding: `${pad.top}px ${pad.right}px ${pad.bottom}px ${pad.left}px`,
-    background: POSTER_BG_COLOR,
+    background: bg,
     overflow: 'hidden',
     textAlign: 'left',
     display: 'flex',

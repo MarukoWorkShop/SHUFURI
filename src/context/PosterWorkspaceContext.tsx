@@ -136,7 +136,10 @@ export type PosterTypographyContextValue = {
   repaginating: boolean;
   rubyToggleSupported: boolean;
   posterRenderOpts: PosterRenderOptions;
+  /** 当前选中的海报背景图 ID */
+  backgroundId: string;
   handleShowRubyChange: (next: boolean) => void;
+  handleBackgroundChange: (nextId: string) => void;
 };
 
 export type PosterInkContextValue = PosterWorkspaceInkSession;

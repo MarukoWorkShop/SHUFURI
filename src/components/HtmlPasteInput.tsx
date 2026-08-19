@@ -361,6 +361,13 @@ export default function HtmlPasteInput({
       .then(() => {
         setPromptLocked(false);
         setCollapsed(true);
+        showAppToast(
+          L(
+            '请先打开联网搜索再粘贴，否则容易编造歌词',
+            'Turn on web search before pasting, or the AI may invent lyrics.',
+          ),
+          4500,
+        );
       })
       .catch(() => {
         showAppToast(L('⚠ 复制失败，请检查浏览器权限后重试', '⚠ Copy failed. Please check browser permissions and retry.'));
@@ -475,7 +482,6 @@ export default function HtmlPasteInput({
                       <input
                         ref={pasteInputRef}
                         className="ext-pipeline__share-fill-input"
-                        placeholder={L('长按此处粘贴分享链接…', 'Long-press to paste share link…')}
                         value={pasteValue}
                         inputMode="none"
                         enterKeyHint="done"

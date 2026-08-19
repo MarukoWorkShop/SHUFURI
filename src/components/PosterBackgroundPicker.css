@@ -1,0 +1,120 @@
+/* 背景选择器：仅一个三角形开关 + 可展开面板；无白条、无文字标签 */
+.poster-bg-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 2px;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+/* 三角形开关：编辑页同款圆形 hover 反转 */
+.poster-bg-picker__toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ui-fg-secondary, #6b7280);
+  cursor: pointer;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+
+.poster-bg-picker__toggle:hover {
+  color: var(--ui-fg, #111827);
+  background: color-mix(in srgb, var(--ui-fg, #111827) 8%, transparent);
+}
+
+/* 三角形：收起朝右，展开朝下，带轻微旋转动画 */
+.poster-bg-picker__caret {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 5px 0 5px 7px;
+  border-color: transparent transparent transparent currentColor;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.poster-bg-picker__caret.is-open {
+  transform: rotate(90deg);
+}
+
+.poster-bg-picker__panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  animation: poster-bg-panel-in 0.18s ease;
+}
+
+@keyframes poster-bg-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.poster-bg-picker__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 4px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.12s ease;
+  flex-shrink: 0;
+}
+
+.poster-bg-picker__item:hover {
+  transform: translateY(-1px);
+}
+
+.poster-bg-picker__item.is-selected {
+  border-color: var(--color-kinari, #e5d4a1);
+}
+
+.poster-bg-picker__thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.poster-bg-picker__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.poster-bg-picker__plain {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+}
+
+.poster-bg-picker__name {
+  font-size: 11px;
+  color: var(--color-text-primary, #111827);
+  white-space: nowrap;
+}

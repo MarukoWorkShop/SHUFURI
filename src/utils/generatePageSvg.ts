@@ -23,6 +23,7 @@ import {
   buildPosterWatermarkCss,
   buildPosterWatermarkHtml,
 } from './shufuriPoster/posterWatermark';
+import { getPosterBackgroundUrl } from '../config/posterBackgrounds';
 
 /** 将 JS 样式对象转为内联 style 属性字符串 */
 function styleObjToAttr(style: Record<string, string | number>): string {
@@ -79,7 +80,8 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
   const showRuby = renderOptions?.showRuby ?? true;
 
   const { width: w, height: h } = getShufuriPosterCanvasDimensions(layoutProfile);
-  const rootStyle = buildShufuriPosterRootStyle(layoutProfile);
+  const backgroundImage = getPosterBackgroundUrl(renderOptions?.backgroundId);
+  const rootStyle = buildShufuriPosterRootStyle(layoutProfile, backgroundImage);
   const pipelineLang = resolvePosterPipelineLang(lang, bodyFragmentHtml, language);
   const innerCss = buildShufuriPosterInnerCss(layoutProfile, {
     spacingScale,
@@ -89,6 +91,7 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
     showRuby: renderOptions?.showRuby,
     userFontScale: renderOptions?.userFontScale,
     userLineHeightScale: renderOptions?.userLineHeightScale,
+    backgroundImage,
   });
 
   const jpFontCss = getPosterJapaneseFontsFaceCss();
@@ -111,6 +114,11 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
 
   const rootInlineStyle = styleObjToAttr(rootStyle);
 
+  // 背景图：以底层 <image> 嵌入，确保矢量渲染/打印时背景真正呈现
+  const bgImageEl = backgroundImage
+    ? `\n  <image href="${xmlEscape(backgroundImage)}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" />`
+    : '';
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
      width="${w}" height="${h}"
@@ -124,7 +132,7 @@ export async function generatePageSvg(opts: GeneratePageSvgOptions): Promise<str
       ${xmlEscape(innerCss)}
       ${xmlEscape(watermarkCss)}
     </style>
-  </defs>
+  </defs>${bgImageEl}
   <foreignObject width="100%" height="100%">
     <div xmlns="http://www.w3.org/1999/xhtml"
          class="fv-html-poster-root"

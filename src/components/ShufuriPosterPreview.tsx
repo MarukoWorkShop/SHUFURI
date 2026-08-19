@@ -19,6 +19,7 @@ import { PAGE_GAP_PX } from '../hooks/usePosterPreviewFitScale';
 import type { PosterLayoutProfile, PosterPageSlice, PosterRenderOptions } from '../utils/shufuriPoster/types';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
+import { getPosterBackgroundUrl } from '../config/posterBackgrounds';
 import { useTimedMessage } from '../hooks/useTimedMessage';
 import { L } from '../utils/i18n';
 import AppToast from './AppToast';
@@ -83,6 +84,10 @@ function ShufuriPosterSinglePage({
   onAnalyzeSelection,
 }: ShufuriPosterSinglePageProps) {
   const showRuby = renderOptions?.showRuby ?? true;
+  const backgroundImage = useMemo(
+    () => getPosterBackgroundUrl(renderOptions?.backgroundId),
+    [renderOptions?.backgroundId],
+  );
   const safeFragment = useMemo(
     () => sanitizeShufuriPosterHtml(bodyFragmentHtml),
     [bodyFragmentHtml],
@@ -104,12 +109,13 @@ function ShufuriPosterSinglePage({
         showRuby: renderOptions?.showRuby,
         userFontScale: renderOptions?.userFontScale,
         userLineHeightScale: renderOptions?.userLineHeightScale,
+        backgroundImage,
       }),
-    [layoutProfile, spacingScale, language, pipelineLang, renderOptions],
+    [layoutProfile, spacingScale, language, pipelineLang, renderOptions, backgroundImage],
   );
   const rootStyle = useMemo(
-    () => buildShufuriPosterRootStyle(layoutProfile),
-    [layoutProfile],
+    () => buildShufuriPosterRootStyle(layoutProfile, backgroundImage),
+    [layoutProfile, backgroundImage],
   );
 
   const targetW = w * displayScale;

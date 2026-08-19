@@ -13,6 +13,7 @@ import {
   type PosterLayoutProfile,
   type PosterPageSlice,
 } from '../utils/shufuriPoster/types';
+import { DEFAULT_POSTER_BACKGROUND_ID } from '../config/posterBackgrounds';
 import type { AppMode } from './usePosterWorkspace';
 
 type Options = {
@@ -49,6 +50,7 @@ export function usePosterTypography({
 }: Options) {
   const [showRubyAnnotations, setShowRubyAnnotations] = useState(true);
   const [repaginating, setRepaginating] = useState(false);
+  const [backgroundId, setBackgroundId] = useState(DEFAULT_POSTER_BACKGROUND_ID);
   const previewTypography = DEFAULT_PREVIEW_TYPOGRAPHY;
 
   const posterPipelineLang = useMemo(
@@ -60,8 +62,8 @@ export function usePosterTypography({
     [lang, bodyHtml, lyricsLanguage],
   );
   const posterRenderOpts = useMemo(
-    () => buildPosterRenderOptions(showRubyAnnotations, previewTypography),
-    [showRubyAnnotations, previewTypography],
+    () => buildPosterRenderOptions(showRubyAnnotations, previewTypography, backgroundId),
+    [showRubyAnnotations, previewTypography, backgroundId],
   );
 
   const rebuildExportPages = useCallback(async () => {
@@ -81,7 +83,7 @@ export function usePosterTypography({
         lyricsLanguage,
         lang,
         titleMarkupHtml,
-        buildPosterRenderOptions(showRubyAnnotations, previewTypography),
+        buildPosterRenderOptions(showRubyAnnotations, previewTypography, backgroundId),
       );
       setPages(pageHtmls);
       resetPosterPageRefs(pageRefs, pageHtmls.length);
@@ -98,6 +100,7 @@ export function usePosterTypography({
     titleMarkupHtml,
     showRubyAnnotations,
     previewTypography,
+    backgroundId,
     setPages,
     pageRefs,
   ]);
@@ -114,8 +117,19 @@ export function usePosterTypography({
 
   const resetTypographyPreview = useCallback(() => {
     setShowRubyAnnotations(true);
+    setBackgroundId(DEFAULT_POSTER_BACKGROUND_ID);
     onResetInkShowRuby?.();
   }, [onResetInkShowRuby]);
+
+  const handleBackgroundChange = useCallback(
+    (nextId: string) => {
+      setBackgroundId(nextId);
+      if (mode === 'export') {
+        void rebuildExportPages();
+      }
+    },
+    [mode, rebuildExportPages],
+  );
 
   return {
     showRubyAnnotations,
@@ -124,8 +138,11 @@ export function usePosterTypography({
     posterPipelineLang,
     rubyToggleSupported,
     posterRenderOpts,
+    backgroundId,
+    setBackgroundId,
     rebuildExportPages,
     handleShowRubyChange,
+    handleBackgroundChange,
     resetTypographyPreview,
   };
 }

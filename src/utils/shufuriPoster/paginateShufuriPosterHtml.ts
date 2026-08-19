@@ -10,6 +10,7 @@ import { resolvePosterPipelineLang } from './inferPosterLang';
 import type { PosterLayoutProfile, PosterPageSlice, PosterRenderOptions } from './types';
 import type { LyricsLanguage, LangCode } from '../../services/appSettings';
 import { getAppSettings } from '../../services/appSettings';
+import { getPosterBackgroundUrl } from '../../config/posterBackgrounds';
 import {
   CJK_TYPOGRAPHY_SCALE_MIN,
   CJK_TYPOGRAPHY_SCALE_STEPS,
@@ -90,12 +91,17 @@ export function createPosterMeasurer(
   wrapper.style.overflow = 'hidden';
   wrapper.style.pointerEvents = 'none';
 
+  const backgroundImage = getPosterBackgroundUrl(renderOptions?.backgroundId);
+
   const shell = doc.createElement('div');
   shell.className = 'fv-html-poster-root';
   // 直接使用 buildShufuriPosterRootStyle 的完整样式（已含带 px 单位的 width/height）
-  Object.assign(shell.style, buildShufuriPosterRootStyle(profile));
+  Object.assign(shell.style, buildShufuriPosterRootStyle(profile, backgroundImage));
   shell.style.position = 'relative';
   shell.dataset.rubyVisible = (renderOptions?.showRuby ?? true) ? 'true' : 'false';
+  // 关键：测量容器也激活 RASTER_SAFE_CSS 的 line-height:1.55 补偿，
+  // 使分页测量的行高与导出栅格化完全一致（避免导出时内容撑高溢出压水印）
+  shell.dataset.exportRaster = '1';
 
   const styleEl = doc.createElement('style');
   const pipelineLang = resolvePosterPipelineLang(lang, '', language) ?? 'jp';
@@ -110,6 +116,7 @@ export function createPosterMeasurer(
     // 字体由 posterFonts.css / ensurePosterFontFacesRegistered 文档级注册；
     // 测量时再注入 @font-face（尤其思源 23MB + font-display:block）会卡死切比例。
     includeFontFaces: false,
+    backgroundImage,
   });
   const titleEl = doc.createElement('h1');
   titleEl.className = 'fv-title-h';
@@ -873,14 +880,6 @@ function createMeasurerAtScale(
   );
 }
 
-function pageBlocksHaveExplainNotes(blocks: HTMLElement[]): boolean {
-  return blocks.some(
-    (b) =>
-      b.classList.contains('lyrics-explain-notes') ||
-      !!b.querySelector?.('.lyrics-explain-notes, [data-shufuri-explain-note="1"]'),
-  );
-}
-
 function pageBlocksForceNewPage(blocks: HTMLElement[]): boolean {
   return blocks.some(
     (b) =>
@@ -910,8 +909,9 @@ function preventOrphanPages(
 
     const lastIdx = packs.length - 1;
     const last = packs[lastIdx]!;
-    // 划词笔记页 / 强制换页板块不并回上一页，避免把笔记或词汇区吞进已过满的歌词页
-    if (pageBlocksHaveExplainNotes(last.blocks) || pageBlocksForceNewPage(last.blocks)) {
+    // 仅强制换页板块不并回上一页（避免破坏语义分组）；
+    // 划词笔记整体允许合并到上一页（导出场景无需交互，合并安全）
+    if (pageBlocksForceNewPage(last.blocks)) {
       break;
     }
     if (countPageContentLines(last.blocks) > ORPHAN_MAX_LINES) {
