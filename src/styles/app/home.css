@@ -2220,7 +2220,7 @@
     align-items: stretch;
     gap: 18px;
     max-width: 980px;
-    margin: 36px auto 0;
+    margin: 48px auto 0;
     width: 100%;
   }
 
@@ -2355,6 +2355,9 @@
   /* 首页 body 不再 overflow:visible, 改为正常滚动 */
   .app--home .home-body {
     padding-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
   }
 
   /* 移除旧的分割线样式（被卡片替代） */
@@ -2407,9 +2410,10 @@
   color: #a0a0a0;
 }
 
-/* 暗色模式：去掉随机歌词区线条框 */
+/* 暗色模式：歌词区保持无背景色块（融入黑底） */
 [data-theme='dark'] .app--home .home-body > .home-daily-quote {
   border: none;
+  background: transparent;
   margin-top: 48px;
 }
 
@@ -2456,9 +2460,9 @@
 }
 
 [data-theme='dark'] .app--home .ext-pipeline__input {
-  background: #1a1a1a;
-  border: 1px solid transparent;
-  border-radius: 10px;
+  background: #1e1e22;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
   padding: 13px 14px;
   text-align: left;
   color: #ffffff;
@@ -2511,6 +2515,39 @@
   background: color-mix(in srgb, var(--color-kinari) 18%, #1a1a1a);
   border-color: color-mix(in srgb, var(--color-kinari) 40%, #3a3a3a);
   color: color-mix(in srgb, var(--color-kinari) 70%, #ffffff);
+}
+
+/* 链接粘贴胶囊：暗色模式 — 深灰底，与输入框/表单卡片协调 */
+[data-theme='dark'] .app--home .ext-pipeline__capsule {
+  background: #2a2a2a;
+  border-color: #3a3a3a;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__share-fill.is-active .ext-pipeline__capsule {
+  background: #1a1a1a;
+  border-color: transparent;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__capsule-collapsed {
+  color: #a0a0a0;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__capsule-collapsed:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__capsule-icon {
+  color: #666666;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__capsule-label {
+  color: #a0a0a0;
+}
+
+[data-theme='dark'] .app--home .ext-pipeline__share-fill-btn-badge {
+  color: #888888;
+  background: #1a1a1a;
+  border-color: #3a3a3a;
 }
 
 [data-theme='dark'] .app--home .ext-pipeline__share-fill-input {
@@ -2661,8 +2698,8 @@
 
 [data-theme='dark'] .app--home .home-libraries-grid > .saved-library,
 [data-theme='dark'] .app--home .home-body > .saved-library {
-  background: #2a2a2a;
-  border-color: #2c2c30;
+  background: #2a2a2e;
+  border-color: rgba(255, 255, 255, 0.10);
 }
 
 @media (min-width: 768px) {
@@ -2684,9 +2721,9 @@
   [data-theme='dark'] .app--home .home-libraries-grid > .saved-library,
   [data-theme='dark'] .app--home .home-body .home-libraries-grid > .saved-library:not(.study-cards-library),
   [data-theme='dark'] .app--home .home-body .home-libraries-grid > .study-cards-library {
-    background: #2a2a2a;
-    border: 1px solid #2c2c30;
-    border-radius: 16px;
+    background: #2a2a2e;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 18px;
   }
 }
 
@@ -2705,15 +2742,17 @@
   box-sizing: border-box;
 }
 
-/* 暗色模式：浅米色卡片改为深灰 */
+/* 暗色模式：浅米色卡片改为柔和深灰（对齐桌面端观感） */
 [data-theme='dark'] .home-form-card {
-  background: #1a1a1a;
+  background: #232328;
+  border-color: rgba(255, 255, 255, 0.10);
 }
 
 /* ---- 暗色模式：三栏横排 + LANG 下拉框 ---- */
 [data-theme='dark'] .app--home .ext-pipeline__select {
-  background: #2a2a2a;
-  border-color: transparent;
+  background: #2a2a2e;
+  border-color: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
   color: #ffffff;
 }
 
@@ -2748,5 +2787,47 @@
   .ext-pipeline__share-fill-input,
   .app--home .ext-pipeline__input {
     font-size: 16px !important;
+  }
+}
+
+/* ============================================================
+   手机端底部模块统一间距 — 顶层规则（不嵌套），禁止堆叠
+   ============================================================ */
+@media (max-width: 767px) {
+  /* 首页 body：flex 纵向排列，保证子元素流式不重叠 */
+  .app--home .home-body {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    padding-bottom: 8px !important;
+  }
+
+  /* 各模块统一间距：歌词库/词卡 → 每日一言 → Q&A pill → FAQ → Footer */
+  .app--home .home-body > .home-libraries-grid {
+    margin-top: 28px !important;
+  }
+
+  /* 每日一言（歌词区）：保持无背景，与上方间距统一 */
+  .app--home .home-body > .home-daily-quote {
+    margin-top: 28px !important;
+    padding: 20px 20px 24px !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  /* Q&A pill：与歌词区明确分隔，不堆叠 */
+  .app--home .home-body > .home-faq__pill-wrapper {
+    margin-top: 28px !important;
+  }
+
+  /* FAQ 展开区 */
+  .app--home .home-body > .home-faq {
+    margin-top: 16px !important;
+  }
+
+  /* Footer：与上方模块间距 + 底部留白 */
+  .app--home .home-body > .home-footer {
+    margin-top: 32px !important;
+    padding-bottom: 24px !important;
   }
 }

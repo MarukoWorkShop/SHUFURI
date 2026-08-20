@@ -33,13 +33,13 @@ export const KO_FONT_FAMILY_SYSTEM =
   '"Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Nanum Gothic", sans-serif';
 
 /**
- * 韩文系统衬线字体栈（海报标题 + 主体歌词统一使用，首屏零下载）：
- * - macOS / iOS：族名是 **AppleMyungjo**（无空格；`Apple Myungjo` 匹配失败会一路落到 PingFang）
- * - Windows：Batang / Gungsuh
- * - 其它：Nanum Myeongjo / Noto Serif KR；最后才回落 Apple SD Gothic Neo（无衬线，避免再掉进 PingFang）
+ * 韩文系统衬线字体栈（海报标题 + 主体歌词统一使用）：
+ * - 随包 Noto Serif KR 优先（iOS 无系统韩文衬线，必须随包才能保证手机端衬线效果）
+ * - 其它系统衬线回退：AppleMyungjo / Batang / Gungsuh / Nanum Myeongjo
+ * - 最后才回落 Apple SD Gothic Neo（无衬线，避免再掉进 PingFang）
  */
 export const KO_FONT_FAMILY_SYSTEM_SERIF =
-  '"AppleMyungjo", "Apple Myungjo", "Nanum Myeongjo", "Batang", "Gungsuh", "Noto Serif KR", "Apple SD Gothic Neo", serif';
+  '"Noto Serif KR", "AppleMyungjo", "Apple Myungjo", "Nanum Myeongjo", "Batang", "Gungsuh", "Apple SD Gothic Neo", serif';
 
 /** 向后兼容别名：默认走系统字体栈（零下载） */
 export const KO_FONT_FAMILY = KO_FONT_FAMILY_SYSTEM;
@@ -135,6 +135,18 @@ export function getPosterSourceHanSerifScFontFaceCss(): string {
 }`;
 }
 
+/** 韩文衬线 Noto Serif KR — 海报韩文歌词 / 标题 / 词汇统一使用 */
+export function getPosterKoreanSerifFontFaceCss(): string {
+  return `
+@font-face {
+  font-family: "Noto Serif KR";
+  src: url("/assets/fonts/NotoSerifKR-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}`;
+}
+
 /** @deprecated 使用 getPosterJapaneseFontsFaceCss() */
 export const POSTER_JP_FONT_FACE_CSS = getPosterJapaneseFontsFaceCss();
 
@@ -149,6 +161,7 @@ export function ensurePosterFontFacesRegistered(): void {
   style.textContent =
     getPosterJapaneseFontsFaceCss() +
     getPosterSourceHanSerifScFontFaceCss() +
+    getPosterKoreanSerifFontFaceCss() +
     getPosterSansationFontFaceCss();
   document.head.appendChild(style);
 }
@@ -210,6 +223,16 @@ export async function ensurePosterSourceHanSerifScFontLoaded(): Promise<void> {
   ]);
 }
 
+/** 预加载韩文衬线 Noto Serif KR（编辑页 / 学习卡 / 海报韩文统一使用） */
+export async function ensurePosterKoreanSerifFontLoaded(): Promise<void> {
+  if (!document.fonts?.load) return;
+  await Promise.all([
+    loadFontWithTimeout('400 16px "Noto Serif KR"', '안녕하세요', FONT_LOAD_TIMEOUT_MS),
+    loadFontWithTimeout('400 26px "Noto Serif KR"', '사랑', FONT_LOAD_TIMEOUT_MS),
+    loadFontWithTimeout('400 46px "Noto Serif KR"', '한국어', FONT_LOAD_TIMEOUT_MS),
+  ]);
+}
+
 let posterFontsLoadPromise: Promise<void> | null = null;
 
 /**
@@ -225,6 +248,7 @@ export async function ensurePosterFontsLoaded(): Promise<void> {
       ensurePosterJapaneseFontLoaded(),
       ensurePosterEnglishFontLoaded(),
       ensurePosterSourceHanSerifScFontLoaded(),
+      ensurePosterKoreanSerifFontLoaded(),
     ]);
     await waitForPosterLayoutReady();
   })().catch((err) => {

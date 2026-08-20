@@ -34,7 +34,7 @@
   /** 日文/英文学习区衬线（词卡正面主标、例句等） */
   --font-serif-jp: "Kozuka Mincho Pro R", "Kozuka Mincho Pro", "YuMincho", "Yu Mincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", serif;
   /** 韩文学习区衬线（词卡） */
-  --font-serif-ko: "AppleMyungjo", "Apple Myungjo", "Nanum Myeongjo", "Batang", "Gungsuh", "Noto Serif KR", "Apple SD Gothic Neo", serif;
+  --font-serif-ko: "Noto Serif KR", "AppleMyungjo", "Apple Myungjo", "Nanum Myeongjo", "Batang", "Gungsuh", "Apple SD Gothic Neo", serif;
   /** 中文学习区衬线 / 歌名汉字 / 背面汉语大号释义 — 随包思源宋体优先 */
   --font-serif-zh: "Source Han Serif SC", "Songti SC", "STSong", "Songti TC", "SimSun", serif;
   --font-brand: "Sansation Light", sans-serif;

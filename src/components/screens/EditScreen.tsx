@@ -34,6 +34,7 @@ import {
 } from '../../utils/studySectionItems';
 import { extractLyricsOnlyBodyHtml } from '../../utils/lyricsOnlyBodyHtml';
 import { L } from '../../utils/i18n';
+import { ensurePosterKoreanSerifFontLoaded } from '../../utils/shufuriPoster/fonts';
 import '../../styles/posterFonts.css';
 import '../../styles/app/export-preview.css';
 import '../../styles/app/edit-presentation.css';
@@ -328,6 +329,11 @@ export default function EditScreen() {
     ensureExplainNoteIds();
     ensureStudyItemIds();
   }, [ensureExplainNoteIds, ensureStudyItemIds]);
+
+  // 进入编辑页即预加载韩文衬线（iOS 无系统韩文衬线，必须随包 Noto Serif KR）
+  useEffect(() => {
+    void ensurePosterKoreanSerifFontLoaded();
+  }, []);
 
   useEffect(() => {
     const root = editCanvasRef.current;
