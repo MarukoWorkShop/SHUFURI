@@ -1,15 +1,19 @@
 /**
  * 歌词本批量导出 PDF
  *
- * 将「我的歌词本」中所有已保存歌词项目合并为一份 PDF，
- * 每首歌独立起页。每首歌使用目标排版尺寸重新走完整分页管线，
- * 确保 PDF 所有页面尺寸一致、样式统一。
+ * 将「我的歌词本」中若干已保存歌词项目合并为一份 PDF，每首歌独立起页。
+ * 每首歌使用目标排版尺寸重新走完整分页管线，确保 PDF 所有页面尺寸一致、样式统一。
+ *
+ * 改造点（对比旧版）：
+ *  - 拆分为 renderBatchPdf（只渲染到 jsPDF，单首失败不影响其余）+ deliverBatchPdf（交付）
+ *  - renderBatchPdf 支持 existingPdf 续写，用于「重试失败项」
+ *  - 通过 onSongStart / onSongDone / onSongError 回调暴露逐首状态，供 UI 打钩/失败提示
  */
 import { jsPDF } from 'jspdf';
 import type { PosterLayoutProfile, PosterPageSlice } from './shufuriPoster/types';
 import { paginateShufuriPosterBodyHtml } from './shufuriPoster/paginateShufuriPosterHtml';
 import { ensurePosterFontsLoaded } from './shufuriPoster/fonts';
-import { listSavedLyricsProjects } from '../services/savedLyricsStore';
+import type { SavedLyricsProject } from '../services/savedLyricsStore';
 import {
   mountPosterExportPage,
   getPosterExportCanvasSize,
@@ -24,13 +28,30 @@ const CSS_PX_TO_MM = 25.4 / 96;
 const MIN_PDF_BYTES = 512;
 const YIELD_GAP_MS = 80;
 
-/** 批量导出进度回调 */
-export type BatchExportProgress = {
-  current: number;
-  total: number;
-  projectTitle: string;
-  phase: 'rasterizing' | 'done';
-};
+export type BatchSongStatus = 'pending' | 'rendering' | 'done' | 'failed';
+
+export interface BatchSongResult {
+  id: string;
+  title: string;
+  status: BatchSongStatus;
+  error?: string;
+  pages: number;
+}
+
+export interface RenderBatchPdfOptions {
+  targetProfile: PosterLayoutProfile;
+  projects: SavedLyricsProject[];
+  /** 续写模式：传入上一次 renderBatchPdf 返回的 pdf，失败项会追加到同一文件 */
+  existingPdf?: jsPDF;
+  onSongStart?: (id: string, title: string) => void;
+  onSongDone?: (id: string, pages: number) => void;
+  onSongError?: (id: string, title: string, error: string) => void;
+}
+
+export interface RenderBatchPdfResult {
+  pdf: jsPDF;
+  results: BatchSongResult[];
+}
 
 function assertValidPdfBlob(blob: Blob): void {
   if (blob.size < MIN_PDF_BYTES) {
@@ -42,143 +63,116 @@ async function yieldTick(ms = YIELD_GAP_MS): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
-/** 一个项目重新分页后的结果 */
+/** 单个项目重新分页后的结果 */
 interface ProjectPagination {
+  id: string;
   title: string;
   artist?: string;
   slices: PosterPageSlice[];
   lang?: import('../services/appSettings').LangCode;
+  titleMarkupHtml?: string;
 }
 
 /**
- * 执行全量批量导出。
- *
- * 每首歌通过 paginateShufuriPosterBodyHtml 重新走完整排版管线，
- * 使用统一的 targetProfile，确保所有页尺寸一致。
- *
- * @param targetProfile  用户选择的导出尺寸
- * @param onProgress     页面粒度进度回调
+ * 逐首渲染歌词本到 jsPDF，单首失败不影响其余。
+ * 不负责交付（下载/分享）—— 调用方在全部完成后用 deliverBatchPdf 交付。
  */
-export async function executeBatchExport(
-  targetProfile: PosterLayoutProfile,
-  onProgress?: (p: BatchExportProgress) => void,
-): Promise<void> {
-  // 1. 加载所有项目
-  const projects = await listSavedLyricsProjects();
+export async function renderBatchPdf(opts: RenderBatchPdfOptions): Promise<RenderBatchPdfResult> {
+  const { targetProfile, projects, existingPdf, onSongStart, onSongDone, onSongError } = opts;
 
-  if (projects.length === 0) {
-    throw new Error('歌词本为空，无可导出内容');
-  }
-
-  // 2. 确保海报字体已加载（分页测量和栅格化都需要）
+  // 确保海报字体已加载（分页测量和栅格化都需要）
   await ensurePosterFontsLoaded();
 
-  // 3. 逐项目重新走排版管线
-  const projectPages: ProjectPagination[] = [];
-
-  for (const proj of projects) {
-    const rawBody = proj.bodyHtml;
-    if (!rawBody || rawBody.trim() === '') continue;
-
-    // 使用目标 profile 重新分页 —— 而不是复用保存时的 pageHtmls
-    const slices = paginateShufuriPosterBodyHtml(
-      rawBody,
-      proj.title || '歌词笔记',
-      targetProfile,
-      document,
-      proj.artist,
-      'jp',
-      proj.lang,
-      proj.titleMarkupHtml,
-    );
-
-    if (slices.length > 0) {
-      projectPages.push({
-        title: proj.title || '歌词笔记',
-        artist: proj.artist,
-        slices,
-        lang: proj.lang,
-      });
-    }
-  }
-
-  if (projectPages.length === 0) {
-    throw new Error('所有项目均无有效内容');
-  }
-
-  // 4. 计算总页数（用于进度条）
-  const totalPages = projectPages.reduce((sum, pp) => sum + pp.slices.length, 0);
-
-  // 5. 创建 PDF —— 统一使用 targetProfile 尺寸
-  const { width: canvasW, height: canvasH } =
-    getPosterExportCanvasSize(targetProfile);
+  const { width: canvasW, height: canvasH } = getPosterExportCanvasSize(targetProfile);
   const wMm = canvasW * CSS_PX_TO_MM;
   const hMm = canvasH * CSS_PX_TO_MM;
 
-  const pdf = new jsPDF({
+  const pdf = existingPdf ?? new jsPDF({
     orientation: hMm >= wMm ? 'portrait' : 'landscape',
     unit: 'mm',
     format: [wMm, hMm],
     hotfixes: ['px_scaling'],
   });
 
-  // 6. 逐页栅格化 → PDF（统一用 targetProfile）
-  let globalPageIndex = 0;
-  let doneCount = 0;
+  // 续写时文档已有页，首页也需要 addPage
+  let globalPageIndex = existingPdf ? existingPdf.getNumberOfPages() : 0;
 
-  for (const pp of projectPages) {
-    for (let i = 0; i < pp.slices.length; i++) {
-      const slice = pp.slices[i]!;
+  const results: BatchSongResult[] = [];
 
-      onProgress?.({
-        current: doneCount + 1,
-        total: totalPages,
-        projectTitle: pp.title,
-        phase: 'rasterizing',
-      });
+  for (const proj of projects) {
+    const id = proj.id;
+    const title = proj.title || '歌词笔记';
+    onSongStart?.(id, title);
 
-      const mount = mountPosterExportPage(document, {
-        title: pp.title,
-        artist: pp.artist,
-        showTitle: i === 0,
-        bodyFragmentHtml: slice.html,
-        pageIndex: i,
-        pageCount: pp.slices.length,
-        layoutProfile: targetProfile,
-        spacingScale: slice.spacingScale ?? 1,
-        language: 'jp',
-        lang: pp.lang,
-      });
-
-      mount.prepare();
-
-      try {
-        const canvas = await rasterizePosterLayoutPageRoot(mount.root);
-        addCanvasToPdfPage(pdf, canvas, wMm, hMm, globalPageIndex === 0);
-        globalPageIndex++;
-        doneCount++;
-      } finally {
-        mount.dispose();
+    let pages: ProjectPagination | null = null;
+    try {
+      const rawBody = proj.bodyHtml;
+      if (!rawBody || rawBody.trim() === '') {
+        throw new Error('正文内容为空');
       }
-
-      // 页面间 yield，让 GC 喘气
-      if (doneCount < totalPages) {
-        await yieldTick();
+      const slices = paginateShufuriPosterBodyHtml(
+        rawBody,
+        title,
+        targetProfile,
+        document,
+        proj.artist,
+        'jp',
+        proj.lang,
+        proj.titleMarkupHtml,
+      );
+      if (!slices.length) {
+        throw new Error('分页结果为空');
       }
+      pages = { id, title, artist: proj.artist, slices, lang: proj.lang, titleMarkupHtml: proj.titleMarkupHtml };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '分页失败';
+      onSongError?.(id, title, message);
+      results.push({ id, title, status: 'failed', error: message, pages: 0 });
+      continue;
+    }
+
+    try {
+      for (let i = 0; i < pages.slices.length; i++) {
+        const slice = pages.slices[i]!;
+        const mount = mountPosterExportPage(document, {
+          title: pages.title,
+          artist: pages.artist,
+          showTitle: i === 0,
+          bodyFragmentHtml: slice.html,
+          pageIndex: i,
+          pageCount: pages.slices.length,
+          layoutProfile: targetProfile,
+          spacingScale: slice.spacingScale ?? 1,
+          language: 'jp',
+          lang: pages.lang,
+        });
+        mount.prepare();
+        try {
+          const canvas = await rasterizePosterLayoutPageRoot(mount.root);
+          addCanvasToPdfPage(pdf, canvas, wMm, hMm, globalPageIndex === 0);
+          globalPageIndex++;
+        } finally {
+          mount.dispose();
+        }
+        if (i < pages.slices.length - 1) {
+          await yieldTick();
+        }
+      }
+      onSongDone?.(id, pages.slices.length);
+      results.push({ id, title, status: 'done', pages: pages.slices.length });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '栅格化失败';
+      onSongError?.(id, title, message);
+      results.push({ id, title, status: 'failed', error: message, pages: 0 });
     }
   }
 
-  // 7. 输出
+  return { pdf, results };
+}
+
+/** 把渲染好的 jsPDF 交付给用户（移动端分享 / 桌面端下载）。 */
+export async function deliverBatchPdf(pdf: jsPDF, filename: string): Promise<void> {
   const blob = pdf.output('blob') as Blob;
   assertValidPdfBlob(blob);
-
-  const filename = `shufuri-lyrics-batch-${projects.length}-songs.pdf`;
   await deliverPosterPdfBlob(blob, filename);
-
-  onProgress?.({
-    current: totalPages,
-    total: totalPages,
-    projectTitle: '',
-    phase: 'done',
-  });
 }

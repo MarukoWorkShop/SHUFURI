@@ -307,6 +307,7 @@ export default function SavedLyricsLibrary({ onOpen, refreshKey = 0 }: SavedLyri
           <BatchExportPanel
             open={showBatchExport}
             onClose={() => setShowBatchExport(false)}
+            initialSelectedProjects={items.filter((it) => selectedIds.has(it.id))}
           />,
           document.body,
         )

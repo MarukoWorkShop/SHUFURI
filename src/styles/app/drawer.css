@@ -717,6 +717,116 @@
   color: var(--color-fg);
 }
 
+/* ---------- 选择列表（尺寸下方） ---------- */
+
+.batch-export-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 38vh;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-muted);
+}
+
+.batch-export-select-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ui-font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-fg);
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.batch-export-select-item input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+}
+
+/* ---------- 逐首状态列表（进度 / 完成） ---------- */
+
+.batch-export-song-list {
+  list-style: none;
+  margin: 12px 0 16px;
+  padding: 0;
+  width: 100%;
+  max-height: 46vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.batch-export-song-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ui-font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-fg);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-muted);
+}
+
+.batch-export-song-item__icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: var(--ui-weight-bold);
+  line-height: 1;
+}
+
+.batch-export-song-item.is-done .batch-export-song-item__icon {
+  background: var(--color-accent);
+  color: var(--color-bg-elevated);
+}
+
+.batch-export-song-item.is-failed .batch-export-song-item__icon {
+  background: var(--color-danger, #d23);
+  color: #fff;
+}
+
+.batch-export-song-item.is-rendering .batch-export-song-item__icon {
+  background: var(--color-fg-muted);
+  color: var(--color-bg-elevated);
+}
+
+.batch-export-song-item__title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-export-song-item__err {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--color-danger, #d23);
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-export-finish {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
 /* ================================================================
    AI 内测反馈墙
    使用系统设计令牌，与 batch export 面板一致

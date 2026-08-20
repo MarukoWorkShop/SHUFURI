@@ -1,201 +1,287 @@
-import { useState, useCallback, useEffect } from 'react';
-import { L } from '../utils/i18n';
+import { useEffect, useRef, useState } from 'react';
+import { listSavedLyricsProjects } from '../services/savedLyricsStore';
+import type { SavedLyricsProject } from '../services/savedLyricsStore';
+import {
+  renderBatchPdf,
+  deliverBatchPdf,
+  type BatchSongResult,
+} from '../utils/batchExportPdf';
 import type { PosterLayoutProfile } from '../utils/shufuriPoster/types';
-import type { BatchExportProgress } from '../utils/batchExportPdf';
 
-/* ---------- 尺寸选项 ---------- */
+type Phase = 'select' | 'rendering' | 'finish' | 'done';
 
-interface SizeOption {
-  profile: PosterLayoutProfile;
-  label: string;
-  activeLabel: string;
-  desc: string;
-  dimLabel: string;
+interface BatchExportPanelProps {
+  onClose: () => void;
+  /** 受控可见性，由父组件条件渲染时通常恒为 true；传 false 时不渲染 */
+  open?: boolean;
+  /** 来自歌词库的预选集（已勾选的歌词本），提供时直接进入尺寸选择并预填勾选 */
+  initialSelectedProjects?: SavedLyricsProject[];
 }
 
-const SIZE_OPTIONS: SizeOption[] = [
-  {
-    profile: 'clipPosterPrint',
-    label: L('打印尺寸', 'Print Size'),
-    activeLabel: L('打印尺寸 (A5/B5)', 'Print Size (A5/B5)'),
-    desc: L('600×852 像素，适合 A5/B5/B6 纸张打印', '600×852 px, fits A5/B5/B6 paper'),
-    dimLabel: '600 × 852 px',
-  },
-  {
-    profile: 'squarePoster',
-    label: L('1:1 方形', '1:1 Square'),
-    activeLabel: L('1:1 方形', '1:1 Square'),
-    desc: L('1080×1080 像素，适合社交媒体分享', '1080×1080 px, for social media'),
-    dimLabel: '1080 × 1080 px',
-  },
-  {
-    profile: 'mobilePoster',
-    label: L('手机预览', 'Mobile Preview'),
-    activeLabel: L('手机预览 (9:16)', 'Mobile Preview (9:16)'),
-    desc: L('1080×1920 像素，适合手机竖屏查看', '1080×1920 px, for mobile screens'),
-    dimLabel: '1080 × 1920 px',
-  },
-  {
-    profile: 'socialPoster',
-    label: L('小红书 / Instagram', 'Xiaohongshu / Instagram'),
-    activeLabel: L('小红书 / Instagram (3:4)', 'Xiaohongshu / Instagram (3:4)'),
-    desc: L('1080×1440 像素，适合小红书、Instagram 等平台竖版首图', '1080×1440 px, for Xiaohongshu / Instagram vertical posts'),
-    dimLabel: '1080 × 1440 px',
-  },
+const PROFILE_OPTIONS: { key: string; label: string; dim: string; desc: string; profile: PosterLayoutProfile }[] = [
+  { key: 'b5', label: 'B5 打印', dim: '600 × 852', desc: '适合 A4/B5 纸打印，体积小、清晰', profile: 'clipPosterPrint' },
+  { key: 'mobile', label: '手机竖屏', dim: '1080 × 1920', desc: '适合手机阅读 / 长图，高清', profile: 'mobilePoster' },
 ];
 
-/* ---------- Props ---------- */
-
-export interface BatchExportPanelProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-/* ---------- Component ---------- */
-
-export default function BatchExportPanel({ open, onClose }: BatchExportPanelProps) {
+export function BatchExportPanel({ onClose, open = true, initialSelectedProjects }: BatchExportPanelProps) {
+  if (open === false) return null;
+  const [phase, setPhase] = useState<Phase>('select');
+  const [items, setItems] = useState<SavedLyricsProject[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => new Set(initialSelectedProjects?.map((p) => p.id) ?? [])
+  );
   const [selectedProfile, setSelectedProfile] = useState<PosterLayoutProfile>('clipPosterPrint');
-  const [phase, setPhase] = useState<'select' | 'exporting' | 'done'>('select');
-  const [progress, setProgress] = useState<BatchExportProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleStartExport = useCallback(async () => {
-    setPhase('exporting');
-    setError(null);
-    setProgress(null);
+  // 逐首状态
+  const [songStates, setSongStates] = useState<Record<string, BatchSongResult>>({});
+  const [currentTitle, setCurrentTitle] = useState<string>('');
+  const [doneCount, setDoneCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
 
-    try {
-      const { executeBatchExport } = await import('../utils/batchExportPdf');
-      await executeBatchExport(selectedProfile, (p) => setProgress({ ...p }));
-      setPhase('done');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : L('导出失败，请重试', 'Export failed, please retry'));
-      setPhase('select');
-    }
-  }, [selectedProfile]);
+  const pdfRef = useRef<import('jspdf').jsPDF | null>(null);
+  const lastResultsRef = useRef<BatchSongResult[]>([]);
 
-  const handleClose = useCallback(() => {
-    setPhase('select');
-    setError(null);
-    setProgress(null);
-    onClose();
-  }, [onClose]);
-
-  // Escape 键关闭
   useEffect(() => {
-    if (!open) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose();
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [open, handleClose]);
+    listSavedLyricsProjects()
+      .then((list) => setItems(list as SavedLyricsProject[]))
+      .catch(() => setItems([]));
+  }, []);
 
-  if (!open) return null;
+  const toggle = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectedProjects = items.filter((it) => selectedIds.has(it.id));
+
+  const onSongStart = (id: string, title: string) => {
+    setCurrentTitle(title);
+    setSongStates((prev) => ({ ...prev, [id]: { id, title, status: 'rendering', pages: 0 } }));
+  };
+  const onSongDone = (id: string, pages: number) => {
+    setSongStates((prev) => ({ ...prev, [id]: { id, title: prev[id]?.title ?? '', status: 'done', pages } }));
+    setDoneCount((c) => c + 1);
+  };
+  const onSongError = (id: string, title: string, message: string) => {
+    setSongStates((prev) => ({ ...prev, [id]: { id, title, status: 'failed', error: message, pages: 0 } }));
+  };
+
+  const runExport = async (projects: SavedLyricsProject[], existingPdf?: import('jspdf').jsPDF) => {
+    setPhase('rendering');
+    setError(null);
+    setCurrentTitle('');
+    if (!existingPdf) {
+      setSongStates({});
+      setDoneCount(0);
+      setTotalCount(projects.length);
+    }
+    try {
+      const { pdf, results } = await renderBatchPdf({
+        targetProfile: selectedProfile,
+        projects,
+        existingPdf,
+        onSongStart,
+        onSongDone,
+        onSongError,
+      });
+      pdfRef.current = pdf;
+      // 合并结果：续写时用新结果覆盖对应项
+      const merged = existingPdf
+        ? lastResultsRef.current.map((r) => results.find((x) => x.id === r.id) ?? r)
+        : results;
+      lastResultsRef.current = merged;
+      setPhase('finish');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '批量导出初始化失败');
+      setPhase('finish');
+    }
+  };
+
+  const handleStart = () => {
+    if (selectedProjects.length === 0) {
+      setError('请至少选择一首歌词');
+      return;
+    }
+    void runExport(selectedProjects);
+  };
+
+  const failedProjects = () =>
+    lastResultsRef.current
+      .filter((r) => r.status === 'failed')
+      .map((r) => selectedProjects.find((p) => p.id === r.id))
+      .filter(Boolean) as SavedLyricsProject[];
+
+  const succeededCount = () => lastResultsRef.current.filter((r) => r.status === 'done').length;
+
+  // 完成阶段：无失败项则自动交付
+  useEffect(() => {
+    if (phase !== 'finish') return;
+    const failed = lastResultsRef.current.filter((r) => r.status === 'failed');
+    if (failed.length === 0 && pdfRef.current) {
+      const total = lastResultsRef.current.length;
+      deliverBatchPdf(pdfRef.current, `shufuri-lyrics-batch-${total}-songs.pdf`)
+        .then(() => setPhase('done'))
+        .catch((e) => setError(e instanceof Error ? e.message : '交付失败'));
+    }
+  }, [phase]);
+
+  const handleRetryFailed = () => {
+    const failed = failedProjects();
+    if (failed.length === 0) return;
+    void runExport(failed, pdfRef.current ?? undefined);
+  };
+
+  const handleSkipAndDownload = () => {
+    if (!pdfRef.current || succeededCount() === 0) return;
+    deliverBatchPdf(pdfRef.current, `shufuri-lyrics-batch-${succeededCount()}-songs.pdf`)
+      .then(() => setPhase('done'))
+      .catch((e) => setError(e instanceof Error ? e.message : '交付失败'));
+  };
+
+  const handleOverlayClick = () => {
+    if (phase === 'select') onClose();
+  };
 
   return (
-    <div className="batch-export-overlay" onClick={handleClose}>
-      <div
-        className="batch-export-card"
-        role="dialog"
-        aria-modal="true"
-        aria-label={L('批量导出 PDF', 'Batch Export as PDF')}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 标题 */}
-        <h3 className="batch-export-card__title">
-          {L('批量导出 PDF', 'Batch Export as PDF')}
-        </h3>
-
-        {/* 选择阶段 */}
+    <div className="batch-export-overlay" onClick={handleOverlayClick}>
+      <div className="batch-export-card" onClick={(e) => e.stopPropagation()}>
         {phase === 'select' && (
           <>
-            <p className="batch-export-card__hint">
-              {L('将歌词本中全部歌词合并为一份 PDF，每首歌独立起页', 'Merge all lyrics into one PDF (each song starts on a new page).')}
-            </p>
-
-            {/* 尺寸选项 */}
+            <h3 className="batch-export-card__title">批量导出 PDF</h3>
+            <p className="batch-export-card__hint">勾选要导出的歌词本，选择尺寸后开始。</p>
             <div className="batch-export-sizes">
-              {SIZE_OPTIONS.map((opt) => (
+              {PROFILE_OPTIONS.map((opt) => (
                 <button
-                  key={opt.profile}
-                  type="button"
-                  className={`batch-export-size-card${
-                    opt.profile === selectedProfile ? ' is-active' : ''
-                  }`}
+                  key={opt.key}
+                  className={`batch-export-size-card${selectedProfile === opt.profile ? ' is-active' : ''}`}
                   onClick={() => setSelectedProfile(opt.profile)}
-                  aria-pressed={opt.profile === selectedProfile}
-                  aria-label={opt.activeLabel}
                 >
-                  <span className="batch-export-size-card__label">{opt.activeLabel}</span>
-                  <span className="batch-export-size-card__dim">{opt.dimLabel}</span>
+                  <span className="batch-export-size-card__label">{opt.label}</span>
+                  <span className="batch-export-size-card__dim">{opt.dim}</span>
                   <span className="batch-export-size-card__desc">{opt.desc}</span>
                 </button>
               ))}
             </div>
-
-            {/* 错误 */}
-            {error && (
-              <p className="batch-export-error">{error}</p>
-            )}
-
-            {/* 按钮 */}
+            <div className="batch-export-select-list">
+              {items.map((it) => (
+                <label key={it.id} className="batch-export-select-item">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(it.id)}
+                    onChange={() => toggle(it.id)}
+                  />
+                  <span>{it.title || '未命名歌词'}</span>
+                </label>
+              ))}
+              {items.length === 0 && <p className="batch-export-card__hint">暂存库为空</p>}
+            </div>
+            {error && <p className="batch-export-error">{error}</p>}
             <div className="batch-export-actions">
-              <button
-                type="button"
-                className="batch-export-btn batch-export-btn--secondary"
-                onClick={handleClose}
-              >
-                {L('取消', 'Cancel')}
+              <button className="batch-export-btn batch-export-btn--secondary" onClick={onClose}>
+                取消
               </button>
               <button
-                type="button"
                 className="batch-export-btn batch-export-btn--primary"
-                onClick={handleStartExport}
+                onClick={handleStart}
+                disabled={selectedProjects.length === 0}
               >
-                {L('开始导出', 'Start Export')}
+                导出 {selectedProjects.length > 0 ? `(${selectedProjects.length})` : ''}
               </button>
             </div>
           </>
         )}
 
-        {/* 导出中 */}
-        {phase === 'exporting' && progress && (
+        {phase === 'rendering' && (
           <div className="batch-export-progress">
             <p className="batch-export-progress__text">
-              {L('正在导出', 'Exporting…')} {progress.current}/{progress.total}…
+              正在导出 {doneCount} / {totalCount}
             </p>
-            <p className="batch-export-progress__song">{progress.projectTitle}</p>
+            <p className="batch-export-progress__song">{currentTitle || '准备中…'}</p>
             <div className="batch-export-progress__bar">
               <div
                 className="batch-export-progress__fill"
-                style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                style={{ width: totalCount ? `${(doneCount / totalCount) * 100}%` : '0%' }}
               />
+            </div>
+            <ul className="batch-export-song-list">
+              {Object.values(songStates).map((s) => (
+                <li key={s.id} className={`batch-export-song-item is-${s.status}`}>
+                  <span className="batch-export-song-item__icon">
+                    {s.status === 'done' ? '✓' : s.status === 'failed' ? '✕' : '…'}
+                  </span>
+                  <span className="batch-export-song-item__title">{s.title}</span>
+                  {s.status === 'failed' && (
+                    <span className="batch-export-song-item__err">{s.error}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {phase === 'finish' && (
+          <div className="batch-export-finish">
+            <h3 className="batch-export-card__title">导出完成</h3>
+            <ul className="batch-export-song-list">
+              {lastResultsRef.current.map((s) => (
+                <li key={s.id} className={`batch-export-song-item is-${s.status}`}>
+                  <span className="batch-export-song-item__icon">
+                    {s.status === 'done' ? '✓' : '✕'}
+                  </span>
+                  <span className="batch-export-song-item__title">{s.title}</span>
+                  {s.status === 'failed' && (
+                    <span className="batch-export-song-item__err">{s.error}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {error && <p className="batch-export-error">{error}</p>}
+            <div className="batch-export-actions">
+              <button className="batch-export-btn batch-export-btn--secondary" onClick={onClose}>
+                取消
+              </button>
+              {failedProjects().length > 0 && (
+                <button className="batch-export-btn batch-export-btn--secondary" onClick={handleRetryFailed}>
+                  重试失败项
+                </button>
+              )}
+              {succeededCount() > 0 ? (
+                <button className="batch-export-btn batch-export-btn--primary" onClick={handleSkipAndDownload}>
+                  下载（{succeededCount()}）
+                </button>
+              ) : (
+                <button className="batch-export-btn batch-export-btn--primary" disabled>
+                  无成功项
+                </button>
+              )}
             </div>
           </div>
         )}
 
-        {/* 完成 */}
         {phase === 'done' && (
           <div className="batch-export-done">
             <div className="batch-export-done__icon-wrap">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <path className="batch-export-done__check" d="M5 13l4 4L19 7" />
+              <svg viewBox="0 0 52 52" className="batch-export-done__check-svg">
+                <circle className="batch-export-done__circle" cx="26" cy="26" r="24" />
+                <path className="batch-export-done__check" d="M14 27 L23 36 L39 18" />
               </svg>
             </div>
-            <p className="batch-export-done__text">
-              {L('导出完成', 'Export Complete')}
-            </p>
-            <button
-              type="button"
-              className="batch-export-btn batch-export-btn--primary"
-              onClick={handleClose}
-            >
-              {L('关闭', 'Close')}
-            </button>
+            <p className="batch-export-done__text">PDF 已交付</p>
+            <div className="batch-export-actions">
+              <button className="batch-export-btn batch-export-btn--primary" onClick={onClose}>
+                完成
+              </button>
+            </div>
           </div>
         )}
       </div>
     </div>
   );
 }
+
+export default BatchExportPanel;
