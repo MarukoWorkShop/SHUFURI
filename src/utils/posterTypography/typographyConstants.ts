@@ -16,7 +16,7 @@ export const JP_LYRIC_GROUP_GAP_EM = JP_LYRIC_GROUP_GAP_BASE_PX / JP_LYRIC_MAIN_
  * 假名相对汉字的垂直间距（rt 的 padding-bottom，em 相对 rt 字号）。
  * WebKit/Chromium 下可把注音顶离汉字；配合 JP_LYRIC_LINE_HEIGHT 避免行间碰撞。
  */
-export const JP_RUBY_BASE_GAP_EM = 0.28;
+export const JP_RUBY_BASE_GAP_EM = 0.42;
 /** 日语歌词行高（略宽于 Kami 1.52，给假名留空） */
 export const JP_LYRIC_LINE_HEIGHT = 1.72;
 
@@ -45,9 +45,9 @@ export const JP_ZH_LINE_WEIGHT = 400;
 /** 辅助文案 / 标题轻字重 */
 export const AUX_WEIGHT = 300;
 
-/** 日文 ruby 注音层（工具层；略深于 #aaa，保证可读） */
+/** 日文 ruby 注音层（打印加深至 #555，保证黑白打印可读） */
 export const JP_RUBY_WEIGHT = 400;
-export const JP_RUBY_COLOR = '#888';
+export const JP_RUBY_COLOR = '#555';
 /** 假名相对主文比例（修改前原值；手机竖屏约主文×0.54） */
 export const JP_RUBY_RT_EM_MOBILE = 0.54;
 export const JP_RUBY_RT_EM_PRINT = 0.58;

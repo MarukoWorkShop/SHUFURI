@@ -21,7 +21,7 @@ export const B5_DIM: FuriganaEngineDim = {
   profile: 'clipPosterPrint',
   canvasWidth: 600,
   canvasHeight: 852,
-  padH: 45,
+  padH: 75, // 原始 45 + 30px (≈0.8cm 活页纸左右额外缩进)
   pagePadTopCont: 40,
   pageBottomDefault: 24,
   textBottomClearance: 0,

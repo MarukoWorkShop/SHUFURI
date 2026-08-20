@@ -290,6 +290,8 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   const titleFs = fs(L.titleFsPx);
   const mainFs = fs(L.mainPx);
   const auxFs = fs(L.auxPx);
+  /** 英文/外文翻译(gloss)字号：比辅文(aux)再小一档，避免喧宾夺主 */
+  const glossFs = fs(Math.round(L.auxPx * 0.85));
   const h2Fs = fs(L.h2Px);
 
   const jpLyricFont = F.isEnglish ? EN_FONT_FAMILY : KOZMIN_PRO_REGULAR_FAMILY;
@@ -401,6 +403,8 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     box-sizing: border-box;
     overflow-wrap: break-word;
     word-break: break-word;
+    /* 英文/韩文等非中文管线条目间距（日语有 .vocab-ex-zh 的由 :has 规则覆盖更大间距） */
+    margin-bottom: ${unit === 'px' ? Math.round(0.8 * L.auxPx * L.jpLh) : size(Math.round(0.8 * (L.jpLh / r.spacingScale) * L.auxPx), unit, spec)};
   }
   ${bodySel} .lyrics-group .jp-line,
   ${bodySel} .lyrics-group .ko-line,
@@ -544,7 +548,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   ${bodySel} .grammar-ex-gloss,
   ${bodySel} .grammar-ex-gloss * {
     font-family: ${ZH_FONT_FAMILY} !important;
-    font-size: ${auxFs} !important;
+    font-size: ${glossFs} !important;
     font-weight: ${primaryWght} !important;
     color: ${BODY_TEXT_COLOR} !important;
     line-height: ${L.zhLyricsLh} !important;
