@@ -592,12 +592,15 @@ export default function EditScreen() {
         return;
       }
       present.setSpotlight(id);
-      group.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      // 桌面端：点击对焦行居中滚动；手机端不强行居中，交由滑动监听把焦点锚在 40% 高度处
+      if (isDesktopSplit) {
+        group.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
     };
 
     root.addEventListener('click', onClick, true);
     return () => root.removeEventListener('click', onClick, true);
-  }, [present.presentationOn, present.spotlightGroupId, present.setSpotlight, present.clearSpotlight, editCanvasRef]);
+  }, [present.presentationOn, present.spotlightGroupId, present.setSpotlight, present.clearSpotlight, isDesktopSplit, editCanvasRef]);
 
   /** 同步聚光灯 class（HTML 重渲后同帧重贴，避免闪烁丢失） */
   useLayoutEffect(() => {
@@ -676,6 +679,67 @@ export default function EditScreen() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [present.presentationOn, present.spotlightGroupId, present, handleExitPresentation, editCanvasRef]);
+
+  /**
+   * 手机版（无键盘箭头）聚光灯：手动滑动歌词时，自动把「路过屏幕 40% 高度处」的那一行高亮放大。
+   * 仅切换高亮（setSpotlight），不调用 scrollIntoView，避免与手指滑动打架。
+   * 桌面端（isDesktopSplit）保留点击 + ↑↓ 箭头 + 居中对齐，不挂载此监听。
+   */
+  useEffect(() => {
+    if (!present.presentationOn || isDesktopSplit) return;
+    const container = editCanvasRef.current;
+    if (!container) return;
+
+    const resolveGroups = () => {
+      const body = container.querySelector('.fv-body-h');
+      if (!body) return [] as HTMLElement[];
+      return Array.from(body.querySelectorAll('.lyrics-group')) as HTMLElement[];
+    };
+
+    const groupIdAt = (groups: HTMLElement[], idx: number) =>
+      groups[idx]?.getAttribute('data-ink-g') ?? String(idx);
+
+    /** 焦点线垂直锚点：屏幕 40% 高度处（偏上） */
+    const FOCUS_ANCHOR_RATIO = 0.4;
+
+    const syncSpotlightToScroll = () => {
+      const groups = resolveGroups();
+      if (groups.length === 0) return;
+      const containerRect = container.getBoundingClientRect();
+      if (containerRect.height < 1) return;
+      const targetY = containerRect.height * FOCUS_ANCHOR_RATIO;
+      let bestIdx = -1;
+      let bestDist = Infinity;
+      groups.forEach((g, idx) => {
+        const r = g.getBoundingClientRect();
+        const centerY = r.top + r.height / 2 - containerRect.top;
+        const dist = Math.abs(centerY - targetY);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestIdx = idx;
+        }
+      });
+      if (bestIdx < 0) return;
+      const id = groupIdAt(groups, bestIdx);
+      if (id !== present.spotlightGroupId) {
+        present.setSpotlight(id);
+      }
+    };
+
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(syncSpotlightToScroll);
+    };
+
+    // 进入展示态立即按当前位置高亮一行
+    onScroll();
+    container.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      container.removeEventListener('scroll', onScroll);
+    };
+  }, [present.presentationOn, isDesktopSplit, present.spotlightGroupId, present.setSpotlight, editCanvasRef]);
 
   // 讲解模式：用 Highlighter Brush（笔刷涂抹）彻底替代原生划词。
   // 笔刷计算出的选区文本 + 上下文原样喂给 analyzeSelection，不改 AI 管线。

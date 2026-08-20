@@ -287,6 +287,10 @@
   background: var(--color-accent);
 }
 
+.study-card-detail__nav-btn--close:hover:not(:disabled) {
+  color: var(--color-accent-on);
+}
+
 .study-card-detail__counter {
   margin: 10px 0 0;
   font-family: var(--ui-font-sans);

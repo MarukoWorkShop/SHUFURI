@@ -2,7 +2,7 @@
 
 .home-faq {
   max-width: 980px;
-  margin: 24px auto 0;
+  margin: 16px auto 0;
   width: 100%;
   padding: 0;
   background: transparent;
@@ -13,7 +13,7 @@
 .home-faq__pill-wrapper {
   max-width: 980px;
   width: 100%;
-  margin: 24px auto 0; /* 与上方歌词区保持合理弹性间距 */
+  margin: 40px auto 0; /* 与上方歌词区保持合理弹性间距 */
   display: flex;
   justify-content: flex-end;
 }
@@ -199,7 +199,7 @@
   padding: 0 18px;
   font-size: 13px;
   font-weight: 500;
-  line-height: 1.3;
+  line-height: 1.58;
   letter-spacing: 0.02em;
   color: var(--color-fg-secondary);
 }
