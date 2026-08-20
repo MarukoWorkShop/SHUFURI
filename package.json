@@ -50,7 +50,6 @@
     "@cloudbase/js-sdk": "^3.6.3",
     "@patdx/kuromoji": "^1.0.4",
     "framer-motion": "^13.1.0",
-    "garu-ko": "^0.9.11",
     "heic2any": "^0.0.4",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",

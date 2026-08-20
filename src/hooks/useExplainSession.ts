@@ -32,7 +32,6 @@ import {
   krdictHitToMicroscope,
   lookupKrdictLite,
 } from '../services/dict/krdictLite';
-import { ensureGaruKoLoaded } from '../services/dict/garuKoTokenizer';
 import { findGrammarExamplesFromStudyCards } from '../services/grammarExamplesFromStudyCards';
 
 import { ensureKuromojiLoaded } from '../services/dict/kuromojiTokenizer';
@@ -229,9 +228,6 @@ export function useExplainSession({
     } else if (code === 'ko') {
       void ensureKrdictLiteLoaded().catch((err) => {
         console.warn('[krdict] preload failed', err);
-      });
-      void ensureGaruKoLoaded().catch((err) => {
-        console.warn('[garu-ko] preload failed', err);
       });
     }
   }, [lang]);

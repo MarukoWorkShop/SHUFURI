@@ -96,11 +96,10 @@ npm run deploy:ark-explain-stream
 | Kuromoji IPAdic | `public/dict/kuromoji/*.dat.gz` | `npm run generate:kuromoji-dict` |
 | 日语查词 | `src/services/dict/jmdictLite.ts` | 精确 → Kuromoji → 剥助词 → 活用 → 最长匹配 |
 | KRDICT lite（韩中优先） | `public/dict/krdict-lite.json.gz` | `npm run generate:krdict-lite`（释义：中文→英语→韩义兜底；不再因无中文丢词） |
-| 韩语查词 | `src/services/dict/krdictLite.ts` | **Garu 形态分析优先** → 精确 / 剥助词 / 词尾规则 / 前缀词干（失败回退假分词） |
-| 韩语形态分析 | `src/services/dict/garuKoTokenizer.ts` + `garu-ko` | WASM + `public/dict/garu/base.gmdl`（~1.4MB）；词干还原后查 KRDICT |
-| 韩语假分词（回退） | `src/services/dict/koSurfaceNormalize.ts` | 助词 / 常见活用还原 |
+| 韩语查词 | `src/services/dict/krdictLite.ts` | 本地假分词：精确 / 剥助词 / 词尾规则 / 前缀词干 / 最长匹配 |
+| 韩语假分词 | `src/services/dict/koSurfaceNormalize.ts` | 助词 / 常见活用还原（纯本地，无 WASM 依赖） |
 
-**韩语数据与许可**：국립국어원《한국어기초사전》(KRDICT)，经 [spellcheck-ko/korean-dict-nikl](https://github.com/spellcheck-ko/korean-dict-nikl) 镜像构建。许可 **CC-BY-SA 2.0 KR**，再分发须署名国立国语院。释义优先中文 Equivalent，其次英语，再次韩语 Sense（标记「（韩义）」）；**不再因缺少中文 Equivalent 丢弃词条**。划选优先走 [garu-ko](https://www.npmjs.com/package/garu-ko) 形态分析再查 KRDICT；分析失败时回退假分词。运行时另有 `krdictSeedPatches` 补极少数仍缺的高频洞。
+**韩语数据与许可**：국립국어원《한국어기초사전》(KRDICT)，经 [spellcheck-ko/korean-dict-nikl](https://github.com/spellcheck-ko/korean-dict-nikl) 镜像构建。许可 **CC-BY-SA 2.0 KR**，再分发须署名国立国语院。释义优先中文 Equivalent，其次英语，再次韩语 Sense（标记「（韩义）」）；**不再因缺少中文 Equivalent 丢弃词条**。划选走本地假分词（助词剥离 + 词尾还原 + 最长匹配）查 KRDICT。注：原 garu-ko WASM 形态分析因 CloudBase 静态托管 CSP 限制（`unsafe-eval` 不可用）无法在线上加载，已于纯本地方案移除该依赖。运行时另有 `krdictSeedPatches` 补极少数仍缺的高频洞。
 
 **明确不采用（当前）**：
 
