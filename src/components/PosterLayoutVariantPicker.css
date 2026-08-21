@@ -1,0 +1,183 @@
+/* 版式选择器（圆形三角开关 + 横向微缩纸张面板） */
+.poster-layout-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 2px;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+/* 圆形三角开关：与编辑页同款 */
+.poster-layout-picker__toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ui-fg-secondary, #6b7280);
+  cursor: pointer;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+
+.poster-layout-picker__toggle:hover {
+  color: var(--ui-fg, #111827);
+  background: color-mix(in srgb, var(--ui-fg, #111827) 8%, transparent);
+}
+
+.poster-layout-picker__caret {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 5px 0 5px 7px;
+  border-color: transparent transparent transparent currentColor;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.poster-layout-picker__caret.is-open {
+  transform: rotate(90deg);
+}
+
+.poster-layout-picker__panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 4px 2px;
+  animation: poster-layout-panel-in 0.18s ease;
+}
+
+@keyframes poster-layout-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 单个选项 */
+.poster-layout-picker__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+  flex-shrink: 0;
+}
+
+.poster-layout-picker__item:hover {
+  transform: translateY(-1px);
+}
+
+/* 微缩纸张：约 1:1.4 经典纸比例，去圆角，悬浮浅阴影 */
+.poster-layout-picker__thumb {
+  width: 50px;
+  height: 70px;
+  border-radius: 1px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.10);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  display: block;
+  position: relative;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+/* 选中态：深灰 1px 边框 + 加深阴影（MUJI / 独立杂志调性） */
+.poster-layout-picker__item.is-selected .poster-layout-picker__thumb {
+  border: 1px solid #333333;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+}
+
+/* 纸张内部骨架屏 */
+.poster-layout-picker__thumb-inner {
+  position: absolute;
+  inset: 0;
+}
+
+/* 经典（standard）：居中浅灰长短横线（0.5px），模拟日/中居中排版 */
+.poster-layout-picker__thumb--standard {
+  background: #ffffff;
+}
+
+.poster-layout-picker__thumb--standard .poster-layout-picker__thumb-inner {
+  background-image:
+    linear-gradient(90deg, transparent 18%, rgba(120, 120, 120, 0.35) 18%, rgba(120, 120, 120, 0.35) 82%, transparent 82%),
+    linear-gradient(90deg, transparent 30%, rgba(120, 120, 120, 0.28) 30%, rgba(120, 120, 120, 0.28) 70%, transparent 70%),
+    linear-gradient(90deg, transparent 25%, rgba(120, 120, 120, 0.30) 25%, rgba(120, 120, 120, 0.30) 75%, transparent 75%),
+    linear-gradient(90deg, transparent 34%, rgba(120, 120, 120, 0.24) 34%, rgba(120, 120, 120, 0.24) 66%, transparent 66%);
+  background-size: 100% 0.5px;
+  background-repeat: no-repeat;
+  background-position:
+    center 22px,
+    center 34px,
+    center 46px,
+    center 58px;
+}
+
+/* 笔记本（notebook）：暖米白底 + 极淡全局横穿辅助线 + 左对齐骨架 + kinari 色块 */
+.poster-layout-picker__thumb--notebook {
+  background: #f7f1e6;
+}
+
+.poster-layout-picker__thumb--notebook .poster-layout-picker__thumb-inner {
+  background-image:
+    repeating-linear-gradient(
+      180deg,
+      rgba(31, 78, 140, 0.10) 0 0.5px,
+      transparent 0.5px 11px
+    ),
+    linear-gradient(90deg, transparent 8%, rgba(110, 110, 110, 0.30) 8%, rgba(110, 110, 110, 0.30) 80%, transparent 80%),
+    linear-gradient(90deg, transparent 8%, rgba(110, 110, 110, 0.26) 8%, rgba(110, 110, 110, 0.26) 72%, transparent 72%),
+    linear-gradient(90deg, transparent 8%, rgba(110, 110, 110, 0.26) 8%, rgba(110, 110, 110, 0.26) 84%, transparent 84%),
+    linear-gradient(90deg, transparent 8%, rgba(110, 110, 110, 0.22) 8%, rgba(110, 110, 110, 0.22) 64%, transparent 64%);
+  background-size:
+    100% 100%,
+    100% 0.5px,
+    100% 0.5px,
+    100% 0.5px,
+    100% 0.5px;
+  background-repeat: no-repeat;
+  background-position:
+    0 0,
+    0 24px,
+    0 38px,
+    0 52px,
+    0 64px;
+}
+
+/* 笔记本缩略图中的 kinari 小色块（标记生词） */
+.poster-layout-picker__thumb--notebook .poster-layout-picker__thumb-inner::before {
+  content: '';
+  position: absolute;
+  top: 48px;
+  left: 8px;
+  width: 18px;
+  height: 7px;
+  background: rgba(196, 222, 117, 0.7);
+  border-radius: 1px;
+}
+
+/* 名称标签 */
+.poster-layout-picker__name {
+  font-size: 11px;
+  color: var(--color-text-primary, #111827);
+  white-space: nowrap;
+}

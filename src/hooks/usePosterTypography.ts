@@ -10,7 +10,9 @@ import {
 import {
   DEFAULT_PREVIEW_TYPOGRAPHY,
   buildPosterRenderOptions,
+  DEFAULT_POSTER_LAYOUT_VARIANT,
   type PosterLayoutProfile,
+  type PosterLayoutVariant,
   type PosterPageSlice,
 } from '../utils/shufuriPoster/types';
 import { DEFAULT_POSTER_BACKGROUND_ID } from '../config/posterBackgrounds';
@@ -51,6 +53,7 @@ export function usePosterTypography({
   const [showRubyAnnotations, setShowRubyAnnotations] = useState(true);
   const [repaginating, setRepaginating] = useState(false);
   const [backgroundId, setBackgroundId] = useState(DEFAULT_POSTER_BACKGROUND_ID);
+  const [layoutVariant, setLayoutVariant] = useState<PosterLayoutVariant>(DEFAULT_POSTER_LAYOUT_VARIANT);
   const previewTypography = DEFAULT_PREVIEW_TYPOGRAPHY;
 
   const posterPipelineLang = useMemo(
@@ -62,8 +65,14 @@ export function usePosterTypography({
     [lang, bodyHtml, lyricsLanguage],
   );
   const posterRenderOpts = useMemo(
-    () => buildPosterRenderOptions(showRubyAnnotations, previewTypography, backgroundId),
-    [showRubyAnnotations, previewTypography, backgroundId],
+    () =>
+      buildPosterRenderOptions(
+        showRubyAnnotations,
+        previewTypography,
+        backgroundId,
+        layoutVariant,
+      ),
+    [showRubyAnnotations, previewTypography, backgroundId, layoutVariant],
   );
 
   const rebuildExportPages = useCallback(async () => {
@@ -83,7 +92,12 @@ export function usePosterTypography({
         lyricsLanguage,
         lang,
         titleMarkupHtml,
-        buildPosterRenderOptions(showRubyAnnotations, previewTypography, backgroundId),
+        buildPosterRenderOptions(
+          showRubyAnnotations,
+          previewTypography,
+          backgroundId,
+          layoutVariant,
+        ),
       );
       setPages(pageHtmls);
       resetPosterPageRefs(pageRefs, pageHtmls.length);
@@ -101,6 +115,7 @@ export function usePosterTypography({
     showRubyAnnotations,
     previewTypography,
     backgroundId,
+    layoutVariant,
     setPages,
     pageRefs,
   ]);
@@ -118,12 +133,23 @@ export function usePosterTypography({
   const resetTypographyPreview = useCallback(() => {
     setShowRubyAnnotations(true);
     setBackgroundId(DEFAULT_POSTER_BACKGROUND_ID);
+    setLayoutVariant(DEFAULT_POSTER_LAYOUT_VARIANT);
     onResetInkShowRuby?.();
   }, [onResetInkShowRuby]);
 
   const handleBackgroundChange = useCallback(
     (nextId: string) => {
       setBackgroundId(nextId);
+      if (mode === 'export') {
+        void rebuildExportPages();
+      }
+    },
+    [mode, rebuildExportPages],
+  );
+
+  const handleLayoutVariantChange = useCallback(
+    (next: PosterLayoutVariant) => {
+      setLayoutVariant(next);
       if (mode === 'export') {
         void rebuildExportPages();
       }
@@ -140,9 +166,11 @@ export function usePosterTypography({
     posterRenderOpts,
     backgroundId,
     setBackgroundId,
+    layoutVariant,
     rebuildExportPages,
     handleShowRubyChange,
     handleBackgroundChange,
+    handleLayoutVariantChange,
     resetTypographyPreview,
   };
 }

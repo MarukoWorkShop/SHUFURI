@@ -110,6 +110,7 @@ function ShufuriPosterSinglePage({
         userFontScale: renderOptions?.userFontScale,
         userLineHeightScale: renderOptions?.userLineHeightScale,
         backgroundImage,
+        layoutVariant: renderOptions?.layoutVariant,
       }),
     [layoutProfile, spacingScale, language, pipelineLang, renderOptions, backgroundImage],
   );
@@ -117,6 +118,11 @@ function ShufuriPosterSinglePage({
     () => buildShufuriPosterRootStyle(layoutProfile, backgroundImage),
     [layoutProfile, backgroundImage],
   );
+
+  const layoutVariantAttr =
+    renderOptions?.layoutVariant && renderOptions.layoutVariant !== 'standard'
+      ? renderOptions.layoutVariant
+      : undefined;
 
   const targetW = w * displayScale;
 
@@ -157,6 +163,7 @@ function ShufuriPosterSinglePage({
       applyPosterBodyMaxHeight(bodyEl, layoutProfile, {
         showTitle,
         titleEl: titleEl instanceof HTMLElement ? titleEl : null,
+        layoutVariant: layoutVariantAttr,
       });
     };
 
@@ -419,6 +426,7 @@ function ShufuriPosterSinglePage({
           ref={captureRef}
           className="fv-html-poster-root"
           data-ruby-visible={showRuby ? 'true' : 'false'}
+          data-layout-variant={layoutVariantAttr}
           style={rootStyle as CSSProperties}
         >
           <style>{innerCss}</style>

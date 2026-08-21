@@ -1,6 +1,6 @@
 import ShufuriPosterPreview from './ShufuriPosterPreview';
 import PosterLayoutWheel from './PosterLayoutWheel';
-import PosterBackgroundPicker from './PosterBackgroundPicker';
+import PosterLayoutVariantPicker from './PosterLayoutVariantPicker';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import { useCallback, useState } from 'react';
 import {
@@ -29,8 +29,12 @@ export default function ExportPreviewPanel() {
     capturePageRef,
   } = usePosterDocumentContext();
 
-  const { repaginating, posterRenderOpts, backgroundId, handleBackgroundChange } =
-    usePosterTypographyContext();
+  const {
+    repaginating,
+    posterRenderOpts,
+    layoutVariant,
+    handleLayoutVariantChange,
+  } = usePosterTypographyContext();
   const [layoutChanging, setLayoutChanging] = useState(false);
   const layoutBusy = layoutChanging || repaginating;
 
@@ -95,7 +99,7 @@ export default function ExportPreviewPanel() {
         </div>
       </div>
 
-      <PosterBackgroundPicker value={backgroundId} onChange={handleBackgroundChange} />
+      <PosterLayoutVariantPicker value={layoutVariant} onChange={handleLayoutVariantChange} />
 
       <div ref={exportPagesRef} className="preview-pages-fit export-pages-scroll">
         <ShufuriPosterPreview

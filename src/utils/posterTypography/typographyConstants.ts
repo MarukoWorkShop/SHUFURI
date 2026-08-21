@@ -95,3 +95,23 @@ export const CN_RUBY_GAP_EM = 0.06;
 /** 语法三角指示器尺寸 px（LanguageWheel 同比例） */
 export const LANG_WHEEL_INDICATOR_LEG_PX = 4.8;
 export const LANG_WHEEL_INDICATOR_BASE_PX = 5.6;
+
+/** —— Notebook（行间注）版式配色 —— */
+/** 品牌深蓝：手绘线条、页眉线、强调词 */
+export const NOTEBOOK_BRAND_BLUE = '#1f4e8c';
+/** KINARI 荧光马克笔（生词高亮底） */
+export const NOTEBOOK_MARKER_KINARI = 'rgba(196, 222, 117, 0.55)';
+/** 知识卡片底（vocab/grammar 条目） */
+export const NOTEBOOK_CARD_BG = 'rgba(31, 78, 140, 0.045)';
+/** 知识卡片描边 */
+export const NOTEBOOK_CARD_BORDER = 'rgba(31, 78, 140, 0.22)';
+/** 手绘分隔线（波浪感用虚线近似） */
+export const NOTEBOOK_RULE_COLOR = 'rgba(31, 78, 140, 0.55)';
+/** 暖米白做旧纸底色（更淡） */
+export const NOTEBOOK_PAPER_BG = '#f7f1e6';
+/** 纸面斑驳/污渍（更深的暖褐，极低透明，模拟做旧痕迹） */
+export const NOTEBOOK_STAIN_1 = 'rgba(150, 111, 51, 0.05)';
+export const NOTEBOOK_STAIN_2 = 'rgba(120, 86, 40, 0.045)';
+export const NOTEBOOK_STAIN_3 = 'rgba(178, 143, 79, 0.04)';
+/** 边缘暗角（vignette） */
+export const NOTEBOOK_VIGNETTE = 'rgba(101, 70, 30, 0.10)';

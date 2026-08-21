@@ -186,8 +186,10 @@ export default function PosterEditSessionProvider({
     rubyToggleSupported,
     posterRenderOpts,
     backgroundId,
+    layoutVariant,
     handleShowRubyChange,
     handleBackgroundChange,
+    handleLayoutVariantChange,
     resetTypographyPreview,
   } = typography;
 
@@ -455,8 +457,10 @@ export default function PosterEditSessionProvider({
       rubyToggleSupported,
       posterRenderOpts,
       backgroundId,
+      layoutVariant,
       handleShowRubyChange,
       handleBackgroundChange,
+      handleLayoutVariantChange,
     }),
     [
       showRubyAnnotations,
@@ -465,8 +469,10 @@ export default function PosterEditSessionProvider({
       rubyToggleSupported,
       posterRenderOpts,
       backgroundId,
+      layoutVariant,
       handleShowRubyChange,
       handleBackgroundChange,
+      handleLayoutVariantChange,
     ],
   );
 

@@ -96,9 +96,15 @@ export function createPosterMeasurer(
   const shell = doc.createElement('div');
   shell.className = 'fv-html-poster-root';
   // 直接使用 buildShufuriPosterRootStyle 的完整样式（已含带 px 单位的 width/height）
-  Object.assign(shell.style, buildShufuriPosterRootStyle(profile, backgroundImage));
+  Object.assign(
+    shell.style,
+    buildShufuriPosterRootStyle(profile, backgroundImage),
+  );
   shell.style.position = 'relative';
   shell.dataset.rubyVisible = (renderOptions?.showRuby ?? true) ? 'true' : 'false';
+  if (renderOptions?.layoutVariant && renderOptions.layoutVariant !== 'standard') {
+    shell.dataset.layoutVariant = renderOptions.layoutVariant;
+  }
   // 关键：测量容器也激活 RASTER_SAFE_CSS 的 line-height:1.55 补偿，
   // 使分页测量的行高与导出栅格化完全一致（避免导出时内容撑高溢出压水印）
   shell.dataset.exportRaster = '1';
@@ -117,6 +123,7 @@ export function createPosterMeasurer(
     // 测量时再注入 @font-face（尤其思源 23MB + font-display:block）会卡死切比例。
     includeFontFaces: false,
     backgroundImage,
+    layoutVariant: renderOptions?.layoutVariant,
   });
   const titleEl = doc.createElement('h1');
   titleEl.className = 'fv-title-h';
@@ -152,6 +159,7 @@ export function createPosterMeasurer(
     applyPosterBodyMaxHeight(body, profile, {
       showTitle,
       titleEl: showTitle ? titleEl : null,
+      layoutVariant: renderOptions?.layoutVariant,
     });
   };
 

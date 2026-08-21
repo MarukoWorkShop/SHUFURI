@@ -14,6 +14,7 @@ import {
   buildLatinWrapCss,
 } from '../shufuriPoster/cjkTypography.ts';
 import { ZH_CHAR_SLOT_CLASS } from '../zhLayout/zhRubyMarkup.ts';
+import type { PosterLayoutVariant } from '../shufuriPoster/types.ts';
 import {
   AUX_WEIGHT,
   JP_RUBY_BASE_GAP_EM,
@@ -28,6 +29,16 @@ import {
   PLACEHOLDER_COLOR,
   SEPARATOR_COLOR,
   POSTER_BG_COLOR,
+  NOTEBOOK_BRAND_BLUE,
+  NOTEBOOK_MARKER_KINARI,
+  NOTEBOOK_CARD_BG,
+  NOTEBOOK_CARD_BORDER,
+  NOTEBOOK_RULE_COLOR,
+  NOTEBOOK_PAPER_BG,
+  NOTEBOOK_STAIN_1,
+  NOTEBOOK_STAIN_2,
+  NOTEBOOK_STAIN_3,
+  NOTEBOOK_VIGNETTE,
 } from './typographyConstants.ts';
 import { buildPosterWatermarkCss } from '../shufuriPoster/posterWatermark.ts';
 import type { ResolvedTypography } from './tokenRegistry.ts';
@@ -41,6 +52,8 @@ export type CompilePosterCssOptions = {
   /** 背景图 URL；为空时保持 POSTER_BG_COLOR 纯色背景 */
   backgroundImage?: string;
   showRuby?: boolean;
+  /** 版式变体（standard / notebook），决定排版皮肤 */
+  layoutVariant?: PosterLayoutVariant;
 };
 
 function compileRubyVisibilityCss(showRuby: boolean): string {
@@ -762,6 +775,123 @@ function compileWatermarkCss(
   });
 }
 
+/**
+ * 版式变体 CSS 皮肤（data-layout-variant 挂在 .fv-html-poster-root 上）。
+ * Notebook（行间注）：单栏不变，仅叠加品牌深蓝手绘线条 + KINARI 荧光马克笔
+ * 标注生词 + 知识卡片感 + 更大段落留白。纯 CSS，不影响分页算法。
+ */
+function compileLayoutVariantCss(
+  variant: PosterLayoutVariant | undefined,
+  unit: 'px' | 'mm',
+  resolved: ResolvedTypography,
+): string {
+  if (variant !== 'notebook') return '';
+  const root = '.fv-html-poster-root[data-layout-variant="notebook"]';
+  const bodySel = `${root} .fv-body-h`;
+  const L = resolved.layout;
+  // 方向A1：Notebook 的装饰性增量跟随 spacingScale 收缩，使满页时与标准版式同频收紧，
+  // 避免刚性增量累积触发 verifyAndRepairPages 对不可拆分原子的"静默放行"截断。
+  // scale 下限与 CJK_TYPOGRAPHY_SCALE_STEPS 一致（0.85），避免缩到过紧。
+  const scale = resolved.spacingScale ?? 1;
+  const groupExtraPx = Math.round(5 * scale);
+  const zhGapEm = (0.28 * scale).toFixed(3);
+
+  return `
+  /* —— 暖米白做旧纸底 + 斑驳痕迹（替代纯白） —— */
+  ${root} {
+    background-color: ${NOTEBOOK_PAPER_BG} !important;
+    background-image:
+      radial-gradient(120% 80% at 18% 8%, ${NOTEBOOK_STAIN_1} 0%, transparent 55%),
+      radial-gradient(90% 70% at 88% 22%, ${NOTEBOOK_STAIN_2} 0%, transparent 50%),
+      radial-gradient(140% 120% at 70% 100%, ${NOTEBOOK_STAIN_3} 0%, transparent 60%),
+      radial-gradient(100% 100% at 50% 50%, transparent 62%, ${NOTEBOOK_VIGNETTE} 100%) !important;
+    background-blend-mode: multiply !important;
+    background-repeat: no-repeat !important;
+  }
+  /* —— 页眉手绘线：标题下方一条品牌深蓝粗线 + 细线 —— */
+  ${root} .fv-title-h {
+    padding-bottom: 0.55em !important;
+    border-bottom: 2.5px solid ${NOTEBOOK_BRAND_BLUE} !important;
+    box-shadow: 0 3px 0 -1px ${NOTEBOOK_RULE_COLOR} !important;
+  }
+  /* —— 歌词组：适度留白 + 组间手绘分隔虚线（留白随 spacingScale 收缩） —— */
+  ${bodySel} .lyrics-group {
+    margin-bottom: ${
+      unit === 'px'
+        ? `${parseFloat(L.groupMb) + groupExtraPx}px`
+        : L.groupMb
+    } !important;
+    padding: 0.1em 0 0 0 !important;
+    border-bottom: 1.5px dashed ${NOTEBOOK_RULE_COLOR} !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  ${bodySel} > .lyrics-group:last-child {
+    border-bottom: none !important;
+    margin-bottom: 0 !important;
+  }
+  /* 歌词中日文间距微调，营造行间注呼吸感（随 spacingScale 收缩） */
+  ${bodySel} .lyrics-group .zh-line,
+  ${bodySel} .lyrics-group .zh-line *,
+  ${bodySel} .lyrics-group .gloss-line,
+  ${bodySel} .lyrics-group .gloss-line * {
+    margin-top: ${zhGapEm}em !important;
+  }
+  /* —— 区段标题（重点词汇/语法）：品牌深蓝下划线 —— */
+  ${bodySel} h2.lyrics-section-title {
+    color: ${NOTEBOOK_BRAND_BLUE} !important;
+    border-bottom: 1.5px solid ${NOTEBOOK_BRAND_BLUE} !important;
+    padding-bottom: 0.3em !important;
+    letter-spacing: 0.08em !important;
+  }
+  /* —— 知识区段：整个 vocabulary/grammar 用一个左侧色条包裹（非逐条卡片） —— */
+  ${bodySel} .lyrics-vocabulary,
+  ${bodySel} .lyrics-grammar {
+    background: ${NOTEBOOK_CARD_BG} !important;
+    border: 1px solid ${NOTEBOOK_CARD_BORDER} !important;
+    border-left: 3.5px solid ${NOTEBOOK_BRAND_BLUE} !important;
+    border-radius: 10px !important;
+    padding: 0.6em 0.8em !important;
+    box-sizing: border-box !important;
+    margin-top: 0.35em !important;
+  }
+  /* 区段内词条去掉独立卡片样式，保持紧凑 */
+  ${bodySel} .lyrics-vocab-item,
+  ${bodySel} .lyrics-grammar-item {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0.25em 0 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  /* —— KINARI 荧光马克笔：高亮生词 / 语法点标题（不改动字宽，避免溢出） —— */
+  ${bodySel} .vocab-line1 .vocab-word,
+  ${bodySel} .vocab-line1 .vocab-word *:not(rt):not(rp),
+  ${bodySel} .vocab-line1 .vocab-word-cn,
+  ${bodySel} .vocab-line1 .vocab-word-cn *:not(rt):not(rp):not(.${ZH_CHAR_SLOT_CLASS}),
+  ${bodySel} h3.grammar-point-title .grammar-title-ja,
+  ${bodySel} h3.grammar-point-title .grammar-title-ja *:not(rt):not(rp),
+  ${bodySel} h3.grammar-point-title .grammar-title-cn,
+  ${bodySel} h3.grammar-point-title .grammar-title-cn *:not(rt):not(rp):not(.${ZH_CHAR_SLOT_CLASS}) {
+    background: ${NOTEBOOK_MARKER_KINARI} !important;
+    color: ${NOTEBOOK_BRAND_BLUE} !important;
+    padding: 0.18em 0.08em !important;
+    box-decoration-break: clone !important;
+    -webkit-box-decoration-break: clone !important;
+    border-radius: 2px !important;
+  }
+  /* 韩文稿生词同样标记（覆盖旧划词笔记误用路径） */
+  ${bodySel} .lyrics-explain-notes .vocab-line1 .vocab-word,
+  ${bodySel} .lyrics-explain-notes .vocab-line1 .vocab-word *:not(rt):not(rp) {
+    background: ${NOTEBOOK_MARKER_KINARI} !important;
+    color: ${NOTEBOOK_BRAND_BLUE} !important;
+    box-decoration-break: clone !important;
+    -webkit-box-decoration-break: clone !important;
+    border-radius: 2px !important;
+  }`;
+}
+
 export function compilePosterCss(
   resolved: ResolvedTypography,
   options: CompilePosterCssOptions = {},
@@ -784,8 +914,9 @@ export function compilePosterCss(
   const cjkNoBreak = buildCjkNoBreakClassCss();
   const showRuby = options.showRuby ?? resolved.flags.showRuby;
   const rubyVisibility = compileRubyVisibilityCss(showRuby);
+  const layoutVariantCss = compileLayoutVariantCss(options.layoutVariant, unit, resolved);
 
-  return `${fontFaces}${printShell}${bodyRules}${zhRules}${watermark}${cjkNoBreak}${rubyVisibility}`;
+  return `${fontFaces}${printShell}${bodyRules}${zhRules}${watermark}${cjkNoBreak}${rubyVisibility}${layoutVariantCss}`;
 }
 
 /** 编辑页：主题令牌 / 布局（行距已并入 mobilePoster Kami 基准，勿再 !important 覆盖） */

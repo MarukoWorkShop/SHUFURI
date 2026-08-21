@@ -138,8 +138,13 @@ export type PosterTypographyContextValue = {
   posterRenderOpts: PosterRenderOptions;
   /** 当前选中的海报背景图 ID */
   backgroundId: string;
+  /** 当前选中的版式变体 */
+  layoutVariant: import('../utils/shufuriPoster/types').PosterLayoutVariant;
   handleShowRubyChange: (next: boolean) => void;
   handleBackgroundChange: (nextId: string) => void;
+  handleLayoutVariantChange: (
+    next: import('../utils/shufuriPoster/types').PosterLayoutVariant,
+  ) => void;
 };
 
 export type PosterInkContextValue = PosterWorkspaceInkSession;

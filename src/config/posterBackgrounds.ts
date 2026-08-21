@@ -28,3 +28,12 @@ export function getPosterBackgroundUrl(id: string | undefined | null): string | 
   const bg = getPosterBackgroundById(id);
   return bg && bg.file ? bg.file : undefined;
 }
+
+/**
+ * 版式底色（html2canvas backgroundColor 联动，避免非白底被刷白导致 PDF 零字节）。
+ * 当前所有背景均为纯白；未来引入非白底背景时在此返回对应色值。
+ */
+export function getPosterBackgroundBgColor(id: string | undefined | null): string {
+  void id;
+  return '#ffffff';
+}

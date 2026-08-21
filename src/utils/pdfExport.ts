@@ -215,7 +215,8 @@ function buildHtml2CanvasOpts(target: HTMLElement, scale: number): Html2CanvasOp
     height: expectedH,
     useCORS: true,
     allowTaint: false,
-    backgroundColor: '#ffffff',
+    // 底色与版式/背景联动：shell 记录实际底色（notebook 暖米白），避免非白底被刷白
+    backgroundColor: target.dataset.exportBg || '#ffffff',
     logging: false,
     windowWidth: expectedW,
     windowHeight: expectedH,

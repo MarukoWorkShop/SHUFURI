@@ -11,7 +11,8 @@ import { getAppSettings } from '../services/appSettings';
 import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
 import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
 import { appendPosterWatermark } from './shufuriPoster/posterWatermark';
-import { getPosterBackgroundUrl } from '../config/posterBackgrounds';
+import { getPosterBackgroundUrl, getPosterBackgroundBgColor } from '../config/posterBackgrounds';
+import { NOTEBOOK_PAPER_BG } from './posterTypography/typographyConstants';
 
 /**
  * 导出 html2canvas 渲染补偿因子。
@@ -87,6 +88,11 @@ export function mountPosterExportPage(
   void _pageCount;
   const { width: canvasW, height: canvasH } = getShufuriPosterCanvasDimensions(layoutProfile);
   const backgroundImage = getPosterBackgroundUrl(renderOptions?.backgroundId);
+  // 底色与版式联动：notebook 用暖米白做旧纸底，避免 html2canvas 把非白底刷白（PDF 零字节回归）
+  const pageBgColor =
+    renderOptions?.layoutVariant === 'notebook'
+      ? NOTEBOOK_PAPER_BG
+      : getPosterBackgroundBgColor(renderOptions?.backgroundId);
   const rootStyle = buildShufuriPosterRootStyle(layoutProfile, backgroundImage);
 
   // 离屏 backdrop：为 html2canvas 提供白底，尺寸与画布一致，永不移入视口。
@@ -109,6 +115,8 @@ export function mountPosterExportPage(
   backdrop.style.pointerEvents = 'none';
   backdrop.style.contain = 'layout style';
   backdrop.style.zIndex = '2147483646';
+  // backdrop 底色与版式底色联动，避免 html2canvas 把非白底刷白（PDF 零字节回归）
+  backdrop.style.background = pageBgColor;
 
   const wrapper = doc.createElement('div');
   wrapper.style.position = 'absolute';
@@ -129,6 +137,11 @@ export function mountPosterExportPage(
   shell.dataset.exportCanvasW = String(canvasW);
   shell.dataset.exportCanvasH = String(canvasH);
   shell.dataset.rubyVisible = (renderOptions?.showRuby ?? true) ? 'true' : 'false';
+  // 导出底色：供 html2canvas backgroundColor 联动，避免非白底被刷白（PDF 零字节回归）
+  shell.dataset.exportBg = pageBgColor;
+  if (renderOptions?.layoutVariant && renderOptions.layoutVariant !== 'standard') {
+    shell.dataset.layoutVariant = renderOptions.layoutVariant;
+  }
 
   const styleEl = doc.createElement('style');
   // 叠加 html2canvas 渲染补偿因子，确保 PDF 栅格化不溢出
@@ -144,6 +157,7 @@ export function mountPosterExportPage(
       userFontScale: renderOptions?.userFontScale,
       userLineHeightScale: renderOptions?.userLineHeightScale,
       backgroundImage,
+      layoutVariant: renderOptions?.layoutVariant,
     }) + RASTER_SAFE_CSS;
   shell.appendChild(styleEl);
 
@@ -165,6 +179,7 @@ export function mountPosterExportPage(
   applyPosterBodyMaxHeight(body, layoutProfile, {
     showTitle,
     titleEl: titleElForMeasure instanceof HTMLElement ? titleElForMeasure : null,
+    layoutVariant: renderOptions?.layoutVariant,
   });
 
   wrapper.appendChild(shell);

@@ -1,4 +1,4 @@
-import type { PosterLayoutProfile } from './types.ts';
+import type { PosterLayoutProfile, PosterLayoutVariant } from './types.ts';
 import { dimForFuriganaPoster } from './dimensions.ts';
 import type { LyricsLanguage, LangCode, ColorTheme } from '../../services/appSettings.ts';
 import {
@@ -95,17 +95,32 @@ export function getFuriganaBodyBottomPaddingPx(profile: PosterLayoutProfile): nu
   return 16;
 }
 
-/** 分页测量与预览共用的正文区安全余量（吸收 WebKit 字体/ruby 子像素误差） */
-export function getPosterBodySafetyMarginPx(profile: PosterLayoutProfile): number {
-  if (profile === 'mobilePoster') return 20;
-  if (profile === 'squarePoster') return 24;
-  return 12;
+/**
+ * 分页测量与预览共用的正文区安全余量（吸收 WebKit 字体/ruby 子像素误差）。
+ * Notebook 版式在 lyrics-group / 区段卡片上有额外装饰增量（margin/padding/border），
+ * 这些增量在满页时虽随 spacingScale 收缩（见 compileLayoutVariantCss），但为彻底避免
+ * verifyAndRepairPages 对不可拆分原子的"静默放行"截断，这里额外预留 Notebook 余量，
+ * 让测量阶段更早换页（AGENTS.md 第九节 约束A / 方向A2）。
+ */
+export function getPosterBodySafetyMarginPx(
+  profile: PosterLayoutProfile,
+  layoutVariant?: PosterLayoutVariant,
+): number {
+  let margin: number;
+  if (profile === 'mobilePoster') margin = 20;
+  else if (profile === 'squarePoster') margin = 24;
+  else margin = 12;
+  if (layoutVariant === 'notebook') {
+    // mobile 页高更大、可容纳更多 group，绝对增量更可观；print 页密、相对敏感
+    margin += profile === 'mobilePoster' ? 20 : profile === 'squarePoster' ? 18 : 14;
+  }
+  return margin;
 }
 
 /** 计算 fv-body-h 的 max-height（px），测量与预览共用同一公式 */
 export function computePosterBodyMaxHeightPx(
   profile: PosterLayoutProfile,
-  options: { showTitle: boolean; titleEl: HTMLElement | null },
+  options: { showTitle: boolean; titleEl: HTMLElement | null; layoutVariant?: PosterLayoutVariant },
 ): number {
   const { height: h } = getFuriganaPosterCanvasDimensions(profile);
   const insets = getFuriganaCanvasInsets(profile);
@@ -119,7 +134,7 @@ export function computePosterBodyMaxHeightPx(
     titleMB = parseFloat(getComputedStyle(options.titleEl).marginBottom) || 0;
   }
 
-  const margin = getPosterBodySafetyMarginPx(profile);
+  const margin = getPosterBodySafetyMarginPx(profile, options.layoutVariant);
   // C-1: 额外扣除水印文字安全距离（缩放后），使正文 max-height 不进入水印文字区，
   // 配合 getFuriganaPageNumberReservePx 的一致预留，避免导出末行压水印。
   const clearance = Math.round(WATERMARK_TEXT_CLEARANCE_PX * watermarkDesignScale(profile));
@@ -129,7 +144,7 @@ export function computePosterBodyMaxHeightPx(
 export function applyPosterBodyMaxHeight(
   body: HTMLElement,
   profile: PosterLayoutProfile,
-  options: { showTitle: boolean; titleEl: HTMLElement | null },
+  options: { showTitle: boolean; titleEl: HTMLElement | null; layoutVariant?: PosterLayoutVariant },
 ): void {
   const maxPx = computePosterBodyMaxHeightPx(profile, options);
   applyPosterBodyMaxHeightToPx(body, maxPx);
@@ -189,6 +204,8 @@ export type FuriganaPosterCssOptions = {
   includeFontFaces?: boolean;
   /** 背景图 URL；为空时保持 POSTER_BG_COLOR 纯色背景 */
   backgroundImage?: string;
+  /** 版式变体（standard / notebook） */
+  layoutVariant?: PosterLayoutVariant;
 };
 
 export function buildShufuriPosterInnerCss(
@@ -214,6 +231,7 @@ export function buildShufuriPosterInnerCss(
       showRuby,
       includeFontFaces: options.includeFontFaces,
       backgroundImage: options.backgroundImage,
+      layoutVariant: options.layoutVariant,
     }) + RASTER_SAFE_CSS
   );
 }
