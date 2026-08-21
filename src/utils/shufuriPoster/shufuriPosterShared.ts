@@ -51,11 +51,11 @@ export const RASTER_SAFE_CSS = `
 .fv-html-poster-root[data-export-raster="1"] .lyrics-group .cn-line,
 .fv-html-poster-root[data-export-raster="1"] .lyrics-group .gloss-line {
   padding-bottom: 0.22em !important;
-  line-height: 1.55 !important;
+  line-height: 1.62 !important;
 }
 .fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line,
 .fv-html-poster-root[data-export-raster="1"] .lyrics-group .zh-line * {
-  line-height: 1.55 !important;
+  line-height: 1.62 !important;
 }
 `;
 
