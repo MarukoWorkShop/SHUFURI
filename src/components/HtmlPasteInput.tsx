@@ -191,7 +191,13 @@ export default function HtmlPasteInput({
           return;
         }
       } catch {
-        /* 权限不足 → 降级长按粘贴 */
+        // 权限不足（如 Mac Safari 静默拒绝、或剪贴板未授权）→ 降级长按粘贴，并提示用户
+        showAppToast(
+          L(
+            '无法自动读取剪贴板，请长按输入框选择「粘贴」',
+            'Cannot read clipboard automatically. Long-press the field and choose Paste.',
+          ),
+        );
       }
     }
 

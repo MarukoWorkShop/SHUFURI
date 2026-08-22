@@ -15,6 +15,7 @@ import {
 } from '../shufuriPoster/cjkTypography.ts';
 import { ZH_CHAR_SLOT_CLASS } from '../zhLayout/zhRubyMarkup.ts';
 import type { PosterLayoutVariant } from '../shufuriPoster/types.ts';
+import { SPLIT_LEFT_RATIO, SPLIT_RIGHT_RATIO } from '../shufuriPoster/types.ts';
 import {
   AUX_WEIGHT,
   JP_RUBY_BASE_GAP_EM,
@@ -39,6 +40,10 @@ import {
   NOTEBOOK_STAIN_2,
   NOTEBOOK_STAIN_3,
   NOTEBOOK_VIGNETTE,
+  SPLIT_PAPER_BG,
+  SPLIT_PAPER_BG_CENTER,
+  SPLIT_PAPER_BG_EDGE,
+  SPLIT_RULE_BLUE,
 } from './typographyConstants.ts';
 import { buildPosterWatermarkCss } from '../shufuriPoster/posterWatermark.ts';
 import type { ResolvedTypography } from './tokenRegistry.ts';
@@ -782,10 +787,14 @@ function compileWatermarkCss(
  */
 function compileLayoutVariantCss(
   variant: PosterLayoutVariant | undefined,
-  unit: 'px' | 'mm',
   resolved: ResolvedTypography,
 ): string {
-  if (variant !== 'notebook') return '';
+  if (variant === 'notebook') return compileNotebookCss(resolved);
+  if (variant === 'split') return compileSplitCss(resolved);
+  return '';
+}
+
+function compileNotebookCss(resolved: ResolvedTypography): string {
   const root = '.fv-html-poster-root[data-layout-variant="notebook"]';
   const bodySel = `${root} .fv-body-h`;
   const L = resolved.layout;
@@ -816,11 +825,7 @@ function compileLayoutVariantCss(
   }
   /* —— 歌词组：适度留白 + 组间手绘分隔虚线（留白随 spacingScale 收缩） —— */
   ${bodySel} .lyrics-group {
-    margin-bottom: ${
-      unit === 'px'
-        ? `${parseFloat(L.groupMb) + groupExtraPx}px`
-        : L.groupMb
-    } !important;
+    margin-bottom: ${parseFloat(L.groupMb) + groupExtraPx}px !important;
     padding: 0.1em 0 0 0 !important;
     border-bottom: 1.5px dashed ${NOTEBOOK_RULE_COLOR} !important;
     break-inside: avoid;
@@ -892,6 +897,67 @@ function compileLayoutVariantCss(
   }`;
 }
 
+function compileSplitCss(resolved: ResolvedTypography): string {
+  const root = '.fv-html-poster-root[data-layout-variant="split"]';
+  const scale = resolved.spacingScale ?? 1;
+  const gapPx = Math.round(18 * scale);
+  // 极浅蓝渐变底色：中心更浅、四周略浓
+  return `
+  /* —— 极浅蓝渐变纸底（中心浅、四周略浓） —— */
+  ${root} {
+    background-color: ${SPLIT_PAPER_BG} !important;
+    background-image: radial-gradient(
+      130% 120% at 50% 50%,
+      ${SPLIT_PAPER_BG_CENTER} 0%,
+      ${SPLIT_PAPER_BG} 55%,
+      ${SPLIT_PAPER_BG_EDGE} 100%
+    ) !important;
+    background-repeat: no-repeat !important;
+    background-size: 100% 100% !important;
+  }
+
+  /* 外壳真实 body：仅作为分栏根容器，不再直接排布原子 */
+  ${root} > .fv-body-h {
+    display: block !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* 左右双栏根：横向 flex，占满 body 剩余高度 */
+  ${root} .fv-split-root {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    gap: ${gapPx}px !important;
+    width: 100% !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 单栏：复用 .fv-body-h 的全部原子样式规则（栏本身带 fv-body-h class），
+     仅覆写 flex-basis 与栏内底部留白，保证标准版式原子样式自动生效。 */
+  ${root} .fv-split-col {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    padding-bottom: 0 !important;
+  }
+
+  ${root} .fv-split-col--left {
+    flex: 0 0 ${Math.round(SPLIT_LEFT_RATIO * 1000) / 10}% !important;
+  }
+
+  ${root} .fv-split-col--right {
+    flex: 0 0 ${Math.round(SPLIT_RIGHT_RATIO * 1000) / 10}% !important;
+    border-left: 1.5px dashed ${SPLIT_RULE_BLUE} !important;
+    padding-left: ${gapPx}px !important;
+  }
+  `;
+}
+
 export function compilePosterCss(
   resolved: ResolvedTypography,
   options: CompilePosterCssOptions = {},
@@ -914,7 +980,7 @@ export function compilePosterCss(
   const cjkNoBreak = buildCjkNoBreakClassCss();
   const showRuby = options.showRuby ?? resolved.flags.showRuby;
   const rubyVisibility = compileRubyVisibilityCss(showRuby);
-  const layoutVariantCss = compileLayoutVariantCss(options.layoutVariant, unit, resolved);
+  const layoutVariantCss = compileLayoutVariantCss(options.layoutVariant, resolved);
 
   return `${fontFaces}${printShell}${bodyRules}${zhRules}${watermark}${cjkNoBreak}${rubyVisibility}${layoutVariantCss}`;
 }

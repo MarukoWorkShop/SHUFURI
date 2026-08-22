@@ -168,6 +168,14 @@ export default function EditScreen() {
     appendGrammarStudyItem: appendGrammarStudyItemAndScroll,
   });
 
+  // 方向1：EditScreen 挂载即提前预热本地词典/分词器，不必等用户点开划词按钮，
+  // 避免首次划词时 JMdict gzip 解压 + Kuromoji 17MB 还在加载而久久不显示结果。
+  useEffect(() => {
+    if (lang === 'jp' || lang === 'ko') {
+      explain.preload();
+    }
+  }, [lang, explain]);
+
   // —— 划词笔记 / 重点词汇 / 重点语法：删除与点选编辑（与划词/铅笔模式解耦） ——
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [draftTerm, setDraftTerm] = useState('');

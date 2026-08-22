@@ -207,14 +207,15 @@ backdrop (position:fixed, fullscreen, white bg, z-index:2147483646)     ← 视�
 
 **类型定义**：`src/utils/shufuriPoster/types.ts`
 ```typescript
-type PosterLayoutVariant = 'standard' | 'notebook';
-const POSTER_LAYOUT_VARIANTS = ['standard', 'notebook'];
+type PosterLayoutVariant = 'standard' | 'notebook' | 'split';
+const POSTER_LAYOUT_VARIANTS = ['standard', 'notebook', 'split'];
 const DEFAULT_POSTER_LAYOUT_VARIANT = 'standard';
 ```
 
-**CSS 皮肤机制**：`src/utils/posterTypography/cssCompiler.ts` → `compileLayoutVariantCss(variant, unit, resolved)`
-- 通过 `.fv-html-poster-root[data-layout-variant="notebook"]` 选择器作用域隔离
-- **纯 CSS 覆盖，不修改分页算法**
+**CSS 皮肤机制**：`src/utils/posterTypography/cssCompiler.ts` → `compileLayoutVariantCss(variant, resolved)`
+- 通过 `.fv-html-poster-root[data-layout-variant="notebook"|"split"]` 选择器作用域隔离
+- Notebook：**纯 CSS 覆盖，不修改分页算法**（单栏不变，仅叠加皮肤）
+- Split：**不仅改 CSS，还重写分页模型**（见下方「Split 双栏版式」专节）——左右各自独立测量、各自独立分页
 - 在 `compilePosterCss` 末尾拼接，优先级高于 bodyRules（使用 `!important`）
 
 **三处一致性要求**（与标准版式同等重要）：
@@ -224,6 +225,27 @@ const DEFAULT_POSTER_LAYOUT_VARIANT = 'standard';
 | 测量容器 | `paginateShufuriPosterHtml.ts` → `createPosterMeasurer` | `shell.dataset.layoutVariant = variant` |
 | 预览组件 | `ShufuriPosterPreview.tsx` | JSX prop: `data-layout-variant={layoutVariantAttr}` |
 | 导出挂载 | `posterExportMount.ts` → `mountPosterExportPage` | `shell.dataset.layoutVariant = variant` |
+
+#### Split 双栏版式（第三种版式，左 65% 歌词 / 右 35% 词解+语法）
+
+> **新增于 feature/poster-split-layout 分支。核心教训：notebook 失败源于"单栏 measurer + CSS 分栏"导致单栏误测→静默放行截断。Split 从根本上改用"双独立栏分页"。**
+
+**分页模型（与 notebook 本质不同）**：
+- 入口 `paginateShufuriPosterBodyHtml` 在 `renderOptions.layoutVariant === 'split'` 时分流到 `paginateSplitColumns`。
+- `splitAtomsByColumn`：按**原子类型分检**（遍历全部原子，`.lyrics-group`→左栏；`.lyrics-vocabulary`/`.lyrics-grammar` 及其 explode 后的 `lyrics-pagination-unit`→右栏），**不是按位置切分**；`.lyrics` 容器需展开为子 `.lyrics-group`，否则整段歌词会被当成一个不可拆原子→满页截断。
+- 左右栏各自独立 `flowAtomsIntoPages` + `verifyAndRepairPages`，互不干扰高度，从根本上规避单栏误测。
+- 合并：`pageCount = max(leftPages, rightPages)`；第 i 页 HTML = `<div class="fv-split-root"><div class="fv-split-col fv-body-h fv-split-col--left">{leftHtml}</div><div class="fv-split-col fv-body-h fv-split-col--right">{rightHtml}</div></div>`。右栏无内容则输出空栏（用户要求"没有就空着"）。
+- 每栏的 HTML 节点都带 `fv-body-h` class → **复用标准版式全部原子样式规则**（lyrics-group 间距/字号等），CSS 皮肤只覆写栏布局与底色。
+
+**测量容器**：`createSplitPosterMeasurer`（同文件，结构同 `createPosterMeasurer` 但正文含两个 `fv-split-col.fv-body-h`）。左右栏各自独立测 `scrollHeight > clientHeight`，共享受标题高度（标题只出现在外壳，两栏 maxHeight 同时扣减标题高度）。
+
+**CSS 皮肤**（`compileSplitCss`）：
+- 底色：`.fv-html-poster-root[data-layout-variant="split"]` 用 `radial-gradient`（中心 `#F5F9FD` 更浅、四周 `#E4ECF5` 略浓）+ `background-color: #EDF3F9` 兜底；导出 `pageBgColor` 取 `SPLIT_PAPER_BG` 实色（约束 C，防 PDF 零字节）。
+- 分割线：`.fv-split-col--right { border-left: 1.5px dashed #A9C2DD !important }`（浅蓝虚线，装饰性、不动核心类）。
+- 布局：`.fv-split-root { display:flex; flex-direction:row }`；左 `flex: 0 0 65%`、右 `flex: 0 0 35%`（百分比 flex-basis，非约束 D 禁用的 width/max-width 内容区改写）。
+- 安全余量：`getPosterBodySafetyMarginPx` 为 split 注册补偿 mobile +16 / square +14 / print +12（约束 A+ 方向 A2）。
+
+**约束遵守**：约束 A/A+（增量乘 `spacingScale`、注册 safety margin）、B（`!important` + `[data-layout-variant]`）、C（底色联动）、D（不改 font-size/width/overflow/display/position）。
 
 三处都必须：
 1. **设置 DOM 属性** `data-layout-variant`（不是 style 对象属性，DOM 属性才能被 CSS 选择器匹配）
@@ -292,6 +314,7 @@ const zhGapEm = (0.28 * scale).toFixed(3);    // 满页时从 0.28em 收缩到 ~
 - 三处调用点必须传入：测量容器、预览组件、导出挂载
 
 当前 Notebook 补偿值（`shufuriPosterShared.ts`）：mobile +20px / square +18px / print +14px。
+当前 Split 补偿值：mobile +16px / square +14px / print +12px（右栏仅 35% 宽、换行更密，累积风险略高）。
 
 **后续新版式必须**：
 - [ ] 在 `compileLayoutVariantCss` 中对所有内容流增量应用 `scale` 系数

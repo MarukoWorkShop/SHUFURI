@@ -12,7 +12,7 @@ import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
 import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
 import { appendPosterWatermark } from './shufuriPoster/posterWatermark';
 import { getPosterBackgroundUrl, getPosterBackgroundBgColor } from '../config/posterBackgrounds';
-import { NOTEBOOK_PAPER_BG } from './posterTypography/typographyConstants';
+import { NOTEBOOK_PAPER_BG, SPLIT_PAPER_BG } from './posterTypography/typographyConstants';
 
 /**
  * 导出 html2canvas 渲染补偿因子。
@@ -88,11 +88,14 @@ export function mountPosterExportPage(
   void _pageCount;
   const { width: canvasW, height: canvasH } = getShufuriPosterCanvasDimensions(layoutProfile);
   const backgroundImage = getPosterBackgroundUrl(renderOptions?.backgroundId);
-  // 底色与版式联动：notebook 用暖米白做旧纸底，避免 html2canvas 把非白底刷白（PDF 零字节回归）
+  // 底色与版式联动：notebook 用暖米白做旧纸底，split 用极浅蓝实色兜底，
+  // 避免 html2canvas 把非白底刷白（PDF 零字节回归）
   const pageBgColor =
     renderOptions?.layoutVariant === 'notebook'
       ? NOTEBOOK_PAPER_BG
-      : getPosterBackgroundBgColor(renderOptions?.backgroundId);
+      : renderOptions?.layoutVariant === 'split'
+        ? SPLIT_PAPER_BG
+        : getPosterBackgroundBgColor(renderOptions?.backgroundId);
   const rootStyle = buildShufuriPosterRootStyle(layoutProfile, backgroundImage);
 
   // 离屏 backdrop：为 html2canvas 提供白底，尺寸与画布一致，永不移入视口。

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { LangCode, LyricsLanguage } from '../services/appSettings';
 import { ensurePosterFontsLoaded } from '../utils/shufuriPoster/fonts';
 import { buildPosterPagesFromBody } from '../utils/shufuriPoster/buildPosterPages';
@@ -16,6 +16,7 @@ import {
   type PosterPageSlice,
 } from '../utils/shufuriPoster/types';
 import { DEFAULT_POSTER_BACKGROUND_ID } from '../config/posterBackgrounds';
+import { setRenderOptsBridge } from '../utils/shufuriPoster/posterRenderOptsBridge';
 import type { AppMode } from './usePosterWorkspace';
 
 type Options = {
@@ -64,6 +65,12 @@ export function usePosterTypography({
     () => resolvePosterRubyToggleSupported(lang, bodyHtml, lyricsLanguage),
     [lang, bodyHtml, lyricsLanguage],
   );
+
+  // 同步最新版式/背景到桥接，供父层 getPosterRenderOpts 读取（enterExportFlow /
+  // handleLayoutChange / handleSave 重分页时使用），避免分栏被回退为标准单栏 HTML。
+  useEffect(() => {
+    setRenderOptsBridge(layoutVariant, backgroundId);
+  }, [layoutVariant, backgroundId]);
   const posterRenderOpts = useMemo(
     () =>
       buildPosterRenderOptions(
@@ -75,30 +82,32 @@ export function usePosterTypography({
     [showRubyAnnotations, previewTypography, backgroundId, layoutVariant],
   );
 
-  const rebuildExportPages = useCallback(async () => {
-    if (!bodyHtml.trim()) {
-      setPages([]);
-      resetPosterPageRefs(pageRefs, 0);
-      return;
-    }
-    setRepaginating(true);
-    try {
-      await ensurePosterFontsLoaded();
-      const pageHtmls = buildPosterPagesFromBody(
-        bodyHtml,
-        title,
-        layoutProfile,
-        artist,
-        lyricsLanguage,
-        lang,
-        titleMarkupHtml,
-        buildPosterRenderOptions(
-          showRubyAnnotations,
-          previewTypography,
-          backgroundId,
-          layoutVariant,
-        ),
-      );
+  const rebuildExportPages = useCallback(
+    async (overrideLayoutVariant?: PosterLayoutVariant) => {
+      const effectiveVariant = overrideLayoutVariant ?? layoutVariant;
+      if (!bodyHtml.trim()) {
+        setPages([]);
+        resetPosterPageRefs(pageRefs, 0);
+        return;
+      }
+      setRepaginating(true);
+      try {
+        await ensurePosterFontsLoaded();
+        const pageHtmls = buildPosterPagesFromBody(
+          bodyHtml,
+          title,
+          layoutProfile,
+          artist,
+          lyricsLanguage,
+          lang,
+          titleMarkupHtml,
+          buildPosterRenderOptions(
+            showRubyAnnotations,
+            previewTypography,
+            backgroundId,
+            effectiveVariant,
+          ),
+        );
       setPages(pageHtmls);
       resetPosterPageRefs(pageRefs, pageHtmls.length);
     } finally {
@@ -150,11 +159,12 @@ export function usePosterTypography({
   const handleLayoutVariantChange = useCallback(
     (next: PosterLayoutVariant) => {
       setLayoutVariant(next);
-      if (mode === 'export') {
-        void rebuildExportPages();
-      }
+      // 版式变体会改变分页 HTML 结构（split 需要 fv-split-root 双栏），
+      // 必须立即用新 variant 重新分页；否则预览仍是旧的单栏 HTML，CSS 皮肤无的放矢。
+      // 编辑与导出两种模式都消费同一份 pages，故两种模式均重建。
+      void rebuildExportPages(next);
     },
-    [mode, rebuildExportPages],
+    [rebuildExportPages],
   );
 
   return {

@@ -113,6 +113,10 @@ export function getPosterBodySafetyMarginPx(
   if (layoutVariant === 'notebook') {
     // mobile 页高更大、可容纳更多 group，绝对增量更可观；print 页密、相对敏感
     margin += profile === 'mobilePoster' ? 20 : profile === 'squarePoster' ? 18 : 14;
+  } else if (layoutVariant === 'split') {
+    // 分栏右栏仅占 35% 宽，词解/语法条目换行更密、单页可装更多原子，
+    // 累积装饰增量风险略高；预留保守余量让测量更早换页（约束A / 方向A2）。
+    margin += profile === 'mobilePoster' ? 16 : profile === 'squarePoster' ? 14 : 12;
   }
   return margin;
 }

@@ -20,6 +20,7 @@ import {
   buildPosterRenderOptions,
   type PosterLayoutProfile,
 } from '../utils/shufuriPoster/types';
+import { getRenderOptsBridge } from '../utils/shufuriPoster/posterRenderOptsBridge';
 import { PosterDocumentContext, type PosterDocumentContextValue } from './PosterWorkspaceContext';
 import type { ShowAppToast } from './AppToastContext';
 import type { WorkspaceSessionOps } from './PosterEditSessionProvider';
@@ -96,7 +97,13 @@ export default function PosterWorkspaceProvider({
   }, [onWorkspaceReset]);
 
   const getPosterRenderOpts = useCallback(
-    () => buildPosterRenderOptions(showRubyRef.current, previewTypographyRef.current),
+    () =>
+      buildPosterRenderOptions(
+        showRubyRef.current,
+        previewTypographyRef.current,
+        getRenderOptsBridge().backgroundId || undefined,
+        getRenderOptsBridge().layoutVariant,
+      ),
     [],
   );
 

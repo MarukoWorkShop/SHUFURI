@@ -246,6 +246,171 @@ export function createPosterMeasurer(
   };
 }
 
+/** 单栏测量器（split 版式每个栏复用一个） */
+export interface SplitColumnMeasurer {
+  contentFits: (nodes: HTMLElement[], showTitle: boolean) => boolean;
+  pageHtmlOverflows: (html: string, showTitle: boolean) => boolean;
+}
+
+/** 分栏版式测量器：外壳与标准版式完全一致（共享标题高度），但正文含左右两个独立栏 */
+export interface SplitPosterMeasurer {
+  shell: HTMLElement;
+  titleEl: HTMLElement;
+  left: SplitColumnMeasurer;
+  right: SplitColumnMeasurer;
+  setPageContext: (showTitle: boolean) => void;
+  destroy: () => void;
+}
+
+/**
+ * 分栏版式测量容器（左 65% 歌词 / 右 35% 词解+语法）。
+ *
+ * 结构与预览/导出 DOM 完全一致：shell > style + h1 + .fv-body-h > .fv-split-root > 两个 .fv-split-col.fv-body-h。
+ * 每个栏带 `fv-body-h` class → 复用全部标准版式原子样式规则（lyrics-group 间距、字号等）。
+ * 左右栏各自独立测量 scrollHeight>clientHeight，互不干扰高度，从根本上避免 notebook 的"单栏误测→静默放行截断"。
+ *
+ * 关键约束（与 createPosterMeasurer 同等重要）：
+ * - wrapper position:relative + 固定 canvasW×canvasH（约束1）
+ * - shell Object.assign(buildShufuriPosterRootStyle) 且 position:relative（约束2/3）
+ * - 外 .fv-body-h 用 applyPosterBodyMaxHeight 约束高度（约束4/5），栏内 overflow:hidden 由 compileSplitCss 提供
+ * - 注入 layoutVariant="split" + 渐变底色皮肤（与预览/导出一致）
+ */
+export function createSplitPosterMeasurer(
+  doc: Document,
+  profile: PosterLayoutProfile,
+  title: string,
+  artist?: string,
+  spacingScale = 1,
+  language: LyricsLanguage = 'jp',
+  lang?: LangCode,
+  titleMarkupHtml?: string,
+  renderOptions?: PosterRenderOptions,
+): SplitPosterMeasurer {
+  const { width: canvasW, height: canvasH } = getShufuriPosterCanvasDimensions(profile);
+
+  const wrapper = doc.createElement('div');
+  wrapper.style.position = 'relative';
+  wrapper.style.left = '-99999px';
+  wrapper.style.top = '0';
+  wrapper.style.width = canvasW + 'px';
+  wrapper.style.height = canvasH + 'px';
+  wrapper.style.overflow = 'hidden';
+  wrapper.style.pointerEvents = 'none';
+
+  const backgroundImage = getPosterBackgroundUrl(renderOptions?.backgroundId);
+
+  const shell = doc.createElement('div');
+  shell.className = 'fv-html-poster-root';
+  Object.assign(shell.style, buildShufuriPosterRootStyle(profile, backgroundImage));
+  shell.style.position = 'relative';
+  shell.dataset.rubyVisible = (renderOptions?.showRuby ?? true) ? 'true' : 'false';
+  shell.dataset.layoutVariant = 'split';
+  shell.dataset.exportRaster = '1';
+
+  const styleEl = doc.createElement('style');
+  const pipelineLang = resolvePosterPipelineLang(lang, '', language) ?? 'jp';
+  styleEl.textContent = buildShufuriPosterInnerCss(profile, {
+    spacingScale,
+    language,
+    lang: pipelineLang,
+    colorTheme: getAppSettings().colorTheme,
+    showRuby: renderOptions?.showRuby,
+    userFontScale: renderOptions?.userFontScale,
+    userLineHeightScale: renderOptions?.userLineHeightScale,
+    includeFontFaces: false,
+    backgroundImage,
+    layoutVariant: 'split',
+  });
+  const titleEl = doc.createElement('h1');
+  titleEl.className = 'fv-title-h';
+
+  const outerBody = doc.createElement('div');
+  outerBody.className = 'fv-body-h';
+  const splitRoot = doc.createElement('div');
+  splitRoot.className = 'fv-split-root';
+  const leftBody = doc.createElement('div');
+  leftBody.className = 'fv-split-col fv-body-h fv-split-col--left';
+  const rightBody = doc.createElement('div');
+  rightBody.className = 'fv-split-col fv-body-h fv-split-col--right';
+  splitRoot.appendChild(leftBody);
+  splitRoot.appendChild(rightBody);
+  outerBody.appendChild(splitRoot);
+
+  shell.appendChild(styleEl);
+  shell.appendChild(titleEl);
+  shell.appendChild(outerBody);
+  wrapper.appendChild(shell);
+  doc.body.appendChild(wrapper);
+
+  const normalizedTitle = resolveDisplayTitle(title);
+  const displayArtist = resolveDisplayArtist(artist);
+
+  const setPageContext = (showTitle: boolean) => {
+    if (showTitle) {
+      titleEl.style.display = '';
+      if (titleMarkupHtml?.trim()) {
+        titleEl.innerHTML = titleMarkupHtml;
+        stampPosterTitleSerifClasses(titleEl, pipelineLang);
+      } else {
+        applyPosterTitleElement(titleEl, normalizedTitle, displayArtist, pipelineLang);
+      }
+    } else {
+      titleEl.style.display = 'none';
+      titleEl.textContent = '';
+    }
+    void shell.offsetHeight;
+    applyPosterBodyMaxHeight(outerBody, profile, {
+      showTitle,
+      titleEl: showTitle ? titleEl : null,
+      layoutVariant: 'split',
+    });
+    void outerBody.offsetHeight;
+  };
+
+  const makeColumn = (colBody: HTMLElement): SplitColumnMeasurer => {
+    const colOverflows = (): boolean => {
+      void colBody.offsetHeight;
+      const clientH = colBody.clientHeight;
+      if (clientH >= 1) {
+        return colBody.scrollHeight > clientH + FIT_EPSILON_PX;
+      }
+      const maxH =
+        parseFloat(colBody.dataset.posterBodyMaxHeight || '') ||
+        parseFloat(colBody.style.maxHeight);
+      if (!Number.isFinite(maxH) || maxH <= 0) return true;
+      return colBody.scrollHeight > maxH + FIT_EPSILON_PX;
+    };
+    return {
+      contentFits: (nodes: HTMLElement[], showTitle: boolean): boolean => {
+        if (nodes.length === 0) return true;
+        setPageContext(showTitle);
+        colBody.replaceChildren();
+        for (const node of nodes) {
+          colBody.appendChild(node.cloneNode(true));
+        }
+        return !colOverflows();
+      },
+      pageHtmlOverflows: (html: string, showTitle: boolean): boolean => {
+        if (!html.trim()) return false;
+        setPageContext(showTitle);
+        colBody.innerHTML = html;
+        return colOverflows();
+      },
+    };
+  };
+
+  return {
+    shell,
+    titleEl,
+    left: makeColumn(leftBody),
+    right: makeColumn(rightBody),
+    setPageContext,
+    destroy: () => {
+      doc.body.removeChild(wrapper);
+    },
+  };
+}
+
 function flattenAtoms(root: HTMLElement): HTMLElement[] {
   const kids = Array.from(root.children).filter(
     (n): n is HTMLElement => n instanceof HTMLElement,
@@ -1059,6 +1224,138 @@ function resolvePaginationBodyRoot(wrapper: HTMLElement): HTMLElement {
   return wrapper;
 }
 
+/**
+ * 分栏版式：按原子类型分检（非按位置切分）。
+ * 左栏 = 全部歌词组（.lyrics-group）；右栏 = 全部词解/语法段（.lyrics-vocabulary/.lyrics-grammar 及其 explode 子单元）。
+ * 两栏各自保持原相对出现顺序，右栏无内容则为空。
+ *
+ * 注意：preparePaginationAtoms 已把 vocabulary/grammar 拆为 lyrics-pagination-unit，
+ * 但 .lyrics 容器（包住全部 lyrics-group）本身是一个原子，需要展开为其子 .lyrics-group，
+ * 否则会把一整段歌词当成一个不可拆原子 → 满页时静默放行截断（notebook 旧坑）。
+ */
+function splitAtomsByColumn(atoms: HTMLElement[]): { left: HTMLElement[]; right: HTMLElement[] } {
+  const left: HTMLElement[] = [];
+  const right: HTMLElement[] = [];
+  const pushLeft = (atom: HTMLElement) => {
+    if (atom.classList.contains('lyrics') || atom.classList.contains('lyrics-group--zh')) {
+      // 展开歌词容器为单个 lyrics-group 原子（每首歌词组保持不可拆）
+      const groups = Array.from(atom.children).filter(
+        (c): c is HTMLElement => c instanceof HTMLElement && c.classList.contains('lyrics-group'),
+      );
+      if (groups.length > 0) {
+        for (const g of groups) left.push(g);
+        return;
+      }
+    }
+    left.push(atom);
+  };
+  for (const atom of atoms) {
+    if (atom.classList.contains('lyrics-group')) {
+      left.push(atom);
+    } else if (atom.classList.contains('lyrics')) {
+      // .lyrics 容器：展开为子 lyrics-group
+      const groups = Array.from(atom.children).filter(
+        (c): c is HTMLElement => c instanceof HTMLElement && c.classList.contains('lyrics-group'),
+      );
+      if (groups.length > 0) {
+        for (const g of groups) left.push(g);
+      } else {
+        left.push(atom);
+      }
+    } else if (
+      atom.classList.contains('lyrics-vocabulary') ||
+      atom.classList.contains('lyrics-grammar') ||
+      atom.classList.contains('lyrics-pagination-unit')
+    ) {
+      right.push(atom);
+    } else {
+      // 其它原子（标题/空白/lyrics-group--zh 容器等）归入歌词侧的左栏，保持与原文顺序一致
+      pushLeft(atom);
+    }
+  }
+  return { left, right };
+}
+
+/** 将单栏兼容的 { contentFits, pageHtmlOverflows } 包装为 PosterMeasurer（split 列仅需这两个方法） */
+function columnAsMeasurer(col: SplitColumnMeasurer): PosterMeasurer {
+  return {
+    contentFits: col.contentFits,
+    pageHtmlOverflows: col.pageHtmlOverflows,
+    pageOverflows: () => false,
+    tuneCjkLineBreaksInPlace: () => 0,
+    contentFitsInPlace: col.contentFits,
+    dispose: () => {},
+  };
+}
+
+function paginateSplitColumns(
+  safeBodyHtml: string,
+  title: string,
+  profile: PosterLayoutProfile,
+  doc: Document,
+  artist: string | undefined,
+  language: LyricsLanguage,
+  lang: LangCode | undefined,
+  titleMarkupHtml: string | undefined,
+  renderOptions: PosterRenderOptions | undefined,
+): PosterPageSlice[] {
+  const wrapper = doc.createElement('div');
+  wrapper.innerHTML = safeBodyHtml.trim();
+  const bodyRoot = resolvePaginationBodyRoot(wrapper);
+  normalizeBodyRoot(bodyRoot);
+
+  let atoms = flattenAtoms(bodyRoot).filter((a) => !isSkippableAtom(a));
+  atoms = repairLyricsGroupAtoms(atoms);
+  atoms = preparePaginationAtoms(atoms);
+
+  const { left, right } = splitAtomsByColumn(atoms);
+
+  const splitMeasurer = createSplitPosterMeasurer(
+    doc,
+    profile,
+    title,
+    artist,
+    1,
+    language,
+    lang,
+    titleMarkupHtml,
+    renderOptions ? { ...renderOptions, layoutVariant: 'split' } : { layoutVariant: 'split' },
+  );
+
+  try {
+    // 左右栏各自独立贪心装箱 + 各自独立 verify/repair，互不干扰高度
+    const leftPages = verifyAndRepairPages(
+      flowAtomsIntoPages(left, columnAsMeasurer(splitMeasurer.left)),
+      columnAsMeasurer(splitMeasurer.left),
+    );
+    const rightPages = verifyAndRepairPages(
+      flowAtomsIntoPages(right, columnAsMeasurer(splitMeasurer.right)),
+      columnAsMeasurer(splitMeasurer.right),
+    );
+
+    const pageCount = Math.max(leftPages.length, rightPages.length, 1);
+
+    const slices: PosterPageSlice[] = [];
+    for (let i = 0; i < pageCount; i += 1) {
+      const leftBlocks = leftPages[i] ?? [];
+      const rightBlocks = rightPages[i] ?? [];
+      const leftEmitted = new Set<string>();
+      const rightEmitted = new Set<string>();
+      const leftHtml = leftBlocks.length ? joinPageBlocks(leftBlocks, leftEmitted) : '';
+      const rightHtml = rightBlocks.length ? joinPageBlocks(rightBlocks, rightEmitted) : '';
+      const splitHtml =
+        `<div class="fv-split-root">` +
+        `<div class="fv-split-col fv-body-h fv-split-col--left">${leftHtml}</div>` +
+        `<div class="fv-split-col fv-body-h fv-split-col--right">${rightHtml}</div>` +
+        `</div>`;
+      slices.push({ html: splitHtml, spacingScale: 1 });
+    }
+    return slices.filter((slice) => pageHtmlHasContent(slice.html, doc));
+  } finally {
+    splitMeasurer.destroy();
+  }
+}
+
 export function paginateShufuriPosterBodyHtml(
   safeBodyHtml: string,
   title: string,
@@ -1073,6 +1370,21 @@ export function paginateShufuriPosterBodyHtml(
   const trimmed = safeBodyHtml.trim();
   if (!trimmed) {
     return [{ html: '', spacingScale: 1 }];
+  }
+
+  // 分栏版式走独立的双栏分页路径（左右各自独立测量/分页，从根本上避免单栏误测截断）
+  if (renderOptions?.layoutVariant === 'split') {
+    return paginateSplitColumns(
+      trimmed,
+      title,
+      profile,
+      doc,
+      artist,
+      language,
+      lang,
+      titleMarkupHtml,
+      renderOptions,
+    );
   }
 
   const wrapper = doc.createElement('div');

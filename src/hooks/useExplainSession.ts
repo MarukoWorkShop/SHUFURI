@@ -68,11 +68,16 @@ export type UseExplainSessionOptions = {
   }) => void;
 };
 
+/** 本地词典/分词器预加载超时阈值（毫秒）：超过即认为加载异常缓慢 */
+export const DICT_PRELOAD_TIMEOUT_MS = 8000;
+
 export type UseExplainSessionResult = {
   explainMode: boolean;
   arm: () => void;
   disarm: () => void;
   toggleArmed: () => void;
+  /** 提前预加载本地词典/分词器（EditScreen mount 即调用，不必等用户开启划词） */
+  preload: () => void;
 
   panelOpen: boolean;
   closePanel: () => void;
@@ -218,11 +223,13 @@ export function useExplainSession({
     setGrammarExamplesError(null);
   }, []);
 
-  const arm = useCallback(() => {
-    setExplainMode(true);
+  /** 提前预加载本地词典/分词器资源（不开启划词模式，仅热身） */
+  const preloadDictResources = useCallback(() => {
     const code = lang ?? 'jp';
     if (code === 'jp') {
-      void ensureJmdictLiteLoaded().catch(() => {});
+      void ensureJmdictLiteLoaded().catch((err) => {
+        console.warn('[jmdict] preload failed', err);
+      });
       void ensureKuromojiLoaded().catch((err) => {
         console.warn('[kuromoji] preload failed', err);
       });
@@ -235,6 +242,16 @@ export function useExplainSession({
       });
     }
   }, [lang]);
+
+  const arm = useCallback(() => {
+    setExplainMode(true);
+    preloadDictResources();
+  }, [preloadDictResources]);
+
+  /** 提前预加载：EditScreen mount 即调用，避免首次划词时词典还在加载 */
+  const preload = useCallback(() => {
+    preloadDictResources();
+  }, [preloadDictResources]);
 
   const disarm = useCallback(() => {
     setExplainMode(false);
@@ -438,7 +455,7 @@ export function useExplainSession({
             return;
           }
 
-          const lesson = parseGrammarPointLesson(res.content, capsule.term);
+          const lesson = parseGrammarPointLesson(res.content, capsule.term, language);
           // 模型例句不合格时，用本地种子补上
           if (!lesson.example && seed) {
             lesson.example = { ...local[0], via: 'local' };
@@ -457,6 +474,56 @@ export function useExplainSession({
       })();
     },
     [artist, deepDiveLoading, grammarExamplesLoading, lang, loading, title],
+  );
+
+  /**
+   * 给本地查词包一层超时：词典/分词器首次加载可能很慢（JMdict gzip 解压 + Kuromoji 17MB），
+   * 若超过 DICT_PRELOAD_TIMEOUT_MS 仍未返回，则抛出带标记的错误，UI 会提示改用 AI 讲解或重试，
+   * 而不是一直停留在骨架屏。
+   */
+  const withDictTimeout = useCallback(
+    <T>(p: Promise<T>, ms: number = DICT_PRELOAD_TIMEOUT_MS): Promise<T> => {
+      return new Promise<T>((resolve, reject) => {
+        let settled = false;
+        const timer = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          reject(new Error('__DICT_TIMEOUT__'));
+        }, ms);
+        p.then(
+          (val) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            resolve(val);
+          },
+          (err) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            reject(err);
+          },
+        );
+      });
+    },
+    [],
+  );
+
+  /** 把查词错误归一化为用户可见文案（含超时特判） */
+  const formatDictError = useCallback(
+    (err: unknown): string => {
+      if (err instanceof Error && err.message === '__DICT_TIMEOUT__') {
+        return L(
+          '本地词典加载较慢，已超过 8 秒。可点「AI讲解」直接获取讲解，或稍后重试。',
+          'Local dictionary is loading slowly (over 8s). Tap "AI Explain" for instant results, or try again later.',
+        );
+      }
+      if (err instanceof Error) {
+        return `${L('本地词典加载失败：', 'Local dictionary load failed:')}${err.message}${L('。可点「AI讲解」。', '. Tap "AI Explain".')}`;
+      }
+      return L('本地词典加载失败。可点「AI讲解」。', 'Failed to load local dictionary. Tap "AI Explain".');
+    },
+    [L],
   );
 
   const analyzeSelection = useCallback(
@@ -509,7 +576,7 @@ export function useExplainSession({
       setLoading(true);
 
       if (code === 'ko') {
-        void lookupKrdictLite(phrase)
+        void withDictTimeout(lookupKrdictLite(phrase))
           .then((hit) => {
             const dictMeta = getKrdictLiteMeta();
             if (dictMeta) {
@@ -536,16 +603,12 @@ export function useExplainSession({
             setResult(null);
             setResultSource(null);
             setLoading(false);
-            setError(
-              err instanceof Error
-                ? `${L('本地词典加载失败：', 'Local dictionary load failed:')}${err.message}${L('。可点「AI讲解」。', '. Tap "AI Explain".')}`
-                : L('本地词典加载失败。可点「AI讲解」。', 'Failed to load local dictionary. Tap "AI Explain".'),
-            );
+            setError(formatDictError(err));
           });
         return;
       }
 
-      void lookupJmdictLite(phrase)
+      void withDictTimeout(lookupJmdictLite(phrase))
         .then((hit) => {
           const dictMeta = getJmdictLiteMeta();
           if (dictMeta) {
@@ -572,14 +635,10 @@ export function useExplainSession({
           setResult(null);
           setResultSource(null);
           setLoading(false);
-          setError(
-            err instanceof Error
-              ? `${L('本地词典加载失败：', 'Local dictionary load failed:')}${err.message}${L('。可点「AI讲解」。', '. Tap "AI Explain".')}`
-              : L('本地词典加载失败。可点「AI讲解」。', 'Failed to load local dictionary. Tap "AI Explain".'),
-          );
+          setError(formatDictError(err));
         });
     },
-    [cancelInFlight, lang, showToast],
+    [cancelInFlight, formatDictError, lang, showToast, withDictTimeout],
   );
 
   const retryAnalyze = useCallback(() => {
@@ -685,6 +744,7 @@ export function useExplainSession({
     arm,
     disarm,
     toggleArmed,
+    preload,
     panelOpen,
     closePanel,
     targetPhrase,

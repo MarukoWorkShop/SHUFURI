@@ -46,7 +46,7 @@ Vite + React（Web）/ iOS WebView 壳（Capacitor 桥接）
 | 云函数 costReport | Token 成本统计报表 |
 | 环境 ID | `ai-native-d5gtc59uc47601f23`（上海 ap-shanghai） |
 
-**最近部署**：2026-08-14（前端重新部署到静态托管，53 文件。本次包含首页 UI 重构：`MorphingWidget` 形变微件、链接分享胶囊组件、`HtmlPasteInput` 折叠态、`home.css` 样式更新；音乐链接白名单过滤；X 按钮仅在"已复制"态浮现）
+**最近部署**：2026-08-21（前端重新部署到静态托管，124 文件；4 个云函数 force 覆盖更新。本次包含 **Split 双栏版式**（左 65% 歌词 / 右 35% 词解+语法），含双独立栏分页、CSS 皮肤、版式选择器与导出底色联动）
 
 **部署命令**：
 
@@ -73,7 +73,7 @@ npx tcb hosting deploy dist -e ai-native-d5gtc59uc47601f23
 - CDN 刷新：访问前端 URL 时追加随机 query（如 `?v=20260808`）以避免缓存。
 
 **前端访问地址（含 CDN 刷新参数）**：
-`https://ai-native-d5gtc59uc47601f23-1412422924.tcloudbaseapp.com/?v=20260811b`
+`https://ai-native-d5gtc59uc47601f23-1412422924.tcloudbaseapp.com/?v=20260821a`
 
 ### 本地开发
 

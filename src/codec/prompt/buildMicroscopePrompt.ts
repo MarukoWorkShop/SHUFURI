@@ -871,6 +871,13 @@ ${avoidLine}
 【如何使用】说明接续规则或位置；日语须结合本检索键，勿只写词类通识。
 【情感语气】用拟人化或情绪词描述其传达的隐性语感（如：表示傲娇反问、无可奈何、或中性稳定）。
 【例句】严格格式：《歌名》｜原文（必须包含${keyword}，含汉字词请用{汉字|平假名}标注振假名）｜${ifaceLabel}翻译。如果没有合适的著名歌名，请用《造句》作为书名号内容，并确保原文极其适合流行音乐语境。
+
+【例句硬性约束 — 防止半截假句子】
+1. 例句「原文」必须是 100% 纯【${lang}】文，禁止混入任何非目标语种字符（包括把中文翻译文字塞进原文列）。仅允许的例外：{汉字|平假名} 振假名标注、以及书名号《》内的歌名。
+2. 原文须是一个语法完整、语义独立的单句（含标点结尾更佳），不得是「前半外文 + 后半翻译」的拼接残句。
+3. 坏例（禁止）：《造句》｜彼は跳ね上がり追风奔向那片未知的海｜纵身跃起追风奔赴那片未知的海（原文混入中文）
+4. 好例：《造句》｜風に乗って跳ね上がり、未知の海へ走る｜乘着风纵身跃起，奔向那片未知的海
+5. 当使用《造句》模式时，优先保证原文纯正，再谈「流行音乐语境」；若造不出纯正单句，宁可用本地种子例句（见上方可选现成种子例句），也不要输出混语种残句。
 `.trim();
 }
 
@@ -926,9 +933,35 @@ export function textContainsGrammarTerm(text: string, term: string): boolean {
   return Boolean(raw) && surface.includes(raw);
 }
 
+/**
+ * 例句原文是否混入非目标语种字符（防止「前半日文 + 后半中文翻译」的半截假句子）。
+ * 允许例外：{汉字|平假名} 振假名标注、书名号《》内的歌名、标点与空白、以及目标语种自身字符。
+ */
+export function exampleTextIsPureLang(text: string, lang: string): boolean {
+  const langNorm = String(lang || '').toLowerCase();
+  // 先剥掉振假名标注 {汉字|假名} 与书名号《...》（歌名/译名允许混写）
+  const stripped = text
+    .replace(/\{([^|}\n]+)\|[^}\n]+\}/g, '')
+    .replace(/《[^》]*》/g, '');
+  if (!stripped.trim()) return false;
+  if (langNorm === 'jp' || langNorm === 'ja' || langNorm === 'japanese') {
+    // 日文例句可含汉字，难以与中文逐字区分；此处用「中文歌词常用短语」黑名单做兜底拦截，
+    // 命中明确的纯中文动词/副词串（如「踩着风奔向」「纵身跃起 追风奔赴」）即判为混语种残句。
+    const zhSignals =
+      /(踩着|奔向|追风|那片|这片|向着|有着|便是|纵身|奔赴|坠入|化作|掠过|拂过|漫过|撞上|迎着|乘着|跃向|奔赴那|未知的海|未知之海|那片海)/;
+    if (zhSignals.test(stripped)) return false;
+    return true;
+  }
+  if (langNorm === 'ko' || langNorm === 'kr' || langNorm === 'korean') {
+    return true;
+  }
+  return true;
+}
+
 function parseExamplePipeLine(
   line: string,
   term?: string,
+  lang?: string,
 ): GrammarExampleItem | null {
   const t = line.trim().replace(/^\d+[\.\)、]\s*/, '');
   if (!t) return null;
@@ -949,6 +982,8 @@ function parseExamplePipeLine(
   }
   if (!example) return null;
   if (term && !textContainsGrammarTerm(example, term)) return null;
+  // 例句原文不得混入非目标语种字符（防半截假句子）；混入则判为无效，交由调用方回落本地例句
+  if (lang && !exampleTextIsPureLang(example, lang)) return null;
   const via: GrammarExampleItem['via'] = /造句/.test(source) ? 'crafted' : 'ai';
   return { source, text: example, zh, via };
 }
@@ -957,6 +992,7 @@ function parseExamplePipeLine(
 export function parseGrammarPointLesson(
   raw: string,
   term?: string,
+  lang?: string,
 ): GrammarPointLesson {
   const text = normalizeAiExplainText(raw);
   const empty: GrammarPointLesson = {
@@ -997,7 +1033,7 @@ export function parseGrammarPointLesson(
     emotion = text.match(/(?:【情感语气】|情感语气)[:：]\s*([^\n【]+)/)?.[1]?.trim() || '';
   }
 
-  let example = exampleRaw ? parseExamplePipeLine(exampleRaw, term) : null;
+  let example = exampleRaw ? parseExamplePipeLine(exampleRaw, term, lang) : null;
   if (!example) {
     const legacy = parseGrammarExamples(text, term);
     example = legacy[0] ?? null;

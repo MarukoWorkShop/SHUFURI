@@ -1,10 +1,20 @@
 /** 排版模式：打印 B5、手机竖屏 9:16、1:1 方形、社媒竖版 3:4 */
 export type PosterLayoutProfile = 'clipPosterPrint' | 'mobilePoster' | 'squarePoster' | 'socialPoster';
 
-/** 版式变体：standard = 经典排版；notebook = 行间注（单栏不变，仅 CSS 皮肤） */
-export type PosterLayoutVariant = 'standard' | 'notebook';
-export const POSTER_LAYOUT_VARIANTS: PosterLayoutVariant[] = ['standard', 'notebook'];
+/** 版式变体：
+ * - standard = 经典排版（单栏）
+ * - notebook = 笔记本/行间注（单栏，仅 CSS 皮肤）
+ * - split    = 分栏（左 65% 歌词 / 右 35% 词解+语法，双独立栏各自分页）
+ */
+export type PosterLayoutVariant = 'standard' | 'notebook' | 'split';
+export const POSTER_LAYOUT_VARIANTS: PosterLayoutVariant[] = ['standard', 'notebook', 'split'];
 export const DEFAULT_POSTER_LAYOUT_VARIANT: PosterLayoutVariant = 'standard';
+
+/** 分栏版式左右栏宽度占比（左 65% 歌词 / 右 35% 词解+语法） */
+export const SPLIT_LEFT_RATIO = 0.65;
+export const SPLIT_RIGHT_RATIO = 0.35;
+/** 左右栏间留白（px，按 profile 缩放后的基础值），在 CSS 皮肤中以百分比/固定值体现 */
+export const SPLIT_COL_GAP_RATIO = 0.03;
 
 /** 海报渲染/分页选项（注音可见性 + 用户密度倍率 + 背景图 + 版式变体） */
 export type PosterRenderOptions = {

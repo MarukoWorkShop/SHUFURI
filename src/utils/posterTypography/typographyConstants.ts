@@ -109,6 +109,14 @@ export const NOTEBOOK_CARD_BORDER = 'rgba(31, 78, 140, 0.22)';
 export const NOTEBOOK_RULE_COLOR = 'rgba(31, 78, 140, 0.55)';
 /** 暖米白做旧纸底色（更淡） */
 export const NOTEBOOK_PAPER_BG = '#f7f1e6';
+
+/** —— Split（分栏）版式配色 —— */
+/** 极浅蓝渐变底色：中心更浅、四周略浓；导出兜底用 SPLIT_PAPER_BG 实色 */
+export const SPLIT_PAPER_BG = '#EDF3F9';
+export const SPLIT_PAPER_BG_CENTER = '#F5F9FD';
+export const SPLIT_PAPER_BG_EDGE = '#E4ECF5';
+/** 左右栏间浅蓝虚线分割线颜色 */
+export const SPLIT_RULE_BLUE = '#A9C2DD';
 /** 纸面斑驳/污渍（更深的暖褐，极低透明，模拟做旧痕迹） */
 export const NOTEBOOK_STAIN_1 = 'rgba(150, 111, 51, 0.05)';
 export const NOTEBOOK_STAIN_2 = 'rgba(120, 86, 40, 0.045)';
