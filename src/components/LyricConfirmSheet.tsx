@@ -3,6 +3,7 @@ import { getAppSettings, type LangCode } from '../services/appSettings';
 import type { LyricPreviewLine } from '../utils/lyricConfirm';
 import { LyricPreviewRows } from './LyricPreviewRows';
 import ArrowRightIcon from './icons/ArrowRightIcon';
+import { AiLoadingOverlay } from './AiLoadingOverlay';
 
 type Props = {
   visible: boolean;
@@ -226,7 +227,7 @@ export default function LyricConfirmSheet({
           )}
         </div>
 
-        {isGeneratingStudy && <div className="lyric-confirm-sheet__loading-overlay" aria-busy />}
+        {isGeneratingStudy && <AiLoadingOverlay visible={isGeneratingStudy} lang={iface} />}
       </div>
     </div>
   );

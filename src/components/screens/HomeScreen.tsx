@@ -224,10 +224,6 @@ export default function HomeScreen({
           >
             粤ICP备2026114306号
           </a>
-          <span className="home-footer__sep" aria-hidden="true">
-            |
-          </span>
-          <span className="home-footer__meta">粤公网安备 XXXXXXXXXXXX号</span>
         </div>
       </footer>
     </div>

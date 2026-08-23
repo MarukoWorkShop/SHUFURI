@@ -287,6 +287,10 @@
   background: var(--color-accent);
 }
 
+.study-card-detail__nav-btn--close:hover:not(:disabled) {
+  color: var(--color-accent-on);
+}
+
 .study-card-detail__counter {
   margin: 10px 0 0;
   font-family: var(--ui-font-sans);
@@ -308,4 +312,85 @@
 
 .study-card-flip[data-lang='zh'] {
   --study-card-serif: var(--font-serif-zh);
+}
+
+/* ============================================================
+   桌面端：卡片尺寸 2 倍 + 文字等比放大
+   ============================================================ */
+@media (min-width: 769px) {
+  .study-card-detail__stage {
+    width: min(calc(100vw - 80px), calc(100vh - 240px), 680px);
+  }
+
+  .study-card-face__inner {
+    padding: 48px 40px;
+  }
+
+  .study-card-face__kind {
+    top: 24px;
+    left: 28px;
+    font-size: 13px;
+  }
+
+  .study-card-face__headline {
+    font-size: clamp(48px, 5vw, 64px);
+  }
+
+  .study-card-face__headline rt {
+    font-size: 0.42em;
+  }
+
+  .study-card-face__gloss {
+    margin-top: 22px;
+    font-size: 20px;
+  }
+
+  .study-card-face--back .study-card-face__inner {
+    --study-card-back-emphasis: clamp(28px, 3vw, 34px);
+    --study-card-back-meta: 18px;
+    padding: 40px 36px;
+  }
+
+  .study-card-back__label {
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+
+  .study-card-back__label:not(:first-child) {
+    margin-top: 22px;
+  }
+
+  .study-card-back__meaning,
+  .study-card-back__source-lyric {
+    font-size: var(--study-card-back-emphasis, clamp(28px, 3vw, 34px));
+  }
+
+  .study-card-back__source-meta {
+    margin-top: 10px;
+    font-size: var(--study-card-back-meta, 18px);
+  }
+
+  .study-card-back__lyric--zh {
+    font-size: var(--study-card-back-meta, 18px);
+  }
+
+  .study-card-detail__hint {
+    margin-top: 24px;
+    font-size: 15px;
+  }
+
+  .study-card-detail__nav {
+    gap: 16px;
+    margin-top: 28px;
+  }
+
+  .study-card-detail__nav-btn {
+    padding: 14px 20px;
+    font-size: 16px;
+  }
+
+  .study-card-detail__counter {
+    margin-top: 16px;
+    font-size: 14px;
+  }
 }

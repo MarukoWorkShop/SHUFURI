@@ -7,6 +7,7 @@ import {
 } from '../codec/prompt/buildMicroscopePrompt';
 import { getAppSettings } from '../services/appSettings';
 import { applyRubyMarkup } from '../utils/rubyMarkup';
+import { AiLoadingOverlay } from './AiLoadingOverlay';
 import './ExplainMicroscopePanel.css';
 
 type Props = {
@@ -270,8 +271,11 @@ export default function ExplainMicroscopePanel({ session, variant = 'sheet' }: P
           ) : null}
         </header>
 
+        {/* AI 讲解首字到达前的等待：手绘咖啡杯 + 进度条 + 随机文案 */}
+        {deepDiveLoading && !aiExplain && <AiLoadingOverlay visible lang={iface} />}
+
         <div className="microscope-panel__scroll">
-          {loading && !result && (
+          {loading && !result && !deepDiveLoading && (
             <div className="microscope-panel__skeleton" aria-busy="true">
               <div className="microscope-skel" />
               <div className="microscope-skel microscope-skel--short" />

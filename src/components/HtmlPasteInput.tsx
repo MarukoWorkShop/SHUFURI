@@ -121,7 +121,6 @@ export default function HtmlPasteInput({
   const pasteInputRef = useRef<HTMLInputElement>(null);
   const pasteActiveRef = useRef(false);
   const pasteValueRef = useRef('');
-  const pendingFocusPasteRef = useRef(false);
   pasteActiveRef.current = pasteActive;
   pasteValueRef.current = pasteValue;
 
@@ -149,29 +148,11 @@ export default function HtmlPasteInput({
     [isLikelyMusicShare, onParseMusicShareText],
   );
 
-  /** 展开后聚焦输入框；inputMode=none 多数机型不弹键盘，仍可长按系统粘贴 */
-  const focusPasteFieldWithoutKeyboard = useCallback(() => {
-    pendingFocusPasteRef.current = true;
-    queueMicrotask(() => {
-      if (!pendingFocusPasteRef.current) return;
-      const el = pasteInputRef.current;
-      if (!el) return; // 尚未展开挂载 → 交给下方 pasteActive effect
-      el.focus({ preventScroll: true });
-      pendingFocusPasteRef.current = false;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!pasteActive || !pendingFocusPasteRef.current) return;
-    pendingFocusPasteRef.current = false;
-    pasteInputRef.current?.focus({ preventScroll: true });
-  }, [pasteActive]);
-
   const handlePasteAreaClick = useCallback(async () => {
-    setPasteActive(true);
     if (parseMusicShareBusy) return;
 
     // 1) 用户手势内尝试读剪贴板（HTTPS + 手势时 iOS/Android 通常可用）
+    //    这是主要路径：动作按钮直接读取剪贴板，不展开 input、不触发系统粘贴菜单
     if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
       try {
         const text = await navigator.clipboard.readText();
@@ -187,7 +168,8 @@ export default function HtmlPasteInput({
               'Clipboard is not a music share link. Copy a share text from QQ/NetEase first.',
             ),
           );
-          focusPasteFieldWithoutKeyboard();
+          // 展开输入框让用户手动粘贴/编辑，但不主动 focus（避免 iOS 弹出粘贴菜单）
+          setPasteActive(true);
           return;
         }
       } catch {
@@ -201,16 +183,16 @@ export default function HtmlPasteInput({
       }
     }
 
-    // 2) 读不到：展开后引导长按粘贴（不弹全键盘）
+    // 2) 读不到或权限不足：展开后引导用户手动粘贴
+    //    不主动 focus input，避免 iOS Safari 自动弹出系统粘贴菜单
+    setPasteActive(true);
     showAppToast(
       L('请长按输入框，选择「粘贴」', 'Long-press the field and choose Paste.'),
     );
-    focusPasteFieldWithoutKeyboard();
   }, [
     parseMusicShareBusy,
     ingestShareText,
     showAppToast,
-    focusPasteFieldWithoutKeyboard,
   ]);
 
   const handlePaste = useCallback(

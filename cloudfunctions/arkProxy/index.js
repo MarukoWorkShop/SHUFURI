@@ -21,6 +21,36 @@ const cloud = cloudbase.init({ env: cloudbase.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
 
+// ===== 访问埋点（反映近几天访问量，独立于业务逻辑，fire-and-forget） =====
+const ACCESS_LOG_COLLECTION = 'access_log';
+
+/**
+ * 记录一次访问，返回 Promise（调用方应在 main 末尾 await，确保云函数冻结前写入完成）。
+ * 字段：ts(ms) / date(YYYY-MM-DD) / hour(0-23) / action / ip / userId / ok / code / costYuan
+ */
+function logAccess(info) {
+  const now = new Date();
+  const ts = now.getTime();
+  const date = now.toISOString().slice(0, 10); // UTC 日期；统计口径足够
+  const hour = now.getUTCHours();
+  const record = {
+    ts,
+    date,
+    hour,
+    action: info.action || 'unknown',
+    ip: info.ip || 'unknown',
+    userId: info.userId || '',
+    ok: info.ok ? 1 : 0,
+    code: info.code || '',
+    costYuan: typeof info.costYuan === 'number' ? Number(info.costYuan.toFixed(6)) : 0,
+    createdAt: ts,
+  };
+  return db
+    .collection(ACCESS_LOG_COLLECTION)
+    .add({ data: record })
+    .catch((e) => console.warn('[arkProxy] access_log write failed:', e && e.message));
+}
+
 // ===== 每日免费额度（与前端 aiUsageLimit.ts 保持一致） =====
 const EXPLAIN_FREE_LIMIT = 20;
 const LYRICS_FREE_LIMIT = 5;
@@ -291,6 +321,8 @@ async function incrementQuota(userId, ip, action) {
 
 exports.main = async (event, context) => {
   const { action, prompt, userId, targetLanguage, interfaceLanguage } = event || {};
+  // 访问埋点 Promise：main 返回前在 finally 中 await，确保云函数冻结前写入完成
+  let accessLogDone = Promise.resolve();
 
   // 1. action 合法性
   if (!MODELS[action]) {
@@ -303,6 +335,10 @@ exports.main = async (event, context) => {
 
   const ip = getClientIp(event);
 
+  // 1.5 访问埋点：每次有效 action 请求记一条（含被拒，真实反映访问量）
+  accessLogDone = logAccess({ action, ip, userId, ok: true, code: '' });
+
+  try {
   // 2. 每日费用熔断（全局硬拒，优先级最高）
   const cost = await checkDailyCostCap();
   if (!cost.allowed) {
@@ -450,4 +486,8 @@ exports.main = async (event, context) => {
       outputTokens: outTokens,
     },
   };
+  } finally {
+    // 确保访问埋点在云函数冻结前写入完成（失败仅告警，不影响返回）
+    await accessLogDone.catch(() => {});
+  }
 };

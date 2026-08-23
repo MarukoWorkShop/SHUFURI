@@ -1,0 +1,192 @@
+/* ============ AI 生成等待遮罩 ============ */
+.ai-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(255, 252, 247, 0.78);
+  backdrop-filter: blur(2px);
+  animation: ai-loading-fade-in 0.28s ease-out both;
+}
+
+.ai-loading-overlay__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  max-width: 320px;
+  text-align: center;
+}
+
+/* ---------- 手绘咖啡杯（深灰描边 + 白填充 + 咖色液面） ---------- */
+.ai-loading-overlay__cup {
+  filter: drop-shadow(0 6px 10px rgba(60, 60, 60, 0.12));
+  animation: ai-loading-cup-rock 3.6s ease-in-out infinite;
+  transform-origin: 60px 100px;
+}
+
+.ai-loading-cup__mug {
+  fill: #ffffff; /* 白色杯身 */
+  stroke: #3a3a3a; /* 深灰线条 */
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.ai-loading-cup__liquid {
+  fill: #a9712f; /* 咖色液面 */
+  stroke: #3a3a3a;
+  stroke-width: 1.4;
+}
+
+.ai-loading-cup__handle {
+  fill: none;
+  stroke:  #3a3a3a; /* 深灰线条 */
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.ai-loading-cup__shine {
+  fill: none;
+  stroke: #cfcfcf; /* 浅灰高光 */
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.ai-loading-cup__saucer {
+  fill: #f2f2f2; /* 浅灰碟子 */
+  stroke: #3a3a3a;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+/* 蒸汽动画 */
+.ai-loading-steam {
+  fill: none;
+  stroke: #9a9a9a; /* 中性灰蒸汽 */
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0;
+  transform-origin: center;
+}
+
+.ai-loading-steam--1 {
+  animation: ai-loading-steam 2.8s ease-in-out infinite;
+}
+.ai-loading-steam--2 {
+  animation: ai-loading-steam 2.8s ease-in-out 0.5s infinite;
+}
+.ai-loading-steam--3 {
+  animation: ai-loading-steam 2.8s ease-in-out 1s infinite;
+}
+
+@keyframes ai-loading-steam {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scaleY(0.6);
+  }
+  35% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scaleY(1.1);
+  }
+}
+
+@keyframes ai-loading-cup-rock {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+/* ---------- 进度条：浅白底槽 + 深灰实心滑动条（无渐变） ---------- */
+.ai-loading-overlay__bar {
+  width: 240px;
+  height: 10px;
+  border-radius: 999px;
+  /* 主题浅白底槽（实心，无渐变） */
+  background: #f0f0f0;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(60, 60, 60, 0.12);
+}
+
+.ai-loading-overlay__bar-fill {
+  width: 28%; /* 中间流动条文缩短 */
+  height: 100%;
+  border-radius: 999px;
+  /* 深灰实心滑动条（无渐变），与浅白底槽形成对比 */
+  background: #3a3a3a;
+  animation: ai-loading-bar-slide 1.5s linear infinite;
+}
+
+@keyframes ai-loading-bar-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(360%);
+  }
+}
+
+/* ---------- 文案：主题深灰色 + 柔和渐隐渐显 ---------- */
+.ai-loading-overlay__msg {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #3a3a3a; /* 主题深灰 */
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  animation: ai-loading-msg-fade 1.2s ease-in-out both;
+}
+
+@keyframes ai-loading-msg-fade {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes ai-loading-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .ai-loading-overlay {
+    background: rgba(28, 24, 20, 0.82);
+  }
+  .ai-loading-overlay__msg {
+    color: #e6e6e6;
+  }
+  .ai-loading-overlay__bar {
+    background-image: linear-gradient(
+      90deg,
+      #4a4a4a 0%,
+      #2f2f2f 40%,
+      #4a4a4a 80%
+    );
+  }
+  .ai-loading-cup__mug {
+    fill: #2f2f2f;
+  }
+}
