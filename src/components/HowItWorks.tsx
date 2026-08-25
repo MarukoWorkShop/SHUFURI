@@ -114,7 +114,7 @@ const STEPS = [
     badge: '2',
     titleZh: '生成口令 → AI',
     titleEn: 'Prompt → AI',
-    descZh: '点「一键生成口令」复制 Prompt，粘贴到你信任的 AI，将AI返回的结果复制到剪贴板，点击「生成学习材料」。',
+    descZh: '点「去生成AI口令」复制 Prompt，粘贴到你信任的 AI，将AI返回的结果复制到剪贴板，点击「生成学习材料」。',
     descEn: 'Tap "Generate Prompt", paste into your AI, then paste the result back here.',
   },
   {

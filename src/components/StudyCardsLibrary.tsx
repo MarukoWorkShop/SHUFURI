@@ -327,7 +327,7 @@ export default function StudyCardsLibrary(_props: Props) {
               </button>
             )}
             <button type="button" className="study-cards-drawer__close" onClick={closeDrawer}>
-              {L('帰 / 收起', 'Collapse')}
+              {L('收起', 'Collapse')}
             </button>
           </div>
         </header>

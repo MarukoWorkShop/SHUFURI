@@ -5,6 +5,7 @@ import AppLayout from './components/app/AppLayout';
 import GlobalChunkLoading, {
   EDIT_ENTRY_LOADING_TIPS,
 } from './components/GlobalChunkLoading';
+import AiLoadingOverlay from './components/AiLoadingOverlay';
 import HomeScreen from './components/screens/HomeScreen';
 // Edit/Export 屏体积大（海报排版、导出、字典等），按需懒加载以缩小首屏
 const EditScreen = lazy(() => import('./components/screens/EditScreen'));
@@ -164,7 +165,7 @@ function AppShell({
         <GlobalChunkLoading tips={EDIT_ENTRY_LOADING_TIPS} />
       )}
 
-      {isOpeningProject && <GlobalChunkLoading tips={EDIT_ENTRY_LOADING_TIPS} />}
+      {isOpeningProject && <AiLoadingOverlay visible lang={appSettings.interfaceLanguage} />}
     </AppLayout>
   );
 }

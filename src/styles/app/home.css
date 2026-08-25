@@ -772,13 +772,19 @@
   justify-content: center;
   width: 28px;
   height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  max-width: 28px;
+  max-height: 28px;
   border: none;
-  border-radius: 999px;
+  border-radius: 50% !important;
   background: #ECECEC;
   color: #6b7280;
   cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease;
   -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .ext-pipeline__share-fill-clear:hover {

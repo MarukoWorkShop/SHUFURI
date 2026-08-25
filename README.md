@@ -46,7 +46,7 @@ Vite + React（Web）/ iOS WebView 壳（Capacitor 桥接）
 | 云函数 costReport | Token 成本统计报表 |
 | 环境 ID | `ai-native-d5gtc59uc47601f23`（上海 ap-shanghai） |
 
-**最近部署**：2026-08-25（前端重新部署到静态托管，117 文件；4 个云函数 force 覆盖更新。本次包含 **学习词卡词书引擎**（StudyCardsLibrary 语言筛选与设置复习语言解耦、extractStudyCards lang 冲突修正与兜底、studyCardsStore 总数上限 3000 / 导出 999 拦截守卫、新增词书打印/导出面板与 cards→layout 映射、test:cards 回归脚本），并修复 **词书导出「译文」区误显示引用歌名/歌手** 的问题——`mapCardsToLayoutProps` 拆分出 `translationLines`（仅 lyricZh 纯译文），打印视图「译文」区改用该字段）
+**最近部署**：2026-08-25（前端重新部署到静态托管，117 文件；4 个云函数 force 覆盖更新。本次包含：学习词卡词书引擎（StudyCardsLibrary 语言筛选与设置复习语言解耦、extractStudyCards lang 冲突修正与兜底、studyCardsStore 总数上限 3000 / 导出 999 拦截守卫、新增词书打印/导出面板与 cards→layout 映射、test:cards 回归脚本）；修复词书导出「译文」区误显示引用歌名/歌手（`mapCardsToLayoutProps` 拆分出 `translationLines`，打印视图改用该字段）；UI 修正（学习卡「收起」标签、首页链接框清空按钮改为正圆形、使用流程「去生成AI口令」文案）；**点击歌词库项目进入编辑页时立即显示咖啡杯等待动画（AiLoadingOverlay）替代原脉冲点，避免长时间无反应误以为卡死**
 
 **部署命令**：
 
@@ -73,7 +73,7 @@ npx tcb hosting deploy dist -e ai-native-d5gtc59uc47601f23
 - CDN 刷新：访问前端 URL 时追加随机 query（如 `?v=20260808`）以避免缓存。
 
 **前端访问地址（含 CDN 刷新参数）**：
-`https://ai-native-d5gtc59uc47601f23-1412422924.tcloudbaseapp.com/?v=20260825a`
+`https://ai-native-d5gtc59uc47601f23-1412422924.tcloudbaseapp.com/?v=20260825c`
 
 ### 本地开发
 
