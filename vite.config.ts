@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { resolve } from 'node:path';
 import { loadEnv } from 'vite';
 // @ts-expect-error local ESM stream helper (no package types)
 import { createExplainStreamMiddleware } from './scripts/arkExplainStream.mjs';
@@ -60,6 +61,13 @@ export default defineConfig(({ mode }) => {
           ),
       },
       rollupOptions: {
+        input: {
+          main: resolve(__dirname, 'index.html'),
+          // 隐私页作为独立静态页纳入构建，使线上 /privacy 在本站访问（而非跳转外部）
+          privacy: resolve(__dirname, 'privacy.html'),
+          // 服务协议页独立静态页，使线上 /terms 在本站访问
+          terms: resolve(__dirname, 'terms.html'),
+        },
         output: {
           manualChunks(id) {
             if (id.includes('printFontBase64.generated')) {
