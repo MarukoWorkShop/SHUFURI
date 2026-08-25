@@ -30,10 +30,13 @@ const AI_PROMPT_RE = /^\s*\[Role:\s*Sequence_Encoder\]/i;
 /** 剪贴板内容是否应被静默忽略（既非音乐链接也非 AI 口令之外的有效输入） */
 function isSilentIgnoreText(text: string): boolean {
   const t = text.trim();
-  if (!t) return true; // 空串忽略
+  if (!t)  return true; // 空串忽略
   if (AI_PROMPT_RE.test(t)) return true; // AI 口令指纹命中
   return false; // 其余（含音乐链接）由调用方按各自规则处理
 }
+
+/** 全部语言代码（按展示顺序）。 */
+const ALL_LANG_CODES: LyricsLanguage[] = ['jp', 'ko', 'en', 'zh'];
 
 /** 歌名比对用：去空白、小写，忽略标点差异 */
 
@@ -67,6 +70,8 @@ type Props = {
   /** 确认页触发的学习材料 / 再试口令，写入剪贴板并弹出 AI 选择 */
   externalPrompt?: ExternalPromptRequest | null;
   onExternalPromptHandled?: () => void;
+  /** 由语言矩阵 learningTargetLanguages 推导的可用语言；默认为全部 */
+  availableLanguages?: LyricsLanguage[];
 };
 
 export default function HtmlPasteInput({
@@ -85,6 +90,7 @@ export default function HtmlPasteInput({
   onFormMetaChange,
   externalPrompt,
   onExternalPromptHandled,
+  availableLanguages,
 }: Props) {
   const showAppToast = useAppToast();
   const [songTitle, setSongTitle] = useState(initialTitle || '');
@@ -424,12 +430,16 @@ export default function HtmlPasteInput({
                 <select
                   className="ext-pipeline__select"
                   value={language ?? matrix.activeTarget}
-                  onChange={(e) => onLanguageChange(e.target.value as LyricsLanguage)}
+                  onChange={(e) => onLanguageChange?.(e.target.value as LyricsLanguage)}
                 >
-                  <option value="jp">日本語</option>
-                  <option value="ko">한국어</option>
-                  <option value="en">ENG</option>
-                  <option value="zh">中文</option>
+                  {(availableLanguages && availableLanguages.length > 0
+                    ? availableLanguages
+                    : ALL_LANG_CODES
+                  ).map((code) => (
+                    <option key={code} value={code}>
+                      {LANG_LABELS[code]}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}

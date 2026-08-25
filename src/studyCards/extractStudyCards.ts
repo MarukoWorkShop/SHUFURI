@@ -69,6 +69,55 @@ function safeLyricLineCitation(
   }
 }
 
+/**
+ * 内容级语言检测兜底（独立于拨轮/header 声明）。
+ *
+ * 规则（按优先级，从高特异性到低特异性）：
+ *   1. 含谚文 ([\uAC00-\uD7A3] 等)        → 'ko'   （谚文极特殊，最高优先级）
+ *   2. 含平/片假名 ([\u3040-\u30FF])      → 'jp'   （假名是日语独有特征）
+ *   3. 仅拉丁字母，无 CJK/Kana            → 'en'
+ *   4. 仅汉字，无假名/谚文/拉丁           → 'zh'
+ *
+ * 返回 null 表示「文本特征不足以判定」，此时调用方应使用声明值。
+ */
+function detectLangFromContent(text: string): LangCode | null {
+  const hasHangul = /[\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F]/.test(text);
+  const hasKana = /[\u3040-\u309F\u30A0-\u30FF]/.test(text);
+  const hasHan = /[\u4E00-\u9FFF\u3400-\u4DBF]/.test(text);
+  const hasLatin = /[A-Za-z]/.test(text);
+
+  if (hasHangul) return 'ko';
+  if (hasKana) return 'jp';
+  // 仅拉丁字母（无汉字/假名/谚文）→ 英语
+  if (hasLatin && !hasHan && !hasKana && !hasHangul) return 'en';
+  // 纯汉字（无假名/谚文/拉丁）→ 中文
+  if (hasHan && !hasKana && !hasHangul && !hasLatin) return 'zh';
+  // 混合情况（汉字+拉丁：如 "你好 hello"）无法仅凭字符断定 → null
+  return null;
+}
+
+/**
+ * 语言推断修正（兜底机制）：
+ *
+ * 当「声明语言」与「内容特征语言」冲突时，以内容特征为准——
+ * 避免拨轮选择日文导致中文歌《月亮代表我的心》被误标为 jp 等跨语言污染。
+ *
+ * 冲突判定：detectLangFromContent(raw) 非空 且 ≠ declared。
+ * 例外：declared 本身与内容一致时不触发。
+ */
+function correctInferredLang(raw: string, declared: LangCode | undefined): LangCode | undefined {
+  if (!declared) return undefined;
+  const detected = detectLangFromContent(raw);
+  if (detected && detected !== declared) {
+    console.warn(
+      `[study-cards] lang corrected: ${declared} -> ${detected} ` +
+      `(content-based detection on raw lyrics)`,
+    );
+    return detected;
+  }
+  return declared;
+}
+
 export function extractStudyCardsFromRaw(raw: string, meta: ExtractStudyCardsMeta): StudyCardDraft[] {
   const trimmed = cleanDoubaoPaste(raw.trim());
   if (!rawLyricsHasStudyCardSections(trimmed)) {
@@ -85,9 +134,14 @@ export function extractStudyCardsFromRaw(raw: string, meta: ExtractStudyCardsMet
 
   const songTitle = meta.title?.trim() || document.header.title?.trim() || '歌词笔记';
   const artist = meta.artist?.trim() || document.header.artist?.trim() || undefined;
-  const lang = meta.lang ?? document.header.lang;
+  const rawLang = meta.lang ?? document.header.lang;
+  const corrected = correctInferredLang(trimmed, rawLang);
+  // 兜底：声明缺失且内容无法判定时，回退到内容检测或默认日语，避免 lang 为 undefined 污染卡片。
+  const lang: LangCode = corrected ?? detectLangFromContent(trimmed) ?? 'jp';
   const sourceLabel = buildSourceLabel(artist, songTitle);
   const cards: StudyCardDraft[] = [];
+  // 本次解析为一次"相遇"，所有析出的卡共享同一时间戳（作为新 occurrence 的 encounteredAt）。
+  const now = Date.now();
 
   for (const row of document.vocab) {
     const term = row.term?.trim();
@@ -125,6 +179,7 @@ export function extractStudyCardsFromRaw(raw: string, meta: ExtractStudyCardsMet
       }),
       tags: buildTags('vocab', songTitle),
       sourceRaw: term,
+      encounteredAt: now,
     });
   }
 
@@ -166,6 +221,7 @@ export function extractStudyCardsFromRaw(raw: string, meta: ExtractStudyCardsMet
       }),
       tags: buildTags('grammar', songTitle),
       sourceRaw: row.label,
+      encounteredAt: now,
     });
   }
 

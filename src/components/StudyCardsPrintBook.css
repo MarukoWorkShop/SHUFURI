@@ -1,0 +1,260 @@
+/* 专属单词书打印视图 — 不对称双栏镜像排版（左35%单词 / 右65%详情） */
+
+.study-cards-print-book {
+  display: none;
+}
+
+/* ---- 外壳 ---- */
+.study-cards-print-book__inner {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12mm 14mm;
+  background: #f5f1ea;
+  color: #3a3531;
+  font-family: var(--font-serif-jp, 'Noto Serif JP', 'Noto Serif SC', 'Songti SC', 'Source Han Serif CN', serif);
+}
+
+/* ---- 页首横线 + 极小语言标签 ---- */
+.study-cards-print-book__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 2mm;
+  border-bottom: 1.5px solid #c9bfa8;
+}
+
+.study-cards-print-book__lang-tag {
+  font-size: 7pt;
+  letter-spacing: 0.08em;
+  color: #b0a898;
+  text-transform: uppercase;
+}
+
+/* ---- 条目容器 ---- */
+.study-cards-print-book__body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- 约束 G：按歌名分组（扁平渲染，条目级别 break-inside: avoid） ---- */
+
+/* ---- 按语言分页：每种语言另起一页（首个 section 紧贴顶端，其余强制换页） ---- */
+.study-cards-print-book__lang-section {
+  box-sizing: border-box;
+}
+
+.study-cards-print-book__lang-section + .study-cards-print-book__lang-section {
+  page-break-before: always;
+  break-before: page;
+  /* 新分页的 section 顶部间距与首页 inner padding-top 一致 */
+  padding-top: 12mm;
+}
+
+/* 每个语言 section 自身的页首横线 */
+.study-cards-print-book__lang-section .study-cards-print-book__header {
+  margin-bottom: 3mm;
+}
+
+/* ---- 不对称双栏条目（左35% / 右65%，单条不可跨页截断） ---- */
+.study-cards-print-book__entry {
+  display: flex;
+  gap: 20px;
+  padding: 5mm 0;
+  border-bottom: 1px solid #e3dccd;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.study-cards-print-book__entry:last-child {
+  border-bottom: none;
+}
+
+/* 左栏：仅单词/词条（≈35%） */
+.study-cards-print-book__col-left {
+  flex: 7 1 35%;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
+}
+
+/* 右栏：释义 / 出典 / 例句轨迹（≈65%） */
+.study-cards-print-book__col-right {
+  flex: 13 1 65%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---- 左栏内容（仅单词） ---- */
+.study-cards-print-book__front {
+  font-size: 22px;
+  line-height: 1.5;
+  color: #2f2a26;
+  word-break: break-word;
+}
+
+/* ---- 日语振假名 ruby（与歌词海报一致） ---- */
+.study-cards-print-book__front ruby,
+.study-cards-print-book__source-lyric ruby {
+  ruby-position: over;
+}
+
+.study-cards-print-book__front rt,
+.study-cards-print-book__source-lyric rt {
+  font-size: 0.5em;
+  color: #8a7f6d;
+  font-weight: 400;
+}
+
+.study-cards-print-book__front[data-lang='ko'] {
+  font-family: var(--font-serif-ko, 'Noto Serif KR', serif);
+}
+
+.study-cards-print-book__front[data-lang='zh'] {
+  font-family: var(--font-serif-zh, 'Songti SC', serif);
+}
+
+/* ---- 右栏标签（释义 / 出典 / 译文） ---- */
+.study-cards-print-book__label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #9a9080;
+  font-family: 'Noto Serif SC', 'Source Han Serif CN', 'Songti SC', serif;
+}
+
+/* 右栏 — 释义（大字，中文强制思源宋体） */
+.study-cards-print-book__def {
+  margin: 0 0 2px;
+  font-size: 17px;
+  line-height: 1.55;
+  color: #2f2a26;
+  font-family: 'Noto Serif SC', 'Source Han Serif CN', 'Songti SC', serif;
+}
+
+/* 右栏 — 出典（原歌词 + 极小灰色歌名） */
+.study-cards-print-book__source {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.study-cards-print-book__source-lyric {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #5a5550;
+  font-family: 'Noto Serif SC', 'Source Han Serif CN', 'Songti SC', serif;
+}
+
+/* 出典歌词中文翻译 */
+.study-cards-print-book__source-zh {
+  display: block;
+  margin-top: 1px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #7a756d;
+  font-family: 'Noto Serif SC', 'Source Han Serif CN', 'Songti SC', serif;
+}
+
+.study-cards-print-book__source-song {
+  display: block;
+  text-align: right;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: #b0a898;
+}
+
+/* 右栏 — 例句轨迹 / 译文 */
+.study-cards-print-book__notes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.study-cards-print-book__note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #5a5550;
+  font-family: 'Noto Serif SC', 'Source Han Serif CN', 'Songti SC', serif;
+}
+
+/* 频次标记 */
+.study-cards-print-book__freq {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #8a7f6d;
+  background: rgba(138, 127, 109, 0.1);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+/* ---- 约束 P：强制打印保留底色与背景，隐藏浏览器默认页眉，底色铺满纸张 ---- */
+@media print {
+  .study-cards-print-book {
+    display: block !important;
+  }
+
+  .study-cards-print-book,
+  .study-cards-print-book * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 隐藏浏览器默认页眉 / 页脚（URL、日期、页码） */
+  @page {
+    margin: 0 !important;
+    size: auto;
+  }
+
+  /* 根层铺满底色 */
+  html {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #f5f1ea !important;
+  }
+
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #f5f1ea !important;
+  }
+
+  /* 打印容器：绝对定位铺满 + 底色 */
+  .study-cards-print-book__inner {
+    padding: 12mm 14mm;
+    min-height: 100vh;
+    box-sizing: border-box;
+  }
+
+  /* 隐藏 #root 内所有应用内容 + body 下 portal 层的 drawer / overlay（PrintBook 除外） */
+  #root {
+    visibility: hidden !important;
+  }
+
+  /* 隐藏 drawer portal（createPortal 挂在 body 下） */
+  .study-cards-drawer,
+  .study-card-detail-overlay {
+    display: none !important;
+  }
+
+  /* 打印容器：绝对定位铺满 + 底色 */
+  .study-cards-print-book {
+    visibility: visible !important;
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    min-height: 100vh;
+    background: #f5f1ea !important;
+  }
+}

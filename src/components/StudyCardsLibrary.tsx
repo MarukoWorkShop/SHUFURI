@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { deleteStudyCard, deleteStudyCards, listStudyCards, subscribeStudyCardsStore } from '../services/studyCardsStore';
+import { BookOpen } from 'lucide-react';
+import { deleteStudyCard, deleteStudyCards, listStudyCards, subscribeStudyCardsStore, MAX_TOTAL_STUDY_CARDS, evaluateBookExportCount } from '../services/studyCardsStore';
 import type { StudyCard } from '../studyCards/types';
 import type { LangCode } from '../services/appSettings';
 import { shareAnkiDeckTsv } from '../studyCards/shareAnkiDeck';
+import StudyCardsBookExportPanel from './StudyCardsBookExportPanel';
 import StudyCardDetailOverlay from './StudyCardDetailOverlay';
+import StudyCardsPrintBook from './StudyCardsPrintBook';
 import { L } from '../utils/i18n';
 import { useDrawer } from '../hooks/useDrawer';
 import SkeletonCard from './SkeletonCard';
@@ -14,8 +17,6 @@ import '../styles/posterFonts.css';
 type Props = Record<string, never>;
 
 type LangFilter = 'all' | LangCode;
-
-const LANG_FILTER_ORDER: LangFilter[] = ['all', 'jp', 'ko', 'en', 'zh'];
 
 function kindLabel(kind: StudyCard['kind']): string {
   return kind === 'vocab' ? L('词汇', 'Vocabulary') : L('语法', 'Grammar');
@@ -33,6 +34,9 @@ function langFilterLabel(filter: LangFilter): string {
   return langTagLabel(filter);
 }
 
+/** 软提醒阈值：卡片较多时提示用户筛选或归档。 */
+const SOFT_LIMIT_HINT = 1000;
+
 export default function StudyCardsLibrary(_props: Props) {
   const [items, setItems] = useState<StudyCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +46,15 @@ export default function StudyCardsLibrary(_props: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [langFilter, setLangFilter] = useState<LangFilter>('all');
   const [detailIndex, setDetailIndex] = useState<number | null>(null);
+
+  // 语言筛选选项：基于「已生成的词卡实际包含的语言」派生，与设置中启用的复习语言无关。
+  // 例如用户只勾了日/韩但导入过中文词卡，中文仍应出现在筛选选项中。
+  const langFilterOptions = useMemo((): LangFilter[] => {
+    const allLangs: LangCode[] = ['jp', 'ko', 'en', 'zh'];
+    const present = new Set(items.map((item) => item.lang));
+    const ordered = allLangs.filter((lang) => present.has(lang));
+    return ['all', ...ordered];
+  }, [items]);
 
   // --- drawer via shared hook ---
   const {
@@ -99,16 +112,19 @@ export default function StudyCardsLibrary(_props: Props) {
     });
   }, []);
 
+  // 当前筛选语言若已不在选项中（如该语言卡片被删光），回退为 'all' 以免显示空列表。
+  const effectiveLangFilter = langFilterOptions.includes(langFilter) ? langFilter : 'all';
   const visibleItems =
-    langFilter === 'all' ? items : items.filter((item) => item.lang === langFilter);
+    effectiveLangFilter === 'all' ? items : items.filter((item) => item.lang === effectiveLangFilter);
 
   const cycleLangFilter = useCallback(() => {
     setDetailIndex(null);
-    setLangFilter((prev) => {
-      const idx = LANG_FILTER_ORDER.indexOf(prev);
-      return LANG_FILTER_ORDER[(idx + 1) % LANG_FILTER_ORDER.length] ?? 'all';
+    setLangFilter((prev): LangFilter => {
+      const opts = langFilterOptions.includes(prev) ? langFilterOptions : ['all', ...langFilterOptions.filter((o): o is LangCode => o !== 'all')];
+      const idx = opts.indexOf(prev);
+      return (opts[(idx + 1) % opts.length] ?? 'all') as LangFilter;
     });
-  }, []);
+  }, [langFilterOptions]);
 
   const allSelected =
     visibleItems.length > 0 && visibleItems.every((item) => selectedIds.has(item.id));
@@ -146,6 +162,48 @@ export default function StudyCardsLibrary(_props: Props) {
     selectedIds.size > 0
       ? visibleItems.filter((item) => selectedIds.has(item.id))
       : visibleItems;
+
+  // --- 个人专属词典打印（window.print，条目流范式） ---
+  const [bookExportOpen, setBookExportOpen] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  /** 导出超限提示（达到 MAX_EXPORT_CARDS 时拒绝并提示先筛选）。 */
+  const [bookLimitMsg, setBookLimitMsg] = useState<string | null>(null);
+  /** 弹窗确认后选中的卡片（直接 state 传递）。 */
+  const [bookSelectedCards, setBookSelectedCards] = useState<StudyCard[]>([]);
+  /** 打印版本号：每次确认导出时递增，强制打印组件 remount（确保新数据完整渲染）。 */
+  const [printVersion, setPrintVersion] = useState(0);
+
+  /** 打开词典导出选择弹窗。 */
+  const handlePrintBook = useCallback(() => {
+    if (!items.length || printing) return;
+    setBookExportOpen(true);
+  }, [items.length, printing]);
+
+  /** 弹窗确认：用户勾选了分组，进入打印预览。 */
+  const handleBookExportConfirm = useCallback((selected: StudyCard[]) => {
+    setBookExportOpen(false);
+    if (selected.length === 0) return;
+    // 单次导出硬性上限：超过则拒绝并打印前提示先筛选。
+    const exportCheck = evaluateBookExportCount(selected.length);
+    if (exportCheck.blocked) {
+      setBookLimitMsg(
+        L(exportCheck.message ?? '导出数量超限', `${exportCheck.message ?? 'Export count exceeded limit'}`),
+      );
+      return;
+    }
+    setBookLimitMsg(null);
+    setBookSelectedCards(selected);
+    setPrintVersion((v) => v + 1); // 递增版本号
+    setPrinting(true);
+  }, []);
+
+  const handleBookExportCancel = useCallback(() => {
+    setBookExportOpen(false);
+  }, []);
+
+  const handlePrintBookDone = useCallback(() => {
+    setPrinting(false);
+  }, []);
 
   const handleExport = async () => {
     if (!cardsToExport.length || exporting) return;
@@ -246,9 +304,9 @@ export default function StudyCardsLibrary(_props: Props) {
                 type="button"
                 className="study-cards-drawer__lang-filter"
                 onClick={cycleLangFilter}
-                aria-label={`${L('语言筛选：', 'Filter by Language:')}${langFilterLabel(langFilter)}`}
+                aria-label={`${L('语言筛选：', 'Filter by Language:')}${langFilterLabel(effectiveLangFilter)}`}
               >
-                {langFilterLabel(langFilter)}
+                {langFilterLabel(effectiveLangFilter)}
               </button>
             )}
           </div>
@@ -275,6 +333,27 @@ export default function StudyCardsLibrary(_props: Props) {
         </header>
 
         <div className="study-cards-drawer__body">
+          {bookLimitMsg && (
+            <p className="saved-library-hint saved-library-hint--drawer saved-library-hint--warn" style={{ margin: 0 }}>
+              {bookLimitMsg}
+            </p>
+          )}
+          {items.length >= SOFT_LIMIT_HINT && (
+            <p className="saved-library-hint saved-library-hint--drawer" style={{ margin: 0 }}>
+              {L(
+                '卡片较多，建议按歌或语言筛选，或定期归档导出，保持复习效率。',
+                'You have many cards. Filter by song or language, or archive exports periodically to keep review efficient.',
+              )}
+            </p>
+          )}
+          {items.length >= MAX_TOTAL_STUDY_CARDS && (
+            <p className="saved-library-hint saved-library-hint--drawer saved-library-hint--warn" style={{ margin: 0 }}>
+              {L(
+                `已达总库上限 ${MAX_TOTAL_STUDY_CARDS} 张，新的卡片将不再保存。请删除或归档部分卡片后继续。`,
+                `Reached the library limit of ${MAX_TOTAL_STUDY_CARDS} cards. New cards will not be saved until you delete or archive some.`,
+              )}
+            </p>
+          )}
           {loading && <SkeletonCard count={4} />}
           {error && (
             <div className="saved-library-hint saved-library-hint--drawer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
@@ -293,7 +372,7 @@ export default function StudyCardsLibrary(_props: Props) {
 
           {!loading && items.length > 0 && visibleItems.length === 0 && (
             <p className="saved-library-hint saved-library-hint--drawer">
-              {L('暂无', 'None')} {langFilterLabel(langFilter)} {L('卡片，点击标题旁标签切换语言。', 'cards. Tap the tags next to the title to switch languages.')}
+              {L('暂无', 'None')} {langFilterLabel(effectiveLangFilter)} {L('卡片，点击标题旁标签切换语言。', 'cards. Tap the tags next to the title to switch languages.')}
             </p>
           )}
 
@@ -305,6 +384,14 @@ export default function StudyCardsLibrary(_props: Props) {
                   className={`study-cards-drawer__row${selectedIds.has(item.id) ? ' is-selected' : ''}`}
                   style={{ animationDelay: `${index * 0.04}s` }}
                 >
+                  {item.encounterCount && item.encounterCount > 1 && (
+                    <span
+                      className="study-cards-drawer__freq-badge"
+                      aria-label={`${L('遇到', 'Encountered')} ${item.encounterCount} ${L('次', 'times')}`}
+                    >
+                      {item.encounterCount}
+                    </span>
+                  )}
                   <label
                     className="study-cards-drawer__row-check"
                     onClick={(e) => e.stopPropagation()}
@@ -349,21 +436,56 @@ export default function StudyCardsLibrary(_props: Props) {
         </div>
 
         <footer className="study-cards-drawer__footer">
-          <button
-            type="button"
-            className="study-cards-drawer__export"
-            disabled={!cardsToExport.length || exporting}
-            onClick={() => void handleExport()}
-          >
-            {exporting ? L('导出中…', 'Exporting…') : ` ${L('导出至 Anki', 'Export to Anki')} `}
-          </button>
+          <div className="study-cards-drawer__footer-actions">
+            <button
+              type="button"
+              className="study-cards-drawer__export"
+              disabled={!cardsToExport.length || exporting}
+              onClick={() => void handleExport()}
+            >
+              {exporting ? L('导出中…', 'Exporting…') : ` ${L('导出至 Anki', 'Export to Anki')} `}
+            </button>
+            <button
+              type="button"
+              className="study-cards-drawer__book-export"
+              disabled={!items.length || printing}
+              onClick={handlePrintBook}
+              title={L('生成个人专属词典', 'Generate Personal Wordbook')}
+              aria-label={L('生成个人专属词典', 'Generate Personal Wordbook')}
+            >
+              <BookOpen size={14} strokeWidth={1.6} />
+              {L('专属词典', 'Wordbook')}
+            </button>
+          </div>
           {selectedIds.size > 0 && (
             <p className="study-cards-drawer__export-hint">{`${L('已选', 'Selected.')} ${selectedIds.size} ${L('张；未选时导出全部', 'cards; export all if none selected')}`}</p>
           )}
         </footer>
+
+        {bookExportOpen && (
+          <StudyCardsBookExportPanel
+            cards={visibleItems}
+            onConfirm={handleBookExportConfirm}
+            onCancel={handleBookExportCancel}
+          />
+        )}
       </div>,
       document.body,
     );
+
+  // 打印组件通过 createPortal 挂载到 document.body（脱离 #root），
+  // 避免 @media print 中 #root > * { visibility:hidden } 级联隐藏打印内容。
+  const printPortal =
+    printing && bookSelectedCards.length > 0
+      ? createPortal(
+          <StudyCardsPrintBook
+            key={`print-${printVersion}`}
+            cards={bookSelectedCards}
+            onPrinted={handlePrintBookDone}
+          />,
+          document.body,
+        )
+      : null;
 
   return (
     <>
@@ -387,6 +509,7 @@ export default function StudyCardsLibrary(_props: Props) {
         </button>
       </section>
       {drawerPortal}
+      {printPortal}
       {detailIndex != null && visibleItems.length > 0 && (
         <StudyCardDetailOverlay
           cards={visibleItems}

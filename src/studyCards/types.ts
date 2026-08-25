@@ -2,6 +2,18 @@ import type { LangCode } from '../services/appSettings';
 
 export type StudyCardKind = 'vocab' | 'grammar';
 
+/** 一条记忆轨迹：记录在某首歌中初次/再次遇到该词时的代表性例句。 */
+export type CardOccurrence = {
+  songTitle: string;
+  artist: string;
+  /** 遇到该词时的例句原文（日文/原文） */
+  lyricJaRaw: string;
+  /** 例句翻译 */
+  lyricZh: string;
+  /** 遇到时间戳 */
+  encounteredAt: number;
+};
+
 export type StudyCard = {
   id: string;
   bundleId: string;
@@ -25,6 +37,21 @@ export type StudyCard = {
   /** 例句原文（含 {漢|かな} 或 Anki 格式） */
   lyricJaRaw?: string;
   lyricZh?: string;
+  /**
+   * 该词汇在全局去重（dedupeKey）前提下被"再次遇到"的总次数。
+   * 未定义时视作 1（兼容老数据：老卡未记录，视为仅在初见处遇到）。
+   */
+  encounterCount?: number;
+  /**
+   * 代表性例句轨迹（记忆遗产）。最多保留 3 条，index 0 永远是最初遇到的出处。
+   * 老卡无此字段，合并时由自身 songTitle/artist/lyricJaRaw/lyricZh 初始化。
+   */
+  occurrences?: CardOccurrence[];
+  /**
+   * 最近一次析出入库时注入的时间戳（来自 extractStudyCards）。
+   * 合并时用于构造新 occurrence 的 encounteredAt。可选以兼容老数据。
+   */
+  encounteredAt?: number;
 };
 
 export type StudyCardDraft = Omit<StudyCard, 'id' | 'createdAt' | 'dedupeKey'>;

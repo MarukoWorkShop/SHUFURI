@@ -81,7 +81,7 @@ for (const lang of ['jp', 'ko', 'en', 'zh']) {
   assert(!prompt.includes('H column 3 MUST be'), `${lang} no wrong H col3 lang`);
   assert(!prompt.includes('[Integrity]'), `${lang} no legacy integrity block`);
   assert(prompt.includes('[Self_Check'), `${lang} self check block`);
-  assert(prompt.includes('search web for'), `${lang} lyrics search instruction`);
+  assert(prompt.includes('search the web') || prompt.includes('search official lyrics'), `${lang} lyrics search instruction`);
   assert(prompt.includes('not memory recall'), `${lang} self check anti-memory`);
   assert(!prompt.includes('[Sample — H title equals'), `${lang} no overlap sample block`);
   assert(!prompt.includes('EX_ZH MUST'), `${lang} no EX_ZH in learner`);
