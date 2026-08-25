@@ -22,6 +22,7 @@
     "build": "npm run build:web",
     "test:codec": "node scripts/testInferPosterLang.mjs && tsx scripts/testStreamCodec.mjs && tsx scripts/testPaginateCodecBody.mjs && tsx scripts/testMatchLyricCitation.mjs && tsx scripts/testUserAkizakuraPaste.mjs && tsx scripts/testShowRubyPagination.mjs && tsx scripts/testEncoderPrompt.mjs && tsx scripts/testEncoderPromptMatrix.mjs && tsx scripts/testPedagogicalLevelMatrix.mjs && tsx scripts/testPedagogicalLint.mjs && tsx scripts/testDeepSeekPrompt.mjs && tsx scripts/testZhPipeline.mjs && tsx scripts/testQwenPasteRepair.mjs",
     "test": "vitest run",
+    "test:cards": "tsx scripts/testStudyCardExportLimit.mjs && tsx scripts/testStudyCardTotalLimit.mjs",
     "test:watch": "vitest",
     "verify": "npm run build && npm run test:codec",
     "preview": "vite preview",

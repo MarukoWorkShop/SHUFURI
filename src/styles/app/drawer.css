@@ -111,6 +111,15 @@
   font-size: 12px;
 }
 
+.saved-library-hint--warn {
+  color: #9a5b2b;
+  background: #fbf2e6;
+  border: 1px solid #e8c9a3;
+  border-radius: 6px;
+  padding: var(--ui-space-2) var(--ui-space-3);
+  line-height: 1.5;
+}
+
 /* File drawer overlay */
 .saved-library-drawer {
   position: fixed;

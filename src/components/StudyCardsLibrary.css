@@ -167,6 +167,31 @@
   cursor: pointer;
 }
 
+.study-cards-drawer__book-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  font-family: var(--ui-font-sans);
+  font-size: 12px;
+  font-weight: var(--ui-weight-medium);
+  letter-spacing: 0.12em;
+  color: var(--color-fg-secondary);
+  cursor: pointer;
+  transition: color var(--ui-transition);
+}
+
+.study-cards-drawer__book-export:hover:not(:disabled) {
+  color: var(--color-fg);
+}
+
+.study-cards-drawer__book-export:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .study-cards-drawer__body {
   flex: 1 1 auto;
   min-height: 0;
@@ -187,6 +212,27 @@
   gap: 8px;
   margin-bottom: 10px;
   min-height: 56px;
+}
+
+.study-cards-drawer__freq-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: var(--z-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-family: var(--ui-font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  color: rgba(45, 42, 38, 0.55);
+  background: rgba(45, 42, 38, 0.08);
+  pointer-events: none;
 }
 
 .study-cards-drawer__row-check {
@@ -311,7 +357,13 @@
 .study-cards-drawer__footer {
   flex-shrink: 0;
   padding: 14px 18px 0;
-  text-align: center;
+}
+
+.study-cards-drawer__footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
 }
 
 .study-cards-drawer__export {

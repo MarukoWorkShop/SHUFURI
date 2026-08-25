@@ -1,5 +1,123 @@
 import { studyCardDedupeKey } from '../studyCards/studyCardDedupeKey';
-import type { StudyCard, StudyCardDraft } from '../studyCards/types';
+import type { CardOccurrence, StudyCard, StudyCardDraft } from '../studyCards/types';
+
+/** occurrences 数组的最大长度（Rule of Three）。 */
+const MAX_OCCURRENCES = 3;
+
+/**
+ * 单用户学习卡总库硬性上限（去重后）。
+ * 超过后拒绝新增卡（合并已有卡仍允许，不增加总量），防止 IndexedDB / 列表渲染累积爆炸。
+ */
+export const MAX_TOTAL_STUDY_CARDS = 3000;
+
+/**
+ * 判定单次新增是否会突破单用户总库硬性上限。
+ * @param existingCount 当前已去重卡数
+ * @param additionalNewCount 本次将要新增的全新卡数（合并已有卡不计数）
+ * 纯函数，便于 UI/测试复用。
+ */
+export function isWithinTotalLimit(existingCount: number, additionalNewCount = 0): boolean {
+  return existingCount + additionalNewCount <= MAX_TOTAL_STUDY_CARDS;
+}
+
+/**
+ * 评估总库上限拦截结果。纯函数，便于测试与 UI 提示复用。
+ */
+export function evaluateTotalLimit(existingCount: number, additionalNewCount = 0): { blocked: boolean; message?: string } {
+  if (isWithinTotalLimit(existingCount, additionalNewCount)) return { blocked: false };
+  return {
+    blocked: true,
+    message: `已达总库上限 ${MAX_TOTAL_STUDY_CARDS} 张，新的卡片将不再保存。请删除或归档部分卡片后继续。`,
+  };
+}
+
+/**
+ * 单次导出/打印的硬性上限：确保每次导出卡数始终 ≤ 999，避免 PDF 栅格化卡死。
+ */
+export const MAX_EXPORT_CARDS = 999;
+
+/**
+ * 判定单次导出是否被拦截：超过 MAX_EXPORT_CARDS 则拒绝，并给出提示文案。
+ * 纯函数，便于 UI 复用与单元测试。
+ */
+export function evaluateBookExportCount(count: number): { blocked: boolean; message?: string } {
+  if (count <= MAX_EXPORT_CARDS) return { blocked: false };
+  return {
+    blocked: true,
+    message: `本次导出 ${count} 张，已超过上限 ${MAX_EXPORT_CARDS} 张。请先按语言或歌名筛选后再导出。`,
+  };
+}
+
+/**
+ * 从一条 StudyCardDraft（含其来源的歌曲信息/例句）构造一次"相遇"记录。
+ * encounteredAt 取 draft 上携带的时间戳（extractStudyCards 注入），否则用当前时间。
+ */
+function buildOccurrenceFromDraft(draft: StudyCardDraft): CardOccurrence {
+  return {
+    songTitle: draft.songTitle,
+    artist: draft.artist ?? '',
+    lyricJaRaw: draft.lyricJaRaw ?? '',
+    lyricZh: draft.lyricZh ?? '',
+    encounteredAt:
+      typeof draft.encounteredAt === 'number' ? draft.encounteredAt : Date.now(),
+  };
+}
+
+/**
+ * 纯函数：Rule of Three 智能合并。
+ *
+ * 当新 draft 的 dedupeKey 命中已存在的卡片时，不再"直接覆盖"记忆轨迹，
+ * 而是保留初见、递增相遇次数、按 FIFO 维护最多 3 条代表性例句。
+ *
+ * 合并规则：
+ *  - 保留旧卡的 id / createdAt。
+ *  - encounterCount = (旧卡计数 ?? 1) + 1。
+ *  - occurrences：
+ *      · 旧卡无 occurrences → [旧卡初见出处(由自身字段构造), 新 occurrence]
+ *      · 旧卡 < 3 条 → push 新 occurrence
+ *      · 旧卡 == 3 条 → 保留 index0(初见)，index2 移到 index1，最新放 index2
+ *
+ * 不修改入参，返回新对象（纯函数式更新）。
+ */
+export function mergeStudyCardOccurrence(
+  existing: StudyCard,
+  draft: StudyCardDraft,
+): StudyCard {
+  const newOccurrence = buildOccurrenceFromDraft(draft);
+  const prevCount = existing.encounterCount ?? 1;
+  const nextCount = prevCount + 1;
+
+  let nextOccurrences: CardOccurrence[];
+  const prev = existing.occurrences;
+
+  if (!prev || prev.length === 0) {
+    // 老卡首次合并：用旧卡自身出处构造"初见"记录（index0），新相遇放 index1。
+    const seed: CardOccurrence = {
+      songTitle: existing.songTitle,
+      artist: existing.artist ?? '',
+      lyricJaRaw: existing.lyricJaRaw ?? '',
+      lyricZh: existing.lyricZh ?? '',
+      encounteredAt: existing.createdAt,
+    };
+    nextOccurrences = [seed, newOccurrence];
+  } else if (prev.length < MAX_OCCURRENCES) {
+    nextOccurrences = [...prev, newOccurrence];
+  } else {
+    // prev.length === 3：保留 index0，其余右移一格，最新落到 index2。
+    nextOccurrences = [prev[0]!, prev[2]!, newOccurrence];
+  }
+
+  return {
+    ...existing,
+    ...draft,
+    // 以下字段永远以"合并"结果为准，覆盖 draft 可能携带的（draft 不应带这些）。
+    id: existing.id,
+    createdAt: existing.createdAt,
+    dedupeKey: existing.dedupeKey,
+    encounterCount: nextCount,
+    occurrences: nextOccurrences,
+  };
+}
 
 const DB_NAME = 'japanese-kana-app-study-cards';
 const DB_VERSION = 2;
@@ -213,13 +331,14 @@ export async function replaceStudyCardsForBundle(
 
     const existing = cardByDedupeKey.get(dedupeKey);
     if (existing) {
-      upserts.push({
-        ...existing,
-        ...draft,
-        bundleId,
-        dedupeKey,
-      });
+      // Rule of Three 智能合并：保留初见轨迹，而非直接覆盖。
+      upserts.push(mergeStudyCardOccurrence(existing, { ...draft, bundleId }));
     } else {
+      // 总库硬性上限：达到上限后拒绝新增（合并不增总量，仍可继续）。
+      if (evaluateTotalLimit(remaining.length, upserts.length).blocked) {
+        skipped += 1;
+        continue;
+      }
       upserts.push({
         ...draft,
         id: createCardId(),
@@ -287,11 +406,11 @@ export async function upsertStudyCardsFromBackup(
     const byExistingId = byId.get(incoming.id);
 
     if (byExistingDedupe) {
+      // 备份导入也走智能合并：保留本地初见轨迹，叠加备份里的相遇记录。
+      const merged = mergeStudyCardOccurrence(byExistingDedupe, incoming);
       upserts.push({
-        ...byExistingDedupe,
-        ...incoming,
-        id: byExistingDedupe.id,
-        dedupeKey,
+        ...merged,
+        // 导入时若备份记录的创建更早，保留更早的 createdAt（不覆盖初见时刻）。
         createdAt: Math.min(byExistingDedupe.createdAt, incoming.createdAt || Date.now()),
       });
     } else if (byExistingId) {
@@ -302,6 +421,11 @@ export async function upsertStudyCardsFromBackup(
         dedupeKey,
       });
     } else {
+      // 总库硬性上限：全新卡达到上限后拒绝导入（合并/按 id 更新不增总量，仍可继续）。
+      if (evaluateTotalLimit(existing.length, upserts.length).blocked) {
+        skipped += 1;
+        continue;
+      }
       upserts.push({
         ...incoming,
         id: incoming.id || createCardId(),
@@ -344,8 +468,16 @@ export async function upsertStudyCardDraft(
   const existing = await listStudyCards();
   const same = existing.find((c) => c.dedupeKey === dedupeKey);
 
+  // 总库硬性上限：全新卡达到上限后拒绝新增。
+  if (!same && evaluateTotalLimit(existing.length).blocked) {
+    console.warn(
+      `[studyCardsStore] 学习卡已达总库上限 ${MAX_TOTAL_STUDY_CARDS} 张，新卡片「${dedupeKey}」未保存`,
+    );
+    return { written: false, skipped: true };
+  }
+
   const card: StudyCard = same
-    ? { ...same, ...draft, dedupeKey }
+    ? mergeStudyCardOccurrence(same, draft)
     : {
         ...draft,
         id: createCardId(),
@@ -407,6 +539,9 @@ export async function migrateStudyCardsBundle(fromId: string, toId: string): Pro
       bundleId: toId,
     }),
   );
+  // 注意：rest 已包含 occurrences / encounterCount（仅排除了 id/createdAt/dedupeKey），
+  // 因此迁移不会丢弃记忆轨迹。StudyCardDraft = Omit<StudyCard,'id'|'createdAt'|'dedupeKey'>，
+  // 这两个可选字段本就在 Draft 允许范围内。
 
   if (fromId.startsWith('session-')) {
     await replaceStudyCardsForBundle(fromId, []);
