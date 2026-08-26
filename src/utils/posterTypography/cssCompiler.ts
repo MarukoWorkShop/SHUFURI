@@ -335,6 +335,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   const rubyBaseGapCss = rubyBaseGapEm > 0 ? `padding-bottom: ${rubyBaseGapEm}em;` : '';
 
   const titleFont = R.posterTitle.fontFamily;
+  const titleWght = R.posterTitle.fontWeight;
   /** 韩文主体/词汇/语法强制字体：跟随 resolver 的 lyricPrimary（系统衬线） */
   const koFontFamily = R.lyricPrimary.fontFamily;
   const artistWght = R.posterArtist.fontWeight;
@@ -346,7 +347,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   ${titleSel} {
     font-family: ${titleFont};
     font-size: ${titleFs};
-    font-weight: 600;
+    font-weight: ${titleWght};
     color: ${TITLE_TEXT_COLOR};
     text-align: center;
     margin: 0 0 ${fs(L.titleMbPx)} 0;
