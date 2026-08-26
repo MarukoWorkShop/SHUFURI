@@ -137,9 +137,6 @@ export const MINIMAL_LABEL_COLOR = 'rgba(0, 0, 0, 0.35)';
 export const MINIMAL_LYRICS_COLOR = '#111111';
 /** 图片区域占位底色 */
 export const MINIMAL_IMAGE_PLACEHOLDER_BG = 'rgba(0, 0, 0, 0.04)';
-/** 图片滤镜：高灰度贴近黑白照片；饱和度 0.8；brightness≈1 保留原图明度 */
-export const MINIMAL_IMAGE_FILTER =
-  'grayscale(88%) saturate(0.8) brightness(1) contrast(1)';
 /** 纸面斑驳/污渍（更深的暖褐，极低透明，模拟做旧痕迹） */
 export const NOTEBOOK_STAIN_1 = 'rgba(150, 111, 51, 0.05)';
 export const NOTEBOOK_STAIN_2 = 'rgba(120, 86, 40, 0.045)';

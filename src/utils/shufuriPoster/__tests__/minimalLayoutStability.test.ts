@@ -102,6 +102,7 @@ describe('极简版式：与其他三版式的关系', () => {
     expect(css).toContain('.fv-minimal-image');
     expect(css).toContain("content: 'TITLE'");
     expect(css).toContain("content: 'ARTIST'");
+    expect(css).toMatch(/\.fv-title-artist[\s\S]*text-align:\s*left\s*!important/);
     expect(css).toContain('data-study-part="continue"');
     expect(css).toContain('data-study-part="end"');
     expect(css).toMatch(/ruby rt[\s\S]*display:\s*none\s*!important/);

@@ -10,7 +10,6 @@ import {
 import {
   NOTEBOOK_PAPER_BG,
   SPLIT_PAPER_BG,
-  MINIMAL_PAPER_BG,
 } from '../posterTypography/typographyConstants.ts';
 import { getPosterBackgroundBgColor } from '../../config/posterBackgrounds.ts';
 import { paginateShufuriPosterBodyHtml } from '../shufuriPoster/paginateShufuriPosterHtml.ts';
@@ -173,7 +172,7 @@ describe('导出挂载：版式 × exportBg（约束 C）', () => {
     { variant: 'standard', bg: getPosterBackgroundBgColor(undefined), expectAttr: false },
     { variant: 'notebook', bg: NOTEBOOK_PAPER_BG, expectAttr: true },
     { variant: 'split', bg: SPLIT_PAPER_BG, expectAttr: true },
-    { variant: 'minimal', bg: MINIMAL_PAPER_BG, expectAttr: true },
+    { variant: 'minimal', bg: getPosterBackgroundBgColor(undefined), expectAttr: true },
   ];
 
   it.each(cases)('layoutVariant=$variant → exportBg=$bg', ({ variant, bg, expectAttr }) => {
@@ -242,6 +241,25 @@ describe('导出挂载：minimal 封面', () => {
     });
     const img = root.querySelector('.fv-minimal-image img') as HTMLImageElement | null;
     expect(img?.getAttribute('src')).toBe(url);
+  });
+
+  it('ARTIST 行 text-align 为 left（覆盖 body 基线 center，防 PDF 栅格化居中）', () => {
+    const { root } = mount({
+      title: '世界に一つだけの花',
+      artist: 'SMAP',
+      showTitle: true,
+      bodyFragmentHtml: BODY_SIMPLE,
+      pageIndex: 0,
+      pageCount: 1,
+      layoutProfile: 'mobilePoster',
+      renderOptions: { layoutVariant: 'minimal' },
+    });
+    const h1 = root.querySelector('h1.fv-title-h') as HTMLElement | null;
+    const artist = root.querySelector('.fv-title-artist') as HTMLElement | null;
+    expect(h1).toBeTruthy();
+    expect(artist).toBeTruthy();
+    expect(getComputedStyle(h1!).textAlign).toBe('left');
+    expect(getComputedStyle(artist!).textAlign).toBe('left');
   });
 });
 

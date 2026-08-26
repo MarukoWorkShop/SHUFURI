@@ -52,7 +52,6 @@ import {
   MINIMAL_LABEL_COLOR,
   MINIMAL_LYRICS_COLOR,
   MINIMAL_IMAGE_PLACEHOLDER_BG,
-  MINIMAL_IMAGE_FILTER,
 } from './typographyConstants.ts';
 import { buildPosterWatermarkCss } from '../shufuriPoster/posterWatermark.ts';
 import type { ResolvedTypography } from './tokenRegistry.ts';
@@ -1037,10 +1036,15 @@ function compileMinimalCss(resolved: ResolvedTypography): string {
   const studyGroupGapPx = Math.round(minimalAuxPx * 2);
 
   return `
-  /* ========== 底色：F5F5F5 + 极淡纸张纹理 ========== */
+  /* ========== 底色：预览用 F5F5F5 + 极淡纸纹；导出无色白底 ========== */
   ${root} {
     background-color: ${MINIMAL_PAPER_BG} !important;
     background-image: ${MINIMAL_PAPER_TEXTURE} !important;
+    background-blend-mode: normal !important;
+  }
+  ${root}[data-export-raster="1"] {
+    background-color: #ffffff !important;
+    background-image: none !important;
     background-blend-mode: normal !important;
   }
 
@@ -1085,9 +1089,13 @@ function compileMinimalCss(resolved: ResolvedTypography): string {
     margin-bottom: 4px !important;
   }
 
-  /* 歌手：ARTIST 标签行内对齐，字号/字体与 TITLE 标签统一 */
+  /* 歌手：ARTIST 标签行内对齐，字号/字体与 TITLE 标签统一
+   * 必须显式 left：body 基线 .fv-title-artist { text-align:center } 在 html2canvas
+   * 栅格化时会压过 h1 的 text-align:left，预览 DOM 正常、PDF 居中。 */
   ${root} .fv-title-artist {
-    display: inline-block !important;
+    display: block !important;
+    text-align: left !important;
+    width: 100% !important;
     font-family: "Source Han Serif SC", "Songti SC", "STSong", serif !important;
     font-size: 0.75em !important;        /* 比歌名小一号 */
     font-weight: 400 !important;
@@ -1138,7 +1146,6 @@ function compileMinimalCss(resolved: ResolvedTypography): string {
     height: 100% !important;
     object-fit: cover !important;
     object-position: center !important;
-    filter: ${MINIMAL_IMAGE_FILTER} !important;
   }
   /* 占位「➕」（无图片时显示，点击上传） */
   ${root} .fv-minimal-image__placeholder {
