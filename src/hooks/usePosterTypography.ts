@@ -55,6 +55,7 @@ export function usePosterTypography({
   const [repaginating, setRepaginating] = useState(false);
   const [backgroundId, setBackgroundId] = useState(DEFAULT_POSTER_BACKGROUND_ID);
   const [layoutVariant, setLayoutVariant] = useState<PosterLayoutVariant>(DEFAULT_POSTER_LAYOUT_VARIANT);
+  const [minimalImageUrl, setMinimalImageUrl] = useState('');
   const previewTypography = DEFAULT_PREVIEW_TYPOGRAPHY;
 
   const posterPipelineLang = useMemo(
@@ -66,11 +67,11 @@ export function usePosterTypography({
     [lang, bodyHtml, lyricsLanguage],
   );
 
-  // 同步最新版式/背景到桥接，供父层 getPosterRenderOpts 读取（enterExportFlow /
+  // 同步最新版式/背景/图片到桥接，供父层 getPosterRenderOpts 读取（enterExportFlow /
   // handleLayoutChange / handleSave 重分页时使用），避免分栏被回退为标准单栏 HTML。
   useEffect(() => {
-    setRenderOptsBridge(layoutVariant, backgroundId);
-  }, [layoutVariant, backgroundId]);
+    setRenderOptsBridge(layoutVariant, backgroundId, minimalImageUrl);
+  }, [layoutVariant, backgroundId, minimalImageUrl]);
   const posterRenderOpts = useMemo(
     () =>
       buildPosterRenderOptions(
@@ -78,8 +79,9 @@ export function usePosterTypography({
         previewTypography,
         backgroundId,
         layoutVariant,
+        minimalImageUrl,
       ),
-    [showRubyAnnotations, previewTypography, backgroundId, layoutVariant],
+    [showRubyAnnotations, previewTypography, backgroundId, layoutVariant, minimalImageUrl],
   );
 
   const rebuildExportPages = useCallback(
@@ -106,6 +108,7 @@ export function usePosterTypography({
             previewTypography,
             backgroundId,
             effectiveVariant,
+            minimalImageUrl,
           ),
         );
       setPages(pageHtmls);
@@ -143,12 +146,23 @@ export function usePosterTypography({
     setShowRubyAnnotations(true);
     setBackgroundId(DEFAULT_POSTER_BACKGROUND_ID);
     setLayoutVariant(DEFAULT_POSTER_LAYOUT_VARIANT);
+    setMinimalImageUrl('');
     onResetInkShowRuby?.();
   }, [onResetInkShowRuby]);
 
   const handleBackgroundChange = useCallback(
     (nextId: string) => {
       setBackgroundId(nextId);
+      if (mode === 'export') {
+        void rebuildExportPages();
+      }
+    },
+    [mode, rebuildExportPages],
+  );
+
+  const handleMinimalImageChange = useCallback(
+    (nextUrl: string) => {
+      setMinimalImageUrl(nextUrl);
       if (mode === 'export') {
         void rebuildExportPages();
       }
@@ -177,10 +191,12 @@ export function usePosterTypography({
     backgroundId,
     setBackgroundId,
     layoutVariant,
+    minimalImageUrl,
     rebuildExportPages,
     handleShowRubyChange,
     handleBackgroundChange,
     handleLayoutVariantChange,
+    handleMinimalImageChange,
     resetTypographyPreview,
   };
 }

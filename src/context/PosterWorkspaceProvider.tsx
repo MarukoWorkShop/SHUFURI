@@ -101,8 +101,9 @@ export default function PosterWorkspaceProvider({
       buildPosterRenderOptions(
         showRubyRef.current,
         previewTypographyRef.current,
-        getRenderOptsBridge().backgroundId || undefined,
-        getRenderOptsBridge().layoutVariant,
+      getRenderOptsBridge().backgroundId || undefined,
+      getRenderOptsBridge().layoutVariant,
+      getRenderOptsBridge().minimalImageUrl || undefined,
       ),
     [],
   );

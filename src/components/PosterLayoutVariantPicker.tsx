@@ -13,6 +13,7 @@ const VARIANT_META: VariantMeta[] = [
   { id: 'standard', name: '经典', nameEn: 'Classic' },
   { id: 'notebook', name: '笔记本', nameEn: 'Notebook' },
   { id: 'split', name: '分栏', nameEn: 'Split' },
+  { id: 'minimal', name: '极简', nameEn: 'Minimal' },
 ];
 
 type Props = {

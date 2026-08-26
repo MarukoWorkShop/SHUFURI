@@ -71,14 +71,17 @@ export const GLOSS_COLOR = '#64748b';
 /** 艺术家 / 歌手颜色（与 gloss 同色阶） */
 export const ARTIST_TEXT_COLOR = '#64748b';
 
-/** —— 海报全局颜色常量 —— */
+/** —— 海报全局颜色常量 ——
+ * 打印/PDF：正文与标题必须用中性近黑（R=G=B），避免 slate 蓝调黑
+ *（如 #111827）经 JPEG/打印机色域后发灰发红。辅文可用中灰。
+ */
 
-/** 正文色（日/中/韩歌词行、例句） */
-export const BODY_TEXT_COLOR = '#0a0a0a';
-/** 海报标题色 */
-export const TITLE_TEXT_COLOR = '#111827';
+/** 正文色（日/中/韩歌词行、例句）—— 中性近黑，保证打印 denseness */
+export const BODY_TEXT_COLOR = '#000000';
+/** 海报标题色（中性近黑，勿用带蓝通道的 slate） */
+export const TITLE_TEXT_COLOR = '#000000';
 /** 章节标题色（"重点词汇""重点语法"） */
-export const SECTION_TITLE_COLOR = '#1e293b';
+export const SECTION_TITLE_COLOR = '#111111';
 /** 占位符（空歌名/歌手） */
 export const PLACEHOLDER_COLOR = '#cbd5e1';
 /** 分隔线色 */
@@ -117,6 +120,26 @@ export const SPLIT_PAPER_BG_CENTER = '#F5F9FD';
 export const SPLIT_PAPER_BG_EDGE = '#E4ECF5';
 /** 左右栏间浅蓝虚线分割线颜色 */
 export const SPLIT_RULE_BLUE = '#A9C2DD';
+
+/** —— Minimal（极简留白 / MUJI 书籍记录卡）版式配色 —— */
+/** 极淡灰底（F5F5F5，导出兜底用实色，避免 html2canvas 刷白） */
+export const MINIMAL_PAPER_BG = '#F5F5F5';
+/** 纸张纹理叠加（极淡噪点/颗粒感，用 radial-gradient 模拟） */
+export const MINIMAL_PAPER_TEXTURE = 'radial-gradient(ellipse at 20% 50%, rgba(0,0,0,0.02) 0%, transparent 50%), radial-gradient(ellipse at 80% 30%, rgba(0,0,0,0.015) 0%, transparent 50%)';
+/** 标题/区段极淡分隔线（1px，无品牌色，强调留白） */
+export const MINIMAL_HAIRLINE = 'rgba(0, 0, 0, 0.12)';
+/** 区段卡片极淡底边/底色（几乎不可见，仅作视觉分组） */
+export const MINIMAL_CARD_BG = 'rgba(0, 0, 0, 0.015)';
+export const MINIMAL_CARD_BORDER = 'rgba(0, 0, 0, 0.06)';
+/** 字段标签颜色（TITLE / ARTIST / LANGUAGE / LYRICS 等）—— 中灰 */
+export const MINIMAL_LABEL_COLOR = 'rgba(0, 0, 0, 0.35)';
+/** 歌词正文（极简）—— 中性近黑；旧 #333 打印发灰不够黑 */
+export const MINIMAL_LYRICS_COLOR = '#111111';
+/** 图片区域占位底色 */
+export const MINIMAL_IMAGE_PLACEHOLDER_BG = 'rgba(0, 0, 0, 0.04)';
+/** 图片滤镜：高灰度贴近黑白照片；饱和度 0.8；brightness≈1 保留原图明度 */
+export const MINIMAL_IMAGE_FILTER =
+  'grayscale(88%) saturate(0.8) brightness(1) contrast(1)';
 /** 纸面斑驳/污渍（更深的暖褐，极低透明，模拟做旧痕迹） */
 export const NOTEBOOK_STAIN_1 = 'rgba(150, 111, 51, 0.05)';
 export const NOTEBOOK_STAIN_2 = 'rgba(120, 86, 40, 0.045)';

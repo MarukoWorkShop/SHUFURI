@@ -117,6 +117,10 @@ export function getPosterBodySafetyMarginPx(
     // 分栏右栏仅占 35% 宽，词解/语法条目换行更密、单页可装更多原子，
     // 累积装饰增量风险略高；预留保守余量让测量更早换页（约束A / 方向A2）。
     margin += profile === 'mobilePoster' ? 16 : profile === 'squarePoster' ? 14 : 12;
+  } else if (layoutVariant === 'minimal') {
+    // 极简版式装饰增量极小（仅 1px 分隔线 + 极小间距/padding），
+    // 预留极小值以防满页累积（约束A / 方向A2）。
+    margin += profile === 'mobilePoster' ? 6 : profile === 'squarePoster' ? 6 : 4;
   }
   return margin;
 }
@@ -124,7 +128,15 @@ export function getPosterBodySafetyMarginPx(
 /** 计算 fv-body-h 的 max-height（px），测量与预览共用同一公式 */
 export function computePosterBodyMaxHeightPx(
   profile: PosterLayoutProfile,
-  options: { showTitle: boolean; titleEl: HTMLElement | null; layoutVariant?: PosterLayoutVariant },
+  options: {
+    showTitle: boolean;
+    titleEl: HTMLElement | null;
+    layoutVariant?: PosterLayoutVariant;
+    /** Minimal 版式：正文上方的额外顶区（图片、分割线等）；高度需从正文可用空间扣除 */
+    extraTopEl?: HTMLElement | null;
+    /** 多个额外顶区（图片 + 分割线）；若提供则优先于 extraTopEl */
+    extraTopEls?: Array<HTMLElement | null | undefined>;
+  },
 ): number {
   const { height: h } = getFuriganaPosterCanvasDimensions(profile);
   const insets = getFuriganaCanvasInsets(profile);
@@ -138,17 +150,41 @@ export function computePosterBodyMaxHeightPx(
     titleMB = parseFloat(getComputedStyle(options.titleEl).marginBottom) || 0;
   }
 
+  // Minimal：图片 / 分割线在标题与正文之间（或图片在标题之上），须从正文可用空间扣除
+  const extraList =
+    options.extraTopEls && options.extraTopEls.length > 0
+      ? options.extraTopEls
+      : options.extraTopEl
+        ? [options.extraTopEl]
+        : [];
+  let extraTopH = 0;
+  for (const el of extraList) {
+    if (!(el instanceof HTMLElement) || el.style.display === 'none') continue;
+    void el.offsetHeight;
+    const cs = getComputedStyle(el);
+    extraTopH +=
+      el.offsetHeight +
+      (parseFloat(cs.marginTop) || 0) +
+      (parseFloat(cs.marginBottom) || 0);
+  }
+
   const margin = getPosterBodySafetyMarginPx(profile, options.layoutVariant);
   // C-1: 额外扣除水印文字安全距离（缩放后），使正文 max-height 不进入水印文字区，
   // 配合 getFuriganaPageNumberReservePx 的一致预留，避免导出末行压水印。
   const clearance = Math.round(WATERMARK_TEXT_CLEARANCE_PX * watermarkDesignScale(profile));
-  return Math.max(0, shellInnerH - titleH - titleMB - margin - clearance);
+  return Math.max(0, shellInnerH - titleH - titleMB - extraTopH - margin - clearance);
 }
 
 export function applyPosterBodyMaxHeight(
   body: HTMLElement,
   profile: PosterLayoutProfile,
-  options: { showTitle: boolean; titleEl: HTMLElement | null; layoutVariant?: PosterLayoutVariant },
+  options: {
+    showTitle: boolean;
+    titleEl: HTMLElement | null;
+    layoutVariant?: PosterLayoutVariant;
+    extraTopEl?: HTMLElement | null;
+    extraTopEls?: Array<HTMLElement | null | undefined>;
+  },
 ): void {
   const maxPx = computePosterBodyMaxHeightPx(profile, options);
   applyPosterBodyMaxHeightToPx(body, maxPx);

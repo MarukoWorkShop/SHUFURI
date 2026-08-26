@@ -140,11 +140,14 @@ export type PosterTypographyContextValue = {
   backgroundId: string;
   /** 当前选中的版式变体 */
   layoutVariant: import('../utils/shufuriPoster/types').PosterLayoutVariant;
+  /** Minimal 版式用户插入的图片 URL（仅 minimal 生效），空串表示未插入 */
+  minimalImageUrl: string;
   handleShowRubyChange: (next: boolean) => void;
   handleBackgroundChange: (nextId: string) => void;
   handleLayoutVariantChange: (
     next: import('../utils/shufuriPoster/types').PosterLayoutVariant,
   ) => void;
+  handleMinimalImageChange: (nextUrl: string) => void;
 };
 
 export type PosterInkContextValue = PosterWorkspaceInkSession;

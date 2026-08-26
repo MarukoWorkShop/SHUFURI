@@ -111,6 +111,28 @@
   opacity: 0.6;
 }
 
+/* 极简封面图保存提示：复用 manual-paste 壳，仅补 checkbox */
+.minimal-image-save-notice__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-fg-secondary, #555);
+  cursor: pointer;
+  user-select: none;
+}
+
+.minimal-image-save-notice__check input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.minimal-image-save-notice .manual-paste-modal__actions {
+  margin-top: 4px;
+}
+
 @keyframes manual-paste-modal-fade {
   from { opacity: 0; }
   to { opacity: 1; }

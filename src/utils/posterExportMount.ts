@@ -12,7 +12,7 @@ import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
 import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
 import { appendPosterWatermark } from './shufuriPoster/posterWatermark';
 import { getPosterBackgroundUrl, getPosterBackgroundBgColor } from '../config/posterBackgrounds';
-import { NOTEBOOK_PAPER_BG, SPLIT_PAPER_BG } from './posterTypography/typographyConstants';
+import { NOTEBOOK_PAPER_BG, SPLIT_PAPER_BG, MINIMAL_PAPER_BG } from './posterTypography/typographyConstants';
 
 /**
  * 导出 html2canvas 渲染补偿因子。
@@ -95,7 +95,9 @@ export function mountPosterExportPage(
       ? NOTEBOOK_PAPER_BG
       : renderOptions?.layoutVariant === 'split'
         ? SPLIT_PAPER_BG
-        : getPosterBackgroundBgColor(renderOptions?.backgroundId);
+        : renderOptions?.layoutVariant === 'minimal'
+          ? MINIMAL_PAPER_BG
+          : getPosterBackgroundBgColor(renderOptions?.backgroundId);
   const rootStyle = buildShufuriPosterRootStyle(layoutProfile, backgroundImage);
 
   // 离屏 backdrop：为 html2canvas 提供白底，尺寸与画布一致，永不移入视口。
@@ -169,6 +171,28 @@ export function mountPosterExportPage(
     h1.className = 'fv-title-h';
     applyPosterTitleElement(h1, title, artist, pipelineLang ?? 'jp');
     shell.appendChild(h1);
+
+    // Minimal 版式：标题下方插入正方形图片区域（仅首页）
+    if (renderOptions?.layoutVariant === 'minimal') {
+      const imgBox = doc.createElement('div');
+      imgBox.className = 'fv-minimal-image';
+      if (renderOptions?.minimalImageUrl) {
+        const img = doc.createElement('img');
+        img.src = renderOptions.minimalImageUrl;
+        img.alt = '';
+        imgBox.appendChild(img);
+      } else {
+        const ph = doc.createElement('div');
+        ph.className = 'fv-minimal-image__placeholder';
+        ph.innerHTML =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">' +
+          '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>' +
+          '<circle cx="8.5" cy="8.5" r="1.5"/>' +
+          '<polyline points="21 15 16 10 5 21"/></svg>';
+        imgBox.appendChild(ph);
+      }
+      shell.appendChild(imgBox);
+    }
   }
 
   const body = doc.createElement('div');
@@ -179,10 +203,13 @@ export function mountPosterExportPage(
   appendPosterWatermark(shell, pageIndex + 1, doc);
 
   const titleElForMeasure = showTitle ? shell.querySelector('h1.fv-title-h') : null;
+  const imageElForMeasure = showTitle ? shell.querySelector('.fv-minimal-image') : null;
   applyPosterBodyMaxHeight(body, layoutProfile, {
     showTitle,
     titleEl: titleElForMeasure instanceof HTMLElement ? titleElForMeasure : null,
     layoutVariant: renderOptions?.layoutVariant,
+    // Minimal 图片区高度需从正文可用空间扣除，避免末行压水印
+    extraTopEl: imageElForMeasure instanceof HTMLElement ? imageElForMeasure : null,
   });
 
   wrapper.appendChild(shell);

@@ -204,6 +204,29 @@
     64% 0;
 }
 
+/* 极简（minimal）：纯白底 + 极淡 1px 分隔线 + 大留白骨架（仅顶部一两根细线，强调留白） */
+.poster-layout-picker__thumb--minimal {
+  background: #ffffff;
+}
+
+.poster-layout-picker__thumb--minimal .poster-layout-picker__thumb-inner {
+  background-image:
+    /* 标题下方极淡分隔线 */
+    linear-gradient(90deg, rgba(0, 0, 0, 0.12) 14%, rgba(0, 0, 0, 0.12) 86%),
+    /* 正文骨架线（左对齐，间距拉开，体现留白） */
+    linear-gradient(90deg, transparent 14%, rgba(120, 120, 120, 0.28) 14%, rgba(120, 120, 120, 0.28) 70%, transparent 70%),
+    linear-gradient(90deg, transparent 14%, rgba(120, 120, 120, 0.24) 14%, rgba(120, 120, 120, 0.24) 62%, transparent 62%);
+  background-size:
+    100% 1px,
+    100% 0.5px,
+    100% 0.5px;
+  background-repeat: no-repeat;
+  background-position:
+    center 26px,
+    center 44px,
+    center 60px;
+}
+
 /* 名称标签 */
 .poster-layout-picker__name {
   font-size: 11px;

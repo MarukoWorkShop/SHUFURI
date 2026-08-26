@@ -73,7 +73,11 @@ npx tcb hosting deploy dist -e ai-native-d5gtc59uc47601f23
 - CDN 刷新：访问前端 URL 时追加随机 query（如 `?v=20260808`）以避免缓存。
 
 **前端访问地址（含 CDN 刷新参数）**：
-`https://ai-native-d5gtc59uc47601f23-1412422924.tcloudbaseapp.com/?v=20260825c`
+`https://ai-native-d5gtc59uc47601f23-1412422924.tcloudbaseapp.com/?v=20260825d`
+
+**搜索引擎站点验证**（已部署至 `public/`，请勿删除）：
+- 百度：`https://www.shufuri.com/baidu_verify_codeva-pkiR9TKxeW.html`（另在 `index.html` 含 meta 标签）
+- Google：`https://www.shufuri.com/google291e919cc1e89090.html`
 
 ### 本地开发
 

@@ -59,6 +59,8 @@ export type ParsedStreamLyrics = {
   document: StreamDocument;
   /** 流未闭合等可恢复解析时的用户提示 */
   streamWarning?: string;
+  /** 是否使用了宽松模式（跳过了部分异常行，如纯哼唱段落） */
+  lenient?: boolean;
 };
 
 export type CompileOptions = {

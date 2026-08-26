@@ -34,6 +34,8 @@ export default function ExportPreviewPanel() {
     posterRenderOpts,
     layoutVariant,
     handleLayoutVariantChange,
+    minimalImageUrl,
+    handleMinimalImageChange,
   } = usePosterTypographyContext();
   const [layoutChanging, setLayoutChanging] = useState(false);
   const layoutBusy = layoutChanging || repaginating;
@@ -112,6 +114,8 @@ export default function ExportPreviewPanel() {
           lang={lang}
           renderOptions={posterRenderOpts}
           captureRef={capturePageRef}
+          minimalImageUrl={minimalImageUrl}
+          onMinimalImageChange={handleMinimalImageChange}
         />
       </div>
     </div>

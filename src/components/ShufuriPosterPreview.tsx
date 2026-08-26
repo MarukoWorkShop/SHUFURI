@@ -63,6 +63,10 @@ type ShufuriPosterSinglePageProps = {
   /** 划词解释模式：允许选中正文，禁用长按存图 */
   explainMode?: boolean;
   onAnalyzeSelection?: (selection: string, surroundingLine: string) => void;
+  /** Minimal 版式：当前封面图片 dataURL */
+  minimalImageUrl?: string;
+  /** Minimal 版式：封面图片变更回调 */
+  onMinimalImageChange?: (nextUrl: string) => void;
 };
 
 /** 单页假名海报（预览 1:1，导出与预览同一 DOM） */
@@ -82,6 +86,8 @@ function ShufuriPosterSinglePage({
   captureRef,
   explainMode = false,
   onAnalyzeSelection,
+  minimalImageUrl,
+  onMinimalImageChange,
 }: ShufuriPosterSinglePageProps) {
   const showRuby = renderOptions?.showRuby ?? true;
   const backgroundImage = useMemo(
@@ -124,6 +130,19 @@ function ShufuriPosterSinglePage({
       ? renderOptions.layoutVariant
       : undefined;
 
+  const minimalImageInputRef = useRef<HTMLInputElement>(null);
+  const onPickMinimalImage = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => onMinimalImageChange?.(String(reader.result));
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    },
+    [onMinimalImageChange],
+  );
+
   const targetW = w * displayScale;
 
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -160,10 +179,13 @@ function ShufuriPosterSinglePage({
         return;
       }
       const titleEl = bodyEl.parentElement?.querySelector('h1.fv-title-h');
+      const imageEl = bodyEl.parentElement?.querySelector('.fv-minimal-image');
       applyPosterBodyMaxHeight(bodyEl, layoutProfile, {
         showTitle,
         titleEl: titleEl instanceof HTMLElement ? titleEl : null,
         layoutVariant: layoutVariantAttr,
+        // Minimal 图片区（标题下方、正文上方）高度需从正文可用空间扣除，避免末行压水印
+        extraTopEl: imageEl instanceof HTMLElement ? imageEl : null,
       });
     };
 
@@ -436,6 +458,28 @@ function ShufuriPosterSinglePage({
               <span className={getPosterTitleArtistClass(artist, pipelineLang ?? 'jp')}>{resolveDisplayArtist(artist)}</span>
             </h1>
           ) : null}
+          {/* Minimal 版式：图片区域（标题下方、正文上方） */}
+          {showTitle && layoutVariantAttr === 'minimal' && (
+            <div
+              className="fv-minimal-image"
+              role="button"
+              aria-label={L('选择封面图片', 'Choose cover image')}
+              onClick={() => minimalImageInputRef.current?.click()}
+            >
+              {minimalImageUrl ? (
+                <img src={minimalImageUrl} alt="" />
+              ) : (
+                <span className="fv-minimal-image__placeholder">➕</span>
+              )}
+              <input
+                ref={minimalImageInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={onPickMinimalImage}
+              />
+            </div>
+          )}
           <div
             ref={bodyRef}
             className="fv-body-h"
@@ -469,6 +513,8 @@ export type ShufuriPosterPreviewProps = {
   captureRef?: (pageIndex: number) => (el: HTMLDivElement | null) => void;
   explainMode?: boolean;
   onAnalyzeSelection?: (selection: string, surroundingLine: string) => void;
+  minimalImageUrl?: string;
+  onMinimalImageChange?: (nextUrl: string) => void;
 };
 
 /** 日语歌词海报：多页预览（视觉缩放，导出仍用 1:1 DOM） */
@@ -485,6 +531,8 @@ export default function ShufuriPosterPreview({
   captureRef,
   explainMode = false,
   onAnalyzeSelection,
+  minimalImageUrl,
+  onMinimalImageChange,
 }: ShufuriPosterPreviewProps) {
   const pages = pageSlices.length > 0 ? pageSlices : [{ html: '', spacingScale: 1 }];
   const n = pages.length;
@@ -512,6 +560,8 @@ export default function ShufuriPosterPreview({
           captureRef={captureRef?.(i)}
           explainMode={explainMode}
           onAnalyzeSelection={onAnalyzeSelection}
+          minimalImageUrl={minimalImageUrl}
+          onMinimalImageChange={onMinimalImageChange}
         />
       ))}
     </div>

@@ -130,8 +130,25 @@ export function createPosterMeasurer(
   const body = doc.createElement('div');
   body.className = 'fv-body-h';
 
+  // Minimal 版式：标题下方的正方形图片区域（仅首页显示，与标题同步）
+  let minimalImageEl: HTMLElement | null = null;
+  if (renderOptions?.layoutVariant === 'minimal') {
+    minimalImageEl = doc.createElement('div');
+    minimalImageEl.className = 'fv-minimal-image';
+    if (renderOptions?.minimalImageUrl) {
+      const img = doc.createElement('img');
+      img.src = renderOptions.minimalImageUrl;
+      img.alt = '';
+      minimalImageEl.appendChild(img);
+    } else {
+      minimalImageEl.innerHTML =
+        '<svg class="fv-minimal-image__placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+    }
+  }
+
   shell.appendChild(styleEl);
   shell.appendChild(titleEl);
+  if (minimalImageEl) shell.appendChild(minimalImageEl);
   shell.appendChild(body);
   wrapper.appendChild(shell);
   doc.body.appendChild(wrapper);
@@ -151,15 +168,19 @@ export function createPosterMeasurer(
       } else {
         applyPosterTitleElement(titleEl, normalizedTitle, displayArtist, pipelineLang);
       }
+      if (minimalImageEl) minimalImageEl.style.display = '';
     } else {
       titleEl.style.display = 'none';
       titleEl.textContent = '';
+      if (minimalImageEl) minimalImageEl.style.display = 'none';
     }
     void shell.offsetHeight;
     applyPosterBodyMaxHeight(body, profile, {
       showTitle,
       titleEl: showTitle ? titleEl : null,
       layoutVariant: renderOptions?.layoutVariant,
+      // Minimal 图片区仅在标题显示时展示（与标题同步），此时其高度需从正文可用空间扣除
+      extraTopEl: showTitle ? minimalImageEl : null,
     });
   };
 
@@ -827,6 +848,8 @@ function splitPaginationUnit(unit: HTMLElement): HTMLElement[] | null {
     const itemClone = document.createElement('div');
     itemClone.className = item.className;
     itemClone.appendChild(child.cloneNode(true));
+    // 分页拆条后每条只剩一行；标记组内/组间间距（minimal 等版式 CSS 消费）
+    itemClone.dataset.studyPart = index < children.length - 1 ? 'continue' : 'end';
     partUnit.appendChild(itemClone);
     return partUnit;
   };

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, type ReactNode, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode, type RefObject } from 'react';
 import type { ColorTheme, LyricsLanguage, PedagogicalLevel, LangCode } from '../services/appSettings';
 import { usePosterPreviewFitScale } from '../hooks/usePosterPreviewFitScale';
 import { useInkEditSession } from '../hooks/useInkEditSession';
@@ -24,6 +24,8 @@ import {
   type PosterWorkspaceContextValue,
 } from './PosterWorkspaceContext';
 import type { ShowAppToast } from './AppToastContext';
+import MinimalImageSaveNoticeModal from '../components/MinimalImageSaveNoticeModal';
+import { shouldShowMinimalImageSaveNotice } from '../utils/minimalImageSaveNotice';
 import {
   commitExplainNoteToBody,
   deleteExplainNoteFromBodyHtml,
@@ -187,9 +189,11 @@ export default function PosterEditSessionProvider({
     posterRenderOpts,
     backgroundId,
     layoutVariant,
+    minimalImageUrl,
     handleShowRubyChange,
     handleBackgroundChange,
     handleLayoutVariantChange,
+    handleMinimalImageChange,
     resetTypographyPreview,
   } = typography;
 
@@ -245,7 +249,7 @@ export default function PosterEditSessionProvider({
     onNativeExport: exportCtrl.handleNativeExport,
   });
 
-  const { saving, handleSave } = usePosterSave({
+  const { saving, handleSave: persistSave } = usePosterSave({
     mode,
     bodyHtml,
     title,
@@ -267,6 +271,25 @@ export default function PosterEditSessionProvider({
     showToast,
     onLibrarySaved,
   });
+
+  const [minimalImageSaveNoticeOpen, setMinimalImageSaveNoticeOpen] = useState(false);
+
+  const handleSave = useCallback(async () => {
+    if (shouldShowMinimalImageSaveNotice(layoutVariant, minimalImageUrl)) {
+      setMinimalImageSaveNoticeOpen(true);
+      return;
+    }
+    await persistSave();
+  }, [layoutVariant, minimalImageUrl, persistSave]);
+
+  const confirmMinimalImageSaveNotice = useCallback(() => {
+    setMinimalImageSaveNoticeOpen(false);
+    void persistSave();
+  }, [persistSave]);
+
+  const cancelMinimalImageSaveNotice = useCallback(() => {
+    setMinimalImageSaveNoticeOpen(false);
+  }, []);
 
   const handleBackToEdit = useCallback(() => {
     workspaceBackToEdit();
@@ -458,9 +481,11 @@ export default function PosterEditSessionProvider({
       posterRenderOpts,
       backgroundId,
       layoutVariant,
+      minimalImageUrl,
       handleShowRubyChange,
       handleBackgroundChange,
       handleLayoutVariantChange,
+      handleMinimalImageChange,
     }),
     [
       showRubyAnnotations,
@@ -470,9 +495,11 @@ export default function PosterEditSessionProvider({
       posterRenderOpts,
       backgroundId,
       layoutVariant,
+      minimalImageUrl,
       handleShowRubyChange,
       handleBackgroundChange,
       handleLayoutVariantChange,
+      handleMinimalImageChange,
     ],
   );
 
@@ -566,7 +593,14 @@ export default function PosterEditSessionProvider({
     <PosterDocumentContext.Provider value={documentValue}>
       <PosterTypographyContext.Provider value={typographyValue}>
         <PosterInkContext.Provider value={inkValue}>
-          <PosterWorkspaceContext.Provider value={legacyValue}>{children}</PosterWorkspaceContext.Provider>
+          <PosterWorkspaceContext.Provider value={legacyValue}>
+            {children}
+            <MinimalImageSaveNoticeModal
+              open={minimalImageSaveNoticeOpen}
+              onConfirm={confirmMinimalImageSaveNotice}
+              onCancel={cancelMinimalImageSaveNotice}
+            />
+          </PosterWorkspaceContext.Provider>
         </PosterInkContext.Provider>
       </PosterTypographyContext.Provider>
     </PosterDocumentContext.Provider>

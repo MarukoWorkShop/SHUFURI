@@ -5,9 +5,10 @@ export type PosterLayoutProfile = 'clipPosterPrint' | 'mobilePoster' | 'squarePo
  * - standard = 经典排版（单栏）
  * - notebook = 笔记本/行间注（单栏，仅 CSS 皮肤）
  * - split    = 分栏（左 65% 歌词 / 右 35% 词解+语法，双独立栏各自分页）
+ * - minimal  = 极简留白（单栏，仅 CSS 皮肤；纯白底 + 大量留白 + 极淡分隔线）
  */
-export type PosterLayoutVariant = 'standard' | 'notebook' | 'split';
-export const POSTER_LAYOUT_VARIANTS: PosterLayoutVariant[] = ['standard', 'notebook', 'split'];
+export type PosterLayoutVariant = 'standard' | 'notebook' | 'split' | 'minimal';
+export const POSTER_LAYOUT_VARIANTS: PosterLayoutVariant[] = ['standard', 'notebook', 'split', 'minimal'];
 export const DEFAULT_POSTER_LAYOUT_VARIANT: PosterLayoutVariant = 'standard';
 
 /** 分栏版式左右栏宽度占比（左 65% 歌词 / 右 35% 词解+语法） */
@@ -25,6 +26,8 @@ export type PosterRenderOptions = {
   backgroundId?: string;
   /** 版式变体（编辑页"版式"），决定排版皮肤 */
   layoutVariant?: PosterLayoutVariant;
+  /** Minimal 版式用户插入图片 URL（data: 或 https:）；仅 minimal 版式生效 */
+  minimalImageUrl?: string;
 };
 
 export type PreviewTypography = {
@@ -43,6 +46,7 @@ export function buildPosterRenderOptions(
   typography: PreviewTypography,
   backgroundId?: string,
   layoutVariant: PosterLayoutVariant = DEFAULT_POSTER_LAYOUT_VARIANT,
+  minimalImageUrl?: string,
 ): PosterRenderOptions {
   return {
     showRuby,
@@ -50,6 +54,7 @@ export function buildPosterRenderOptions(
     userLineHeightScale: typography.lineHeightScale,
     backgroundId,
     layoutVariant,
+    minimalImageUrl,
   };
 }
 

@@ -12,16 +12,23 @@ import { DEFAULT_POSTER_LAYOUT_VARIANT } from './types';
 interface RenderOptsBridge {
   layoutVariant: import('./types').PosterLayoutVariant;
   backgroundId: string;
+  minimalImageUrl: string;
 }
 
 const bridge: RenderOptsBridge = {
   layoutVariant: DEFAULT_POSTER_LAYOUT_VARIANT,
   backgroundId: '',
+  minimalImageUrl: '',
 };
 
-export function setRenderOptsBridge(layoutVariant: import('./types').PosterLayoutVariant, backgroundId: string): void {
+export function setRenderOptsBridge(
+  layoutVariant: import('./types').PosterLayoutVariant,
+  backgroundId: string,
+  minimalImageUrl = '',
+): void {
   bridge.layoutVariant = layoutVariant;
   bridge.backgroundId = backgroundId;
+  bridge.minimalImageUrl = minimalImageUrl;
 }
 
 export function getRenderOptsBridge(): RenderOptsBridge {

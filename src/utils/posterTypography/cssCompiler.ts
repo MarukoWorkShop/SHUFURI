@@ -44,6 +44,15 @@ import {
   SPLIT_PAPER_BG_CENTER,
   SPLIT_PAPER_BG_EDGE,
   SPLIT_RULE_BLUE,
+  MINIMAL_PAPER_BG,
+  MINIMAL_PAPER_TEXTURE,
+  MINIMAL_HAIRLINE,
+  MINIMAL_CARD_BG,
+  MINIMAL_CARD_BORDER,
+  MINIMAL_LABEL_COLOR,
+  MINIMAL_LYRICS_COLOR,
+  MINIMAL_IMAGE_PLACEHOLDER_BG,
+  MINIMAL_IMAGE_FILTER,
 } from './typographyConstants.ts';
 import { buildPosterWatermarkCss } from '../shufuriPoster/posterWatermark.ts';
 import type { ResolvedTypography } from './tokenRegistry.ts';
@@ -329,7 +338,6 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   const titleFont = R.posterTitle.fontFamily;
   /** 韩文主体/词汇/语法强制字体：跟随 resolver 的 lyricPrimary（系统衬线） */
   const koFontFamily = R.lyricPrimary.fontFamily;
-  const titleWght = R.posterTitle.fontWeight;
   const artistWght = R.posterArtist.fontWeight;
   const sectionTitleFont = R.sectionTitle.fontFamily;
   const studyTermLh = r.lang === 'ko' || r.lang === 'en' ? L.koLh : L.jpLh;
@@ -339,10 +347,12 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
   ${titleSel} {
     font-family: ${titleFont};
     font-size: ${titleFs};
-    font-weight: ${titleWght};
+    font-weight: 600;
     color: ${TITLE_TEXT_COLOR};
     text-align: center;
     margin: 0 0 ${fs(L.titleMbPx)} 0;
+    padding-bottom: ${(r.spacingScale ?? 1).toFixed(3)}em;
+    border-bottom: 1px solid ${MINIMAL_HAIRLINE};
     line-height: ${L.titleLineHeight};
     ${unit === 'mm' ? 'flex: 0 0 auto;' : ''}
   }
@@ -387,6 +397,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     ${unit === 'mm' ? 'flex: 0 1 auto; min-height: 0;' : ''}
   }
   ${bodySel} .lyrics-group {
+    margin-top: ${Math.round(6 * (r.spacingScale ?? 1))}px;
     margin-bottom: ${
       unit === 'px'
         ? L.groupMb
@@ -399,6 +410,9 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     overflow: hidden;
     max-width: 100%;
     box-sizing: border-box;
+  }
+  ${bodySel} .lyrics-group + .lyrics-group {
+    margin-top: ${Math.round(12 * (r.spacingScale ?? 1))}px;
   }
   ${bodySel} > .lyrics-group:last-child { margin-bottom: 0; }
   ${bodySel} .lyrics-pagination-unit { margin-bottom: 0; }
@@ -423,6 +437,17 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     word-break: break-word;
     /* 英文/韩文等非中文管线条目间距（日语有 .vocab-ex-zh 的由 :has 规则覆盖更大间距） */
     margin-bottom: ${unit === 'px' ? Math.round(0.8 * L.auxPx * L.jpLh) : size(Math.round(0.8 * (L.jpLh / r.spacingScale) * L.auxPx), unit, spec)};
+  }
+  /* —— 知识区段卡片（standard 与 minimal 拉齐：极淡底 + 极淡边 + 圆角；随 spacingScale 收缩） —— */
+  ${bodySel} .lyrics-vocabulary,
+  ${bodySel} .lyrics-grammar {
+    background-color: ${MINIMAL_CARD_BG};
+    border: 1px solid ${MINIMAL_CARD_BORDER};
+    border-radius: 4px;
+    padding: ${Math.round(10 * (r.spacingScale ?? 1))}px;
+    box-sizing: border-box;
+    margin-top: ${Math.round(8 * (r.spacingScale ?? 1))}px;
+    margin-bottom: ${Math.round(8 * (r.spacingScale ?? 1))}px;
   }
   ${bodySel} .lyrics-group .jp-line,
   ${bodySel} .lyrics-group .ko-line,
@@ -791,6 +816,7 @@ function compileLayoutVariantCss(
 ): string {
   if (variant === 'notebook') return compileNotebookCss(resolved);
   if (variant === 'split') return compileSplitCss(resolved);
+  if (variant === 'minimal') return compileMinimalCss(resolved);
   return '';
 }
 
@@ -955,6 +981,408 @@ function compileSplitCss(resolved: ResolvedTypography): string {
     border-left: 1.5px dashed ${SPLIT_RULE_BLUE} !important;
     padding-left: ${gapPx}px !important;
   }
+  `;
+}
+
+/**
+ * Minimal（极简留白 / MUJI 书籍记录卡）版式皮肤。
+ *
+ * 设计参考：MUJI 无印良品书籍记录卡 —— A5 比例卡片，纸张纹理底色，
+ * 四周均等留白，内容从上到下依次排列：
+ *   1. 正方形图片区（居中，用户可插入，带降低明度对比度滤镜）
+ *   2. 细横线分隔符
+ *   3. 歌曲信息区（字段标签 = 极小全大写灰色衬线体；字段内容 = 中等宋体）
+ *   4. 歌词原文（宋体细体、小字号、宽字距、深灰、行距宽松）
+ *   5. 词汇/语法区（同风格卡片）
+ *
+ * 配色：极简黑白灰，无任何彩色元素。
+ *
+ * 约束遵守：
+ * - A/A+：装饰性增量极小（仅 1px 分隔线 + 留白），且随 spacingScale 收缩；
+ * - B：全部 !important + [data-layout-variant="minimal"] 作用域；
+ * - C：底色用 MINIMAL_PAPER_BG 实色（#F5F5F5），导出兜底用同一实色；
+ * - D：不改 font-size/width/display/overflow/position（仅 margin/padding/border-color/bg/font-family/font-weight/color/letter-spacing/line-height/filter）。
+ */
+function compileMinimalCss(resolved: ResolvedTypography): string {
+  const root = '.fv-html-poster-root[data-layout-variant="minimal"]';
+  const bodySel = `${root} .fv-body-h`;
+  const scale = resolved.spacingScale ?? 1;
+  const L = resolved.layout;
+  const ZH_CHAR_SLOT = `.${ZH_CHAR_SLOT_CLASS}`;
+
+  // ===== 弹性间距（随 spacingScale 收缩，约束 A/A+ 方向 A1）=====
+  const imgGapPx = Math.round(24 * scale);           // 图片下方到正文的间距
+  const sectionGapPx = Math.round(20 * scale);       // 各大区间距
+  const labelLsEm = (0.22 * scale).toFixed(3);      // 字段标签字距
+  /** TITLE / ARTIST / 重点词汇·语法：同一标签字号（绝对 px，避免 em 继承倒挂） */
+  const minimalLabelPx = Math.max(10, Math.ceil(L.titleFsPx * 0.28 * scale));
+  const minimalLabelFont =
+    '"EB Garamond", "Source Han Serif SC", "Georgia", serif';
+  const lyricsLsEm = (0.08 * scale).toFixed(3);     // 歌词正文宽字距
+  const lyricsLhNum = (1.85 / scale).toFixed(2);    // 歌词行距宽松（scale 越小行距越大）
+  /** MUJI 笔记风：主/辅歌词用 token 绝对 px，避免 em 相对 16px 导致韩文倒挂 */
+  const minimalMainPx = Math.round(L.mainPx * 0.82 * scale);
+  const minimalAuxPx = Math.min(
+    Math.round(L.auxPx * 0.74 * scale),
+    minimalMainPx - 2,
+  );
+  /** 歌词译文：辅文档 ×1.2 向上取整（各预览比例共用同一公式） */
+  const minimalLyricsZhPx = Math.ceil(minimalAuxPx * 1.2);
+  const lyricsZhGapPx = Math.round(6 * scale);
+  const minimalSans = ZH_FONT_FAMILY;
+  const minimalSerif = ZH_SONGTI_FONT_FAMILY;
+  /** 词解/语法：组内行距 1.35 + 统一 sibling 间距；组间 ≈ 2×辅文档行高 */
+  const studyInnerLh = '1.35';
+  const studyIntraGapPx = Math.max(2, Math.round(minimalAuxPx * 0.12));
+  const studyGroupGapPx = Math.round(minimalAuxPx * 2);
+
+  return `
+  /* ========== 底色：F5F5F5 + 极淡纸张纹理 ========== */
+  ${root} {
+    background-color: ${MINIMAL_PAPER_BG} !important;
+    background-image: ${MINIMAL_PAPER_TEXTURE} !important;
+    background-blend-mode: normal !important;
+  }
+
+  /* ========== 标题区 → 重构为「歌曲信息区」样式 ==========
+   * 原标题 h1.fv-title-h 包含歌名(fv-title-name)和歌手(fv-title-artist)。
+   * MUJI 风格下：
+   * - 歌名变为中等大小宋体（非超大标题），左对齐或居中
+   * - 歌手作为 ARTIST 字段，标签在上、内容在下
+   * - 去掉标题的 border-bottom（改由信息区整体结构承载）
+   */
+  ${root} .fv-title-h {
+    text-align: left !important;
+    padding-bottom: 0 !important;
+    margin-bottom: ${sectionGapPx}px !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+    font-weight: 400 !important;
+  }
+
+  /* 歌名：宋体，中等大小，深灰 */
+  ${root} .fv-title-name {
+    display: block !important;
+    font-family: "Source Han Serif SC", "Songti SC", "STSong", serif !important;
+    font-size: 1em !important;          /* 继承 titleFs 但不放大 */
+    font-weight: 600 !important;
+    color: #111111 !important;
+    letter-spacing: 0.04em !important;
+    line-height: 1.4 !important;
+  }
+
+  /* TITLE / ARTIST / 重点词汇·语法：同一标签字号（绝对 px） */
+  ${root} .fv-title-name::before {
+    content: 'TITLE' !important;
+    display: block !important;
+    font-family: ${minimalLabelFont} !important;
+    font-size: ${minimalLabelPx}px !important;
+    font-weight: 400 !important;
+    color: ${MINIMAL_LABEL_COLOR} !important;
+    letter-spacing: ${labelLsEm}em !important;
+    text-transform: uppercase !important;
+    line-height: 1.2 !important;
+    margin-bottom: 4px !important;
+  }
+
+  /* 歌手：ARTIST 标签行内对齐，字号/字体与 TITLE 标签统一 */
+  ${root} .fv-title-artist {
+    display: inline-block !important;
+    font-family: "Source Han Serif SC", "Songti SC", "STSong", serif !important;
+    font-size: 0.75em !important;        /* 比歌名小一号 */
+    font-weight: 400 !important;
+    color: #444 !important;
+    letter-spacing: 0.03em !important;
+    margin-top: 6px !important;
+  }
+  ${root} .fv-title-artist::before {
+    content: 'ARTIST' !important;
+    display: inline !important;
+    font-family: ${minimalLabelFont} !important;
+    font-size: ${minimalLabelPx}px !important;
+    font-weight: 400 !important;
+    color: ${MINIMAL_LABEL_COLOR} !important;
+    letter-spacing: ${labelLsEm}em !important;
+    text-transform: uppercase !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0 !important;
+    margin-right: 8px !important;
+  }
+
+  /* 隐藏歌手占位符文本（"佚名"）—— 由 ::before 的 ARTIST 标签替代 */
+  ${root} .fv-title-artist--placeholder,
+  ${root} .fv-title-name--placeholder {
+    display: none !important;
+  }
+
+  /* ========== 图片区域（正方形，水平居中，带滤镜）==========
+   * 通过 .fv-minimal-image 容器实现（预览组件中按需注入 DOM）。
+   * 宽度取内容区约 2/3，避免满宽 1:1 过高压住页脚水印；保持 1:1。
+   * 若无图片则显示占位框。
+   */
+  ${root} .fv-minimal-image {
+    width: 68% !important;
+    max-width: 68% !important;
+    aspect-ratio: 1 / 1 !important;
+    flex-shrink: 0 !important;
+    margin: 0 auto ${imgGapPx}px auto !important;
+    background-color: ${MINIMAL_IMAGE_PLACEHOLDER_BG} !important;
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+    overflow: hidden !important;
+    position: relative !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+  }
+  ${root} .fv-minimal-image img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    filter: ${MINIMAL_IMAGE_FILTER} !important;
+  }
+  /* 占位「➕」（无图片时显示，点击上传） */
+  ${root} .fv-minimal-image__placeholder {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 56px !important;
+    height: 56px !important;
+    font-size: 40px !important;
+    line-height: 1 !important;
+    color: ${MINIMAL_LABEL_COLOR} !important;
+    opacity: 0.5 !important;
+    pointer-events: none !important;
+  }
+
+  /* ========== 分隔线（可选装饰，当前首页 DOM 未插入）========== */
+  ${root} .fv-minimal-divider {
+    height: 1px !important;
+    background: transparent !important;
+    border-top: 1px solid ${MINIMAL_HAIRLINE} !important;
+    margin: ${sectionGapPx}px 0 !important;
+  }
+
+  /* ========== 歌词组：MUJI 笔记风；组内统一选择器深度，主 > 辅 ========== */
+  ${bodySel} .lyrics-group {
+    margin-top: ${Math.round(10 * scale)}px !important;
+    margin-bottom: ${Math.round(14 * scale)}px !important;
+  }
+  ${bodySel} .lyrics-group + .lyrics-group {
+    margin-top: ${Math.round(16 * scale)}px !important;
+  }
+  /* 原文：日/韩/中统一思源宋体细体（MUJI 笔记正文） */
+  ${bodySel} .lyrics-group .jp-line,
+  ${bodySel} .lyrics-group .jp-line *:not(rt):not(rp),
+  ${bodySel} .lyrics-group .ko-line,
+  ${bodySel} .lyrics-group .ko-line *:not(rt):not(rp),
+  ${bodySel} .lyrics-group .cn-line,
+  ${bodySel} .lyrics-group .cn-line *:not(rt):not(rp):not(${ZH_CHAR_SLOT}) {
+    font-family: ${minimalSerif} !important;
+    font-weight: 300 !important;
+    color: ${MINIMAL_LYRICS_COLOR} !important;
+    letter-spacing: ${lyricsLsEm}em !important;
+    line-height: ${lyricsLhNum} !important;
+    font-size: ${minimalMainPx}px !important;
+    margin: 0 !important;
+  }
+  /* 释义 / 译文：PingFang 无衬线，字号 = 辅文档 ×1.2 向上取整，MUJI 宽行距 */
+  ${bodySel} .lyrics-group .zh-line,
+  ${bodySel} .lyrics-group .zh-line *,
+  ${bodySel} .lyrics-group .gloss-line,
+  ${bodySel} .lyrics-group .gloss-line * {
+    font-family: ${minimalSans} !important;
+    font-weight: 300 !important;
+    color: rgba(0, 0, 0, 0.45) !important;
+    letter-spacing: 0.04em !important;
+    line-height: ${lyricsLhNum} !important;
+    font-size: ${minimalLyricsZhPx}px !important;
+    margin: ${lyricsZhGapPx}px 0 0 0 !important;
+  }
+
+  /* ========== 区段标题（重点词汇 / 重点语法）→ 与 TITLE/ARTIST 标签同款 ========== */
+  ${root} .lyrics-section-title,
+  ${bodySel} h2.lyrics-section-title {
+    font-family: ${minimalLabelFont} !important;
+    font-size: ${minimalLabelPx}px !important;
+    font-weight: 400 !important;
+    color: ${MINIMAL_LABEL_COLOR} !important;
+    letter-spacing: ${labelLsEm}em !important;
+    text-transform: uppercase !important;
+    line-height: 1.2 !important;
+    text-align: left !important;
+    padding: 0 !important;
+    margin: 0 0 8px 0 !important;
+    border: none !important;
+  }
+
+  /* ========== 词汇/语法卡片：极淡底 + 极淡边，MUJI 简约风 ========== */
+  ${root} .lyrics-vocabulary,
+  ${root} .lyrics-grammar {
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin-top: ${sectionGapPx}px !important;
+    margin-bottom: ${sectionGapPx}px !important;
+  }
+  /* 词汇/语法条目：未拆条整组用 sibling 间距；拆条后靠 data-study-part 区分组内/组间 */
+  ${bodySel} .lyrics-vocab-item,
+  ${bodySel} .lyrics-grammar-item {
+    padding: 0 !important;
+    margin: 0 0 ${studyGroupGapPx}px 0 !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+  ${bodySel} .lyrics-vocab-item[data-study-part="continue"],
+  ${bodySel} .lyrics-grammar-item[data-study-part="continue"] {
+    margin-bottom: ${studyIntraGapPx}px !important;
+  }
+  ${bodySel} .lyrics-vocab-item[data-study-part="end"],
+  ${bodySel} .lyrics-grammar-item[data-study-part="end"] {
+    margin-bottom: ${studyGroupGapPx}px !important;
+  }
+  ${bodySel} > .lyrics-pagination-unit:last-child .lyrics-vocab-item[data-study-part="end"],
+  ${bodySel} > .lyrics-pagination-unit:last-child .lyrics-grammar-item[data-study-part="end"],
+  ${bodySel} > .lyrics-pagination-unit:last-child .lyrics-vocab-item:not([data-study-part]),
+  ${bodySel} > .lyrics-pagination-unit:last-child .lyrics-grammar-item:not([data-study-part]),
+  ${bodySel} .lyrics-vocabulary > .lyrics-vocab-item:last-child,
+  ${bodySel} .lyrics-grammar > .lyrics-grammar-item:last-child {
+    margin-bottom: 0 !important;
+  }
+  ${bodySel} .lyrics-vocab-item > *,
+  ${bodySel} .lyrics-grammar-item > * {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: ${studyInnerLh} !important;
+    max-width: 100% !important;
+  }
+  ${bodySel} .lyrics-vocab-item > * + *,
+  ${bodySel} .lyrics-grammar-item > * + * {
+    margin-top: ${studyIntraGapPx}px !important;
+  }
+  ${bodySel} .vocab-line1,
+  ${bodySel} h3.grammar-point-title,
+  ${bodySel} .grammar-detail {
+    margin: 0 !important;
+    font-family: inherit !important;
+    font-size: unset !important;
+    font-weight: unset !important;
+    color: inherit !important;
+    border: none !important;
+  }
+  /* 例句块：清掉标准版残留 margin-bottom / grammar-ex margin-top */
+  ${bodySel} .lyrics-vocab-item .vocab-ex-ja,
+  ${bodySel} .lyrics-vocab-item .vocab-ex-ko,
+  ${bodySel} .lyrics-vocab-item .vocab-ex-cn,
+  ${bodySel} .lyrics-vocab-item .vocab-ex-zh,
+  ${bodySel} .lyrics-vocab-item .vocab-ex-gloss,
+  ${bodySel} .lyrics-grammar-item .grammar-ex-ja,
+  ${bodySel} .lyrics-grammar-item .grammar-ex-ko,
+  ${bodySel} .lyrics-grammar-item .grammar-ex-cn,
+  ${bodySel} .lyrics-grammar-item .grammar-ex-zh,
+  ${bodySel} .lyrics-grammar-item .grammar-ex-gloss {
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+    line-height: ${studyInnerLh} !important;
+  }
+  /* 词条 / 语法条（源语词头）：PingFang，字号与歌词正文一致（须 ≥ body 的 .vocab-line1 链） */
+  ${bodySel} .vocab-line1 .vocab-word,
+  ${bodySel} .vocab-line1 .vocab-word *:not(rt):not(rp),
+  ${bodySel} .vocab-line1 .vocab-word-cn,
+  ${bodySel} .vocab-line1 .vocab-word-cn *:not(rt):not(rp):not(${ZH_CHAR_SLOT}),
+  ${bodySel} .vocab-line1 .vocab-word-ko,
+  ${bodySel} .vocab-line1 .vocab-word-ko *,
+  ${bodySel} h3.grammar-point-title .grammar-title-ja,
+  ${bodySel} h3.grammar-point-title .grammar-title-ja *:not(rt):not(rp),
+  ${bodySel} h3.grammar-point-title .grammar-title-ko,
+  ${bodySel} h3.grammar-point-title .grammar-title-ko *,
+  ${bodySel} h3.grammar-point-title .grammar-title-cn,
+  ${bodySel} h3.grammar-point-title .grammar-title-cn *:not(rt):not(rp):not(${ZH_CHAR_SLOT}) {
+    font-family: ${minimalSans} !important;
+    font-size: ${minimalMainPx}px !important;
+    font-weight: 500 !important;
+    line-height: ${studyInnerLh} !important;
+    letter-spacing: 0.04em !important;
+    color: #111111 !important;
+  }
+  /* 释义 / 说明 / 例句：统一 PingFang 辅文档（须 ≥ body 的 .vocab-line1 / h3 链） */
+  ${bodySel} .vocab-line1 .vocab-meaning,
+  ${bodySel} .vocab-line1 .vocab-meaning *,
+  ${bodySel} .grammar-detail,
+  ${bodySel} .grammar-detail *,
+  ${bodySel} h3.grammar-point-title .grammar-title-zh,
+  ${bodySel} h3.grammar-point-title .grammar-title-zh *,
+  ${bodySel} h3.grammar-point-title .grammar-title-gloss,
+  ${bodySel} h3.grammar-point-title .grammar-title-gloss *,
+  ${bodySel} .vocab-ex-ja,
+  ${bodySel} .vocab-ex-ja *:not(rt):not(rp),
+  ${bodySel} .vocab-ex-ko,
+  ${bodySel} .vocab-ex-ko *,
+  ${bodySel} .vocab-ex-cn,
+  ${bodySel} .vocab-ex-cn *:not(rt):not(rp):not(${ZH_CHAR_SLOT}),
+  ${bodySel} .vocab-ex-zh,
+  ${bodySel} .vocab-ex-zh *,
+  ${bodySel} .vocab-ex-gloss,
+  ${bodySel} .vocab-ex-gloss *,
+  ${bodySel} .grammar-ex-ja,
+  ${bodySel} .grammar-ex-ja *:not(rt):not(rp),
+  ${bodySel} .grammar-ex-ko,
+  ${bodySel} .grammar-ex-ko *,
+  ${bodySel} .grammar-ex-cn,
+  ${bodySel} .grammar-ex-cn *:not(rt):not(rp):not(${ZH_CHAR_SLOT}),
+  ${bodySel} .grammar-ex-zh,
+  ${bodySel} .grammar-ex-zh *,
+  ${bodySel} .grammar-ex-gloss,
+  ${bodySel} .grammar-ex-gloss * {
+    font-family: ${minimalSans} !important;
+    font-size: ${minimalAuxPx}px !important;
+    font-weight: 300 !important;
+    line-height: ${studyInnerLh} !important;
+    letter-spacing: 0.04em !important;
+    color: rgba(0, 0, 0, 0.5) !important;
+  }
+
+  /* ========== Ruby / 拼音注音：极简版完全隐藏（不占行高）========== */
+  ${root} ruby rt,
+  ${root} ruby rp,
+  ${root} .fv-rb-rt,
+  ${root} .ruby-rt,
+  ${root} .furigana-rt,
+  ${root} .kana-rt,
+  ${root} ${ZH_CHAR_SLOT} rt,
+  ${root} ${ZH_CHAR_SLOT} rp {
+    display: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    overflow: hidden !important;
+  }
+  ${root} ruby,
+  ${root} ${ZH_CHAR_SLOT} ruby {
+    display: inline !important;
+    ruby-position: unset !important;
+  }
+  ${bodySel} .jp-line ruby,
+  ${bodySel} .cn-line ruby,
+  ${bodySel} .vocab-word ruby,
+  ${bodySel} .grammar-title-ja ruby,
+  ${bodySel} .grammar-title-cn ruby {
+    padding-bottom: 0 !important;
+  }
+
+  /* ========== 水印：继承经典版式（底部品牌 + 页码 + 域名）==========
+   * 不覆写 display，沿用 buildPosterWatermarkCss 的底部定位与淡灰配色；
+   * 测量层 computePosterBodyMaxHeightPx 已为所有版式（含 minimal）扣除水印安全距离，
+   * 故 minimal 与 standard 一样不会压到末行歌词。
+   */
   `;
 }
 
