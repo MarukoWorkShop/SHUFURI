@@ -8,7 +8,10 @@ import {
 import type { PosterLayoutProfile, PosterRenderOptions } from './shufuriPoster/types';
 import type { LyricsLanguage, LangCode } from '../services/appSettings';
 import { getAppSettings } from '../services/appSettings';
-import { applyPosterTitleElement } from './shufuriPoster/posterTitle';
+import {
+  applyMinimalPosterTitleExportAlignment,
+  applyPosterTitleElement,
+} from './shufuriPoster/posterTitle';
 import { resolvePosterPipelineLang } from './shufuriPoster/inferPosterLang';
 import { appendPosterWatermark } from './shufuriPoster/posterWatermark';
 import { getPosterBackgroundUrl, getPosterBackgroundBgColor } from '../config/posterBackgrounds';
@@ -169,6 +172,7 @@ export function mountPosterExportPage(
     h1.className = 'fv-title-h';
     applyPosterTitleElement(h1, title, artist, pipelineLang ?? 'jp');
     shell.appendChild(h1);
+    applyMinimalPosterTitleExportAlignment(shell);
 
     // Minimal 版式：标题下方插入正方形图片区域（仅首页）
     if (renderOptions?.layoutVariant === 'minimal') {

@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useCallback, useEffect, useState, lazy, Suspense } from 'react';
 import './App.css';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/app/AppLayout';
@@ -32,6 +32,7 @@ import { CLIPBOARD_BLOCKED_EVENT } from './utils/clipboard';
 type AppShellProps = {
   settings: UseAppSettingsReturn;
   inputResetKey: number;
+  onInputReset: () => void;
   libraryRefreshKey: number;
   onLibraryImported: () => void;
   toastMessage: string | null;
@@ -40,6 +41,7 @@ type AppShellProps = {
 function AppShell({
   settings,
   inputResetKey,
+  onInputReset,
   libraryRefreshKey,
   onLibraryImported,
   toastMessage,
@@ -64,6 +66,18 @@ function AppShell({
     setShareOcrData: homeSession.setShareOcrData,
     setAppSettings,
   });
+
+  const handleHomeReset = useCallback(() => {
+    homeSession.setShareOcrData(null);
+    homeSession.homeFormMetaRef.current = { title: '', artist: '' };
+    homeSession.consumedClipboardRef.current.clear();
+    homeSession.prevClipboardHashRef.current = '';
+    homeSession.handleConfirmDismiss();
+    homeSession.handleClipboardDismiss();
+    homeSession.clearExternalPrompt();
+    homeSession.handleManualPasteCancel();
+    onInputReset();
+  }, [homeSession, onInputReset]);
 
   const network = useNetworkStatus();
 
@@ -127,6 +141,7 @@ function AppShell({
             prevClipboardHashRef={homeSession.prevClipboardHashRef}
             externalPrompt={homeSession.externalPrompt}
             onExternalPromptHandled={homeSession.clearExternalPrompt}
+            onHomeReset={handleHomeReset}
           />
         </ErrorBoundary>
       )}
@@ -274,6 +289,7 @@ export default function App() {
             <AppShell
               settings={settings}
               inputResetKey={inputResetKey}
+              onInputReset={() => setInputResetKey((k) => k + 1)}
               libraryRefreshKey={libraryRefreshKey}
               onLibraryImported={() => setLibraryRefreshKey((k) => k + 1)}
               toastMessage={appToast.message}

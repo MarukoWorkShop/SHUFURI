@@ -369,7 +369,7 @@ function compileBodyRules(r: ResolvedTypography, unit: 'px' | 'mm', spec?: Print
     font-weight: ${artistWght};
     color: ${GLOSS_COLOR};
     letter-spacing: 0.02em;
-    text-align: center;
+    /* 对齐继承 .fv-title-h（standard 居中 / minimal 左对齐）；勿在此写 center，html2canvas 会压过 minimal 覆盖 */
     white-space: normal;
     overflow-wrap: break-word;
     word-break: break-word;
@@ -1026,8 +1026,8 @@ function compileMinimalCss(resolved: ResolvedTypography): string {
     Math.round(L.auxPx * 0.74 * scale),
     minimalMainPx - 2,
   );
-  /** 歌词译文：辅文档 ×1.2 向上取整（各预览比例共用同一公式） */
-  const minimalLyricsZhPx = Math.ceil(minimalAuxPx * 1.2);
+  /** 歌词译文：辅文档 ×1.2 再加大 20%，向上取整（ceil(aux×1.44)） */
+  const minimalLyricsZhPx = Math.ceil(minimalAuxPx * 1.2 * 1.2);
   const lyricsZhGapPx = Math.round(6 * scale);
   const minimalSans = ZH_FONT_FAMILY;
   const minimalSerif = ZH_SONGTI_FONT_FAMILY;
@@ -1090,9 +1090,7 @@ function compileMinimalCss(resolved: ResolvedTypography): string {
     margin-bottom: 4px !important;
   }
 
-  /* 歌手：ARTIST 标签行内对齐，字号/字体与 TITLE 标签统一
-   * 必须显式 left：body 基线 .fv-title-artist { text-align:center } 在 html2canvas
-   * 栅格化时会压过 h1 的 text-align:left，预览 DOM 正常、PDF 居中。 */
+  /* 歌手：ARTIST 标签行内对齐；导出栅格化另见 applyMinimalPosterTitleExportAlignment inline 兜底 */
   ${root} .fv-title-artist {
     display: block !important;
     text-align: left !important;

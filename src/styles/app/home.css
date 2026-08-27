@@ -532,6 +532,29 @@
   border-color: #000000;
 }
 
+/* 复位：灰色旋转箭头（无外框，较主按钮小 30%，间距加大） */
+.morphing-widget__reset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  margin-left: 12px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #9CA3AF;
+  cursor: pointer;
+  transition: color 0.18s ease, opacity 0.18s ease;
+  flex-shrink: 0;
+}
+
+.morphing-widget__reset-btn:hover {
+  color: #6B7280;
+  background: transparent;
+}
+
 @keyframes morphing-widget-guide-pulse {
   0%,
   100% {
@@ -582,6 +605,15 @@
 [data-theme='dark'] .app--home .morphing-widget__x-btn.is-guide {
   background: #1a1a1a;
   border-color: #1a1a1a;
+}
+
+[data-theme='dark'] .app--home .morphing-widget__reset-btn {
+  color: #6b7280;
+}
+
+[data-theme='dark'] .app--home .morphing-widget__reset-btn:hover {
+  color: #9ca3af;
+  background: transparent;
 }
 
 [data-theme='dark'] .app--home .morphing-widget__pill--paste {

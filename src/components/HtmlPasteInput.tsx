@@ -72,6 +72,8 @@ type Props = {
   onExternalPromptHandled?: () => void;
   /** 由语言矩阵 learningTargetLanguages 推导的可用语言；默认为全部 */
   availableLanguages?: LyricsLanguage[];
+  /** 清空首页输入并回到初始态 */
+  onHomeReset?: () => void;
 };
 
 export default function HtmlPasteInput({
@@ -91,6 +93,7 @@ export default function HtmlPasteInput({
   externalPrompt,
   onExternalPromptHandled,
   availableLanguages,
+  onHomeReset,
 }: Props) {
   const showAppToast = useAppToast();
   const [songTitle, setSongTitle] = useState(initialTitle || '');
@@ -600,6 +603,7 @@ export default function HtmlPasteInput({
                       })
                     }
                     disabled={!canGenerate}
+                    onFullReset={onHomeReset}
                   />
                 </div>
           </div>

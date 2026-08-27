@@ -107,7 +107,7 @@ describe('极简版式：与其他三版式的关系', () => {
     expect(css).toContain('data-study-part="end"');
     expect(css).toMatch(/ruby rt[\s\S]*display:\s*none\s*!important/);
     expect(css).toContain(MINIMAL_PAPER_BG);
-    // 歌词译文用独立 px（≠ 词解辅文），由 ceil(aux*1.2) 注入
+    // 歌词译文用独立 px（≠ 词解辅文），由 ceil(aux×1.44) 注入
     expect(css).toMatch(/\.lyrics-group \.zh-line[\s\S]*font-size:\s*\d+px\s*!important/);
   });
 
@@ -265,7 +265,7 @@ describe('极简版式：分页路径与拆条打标', () => {
 });
 
 describe('极简版式：字号公式（各 profile）', () => {
-  it('歌词译文 font-size = ceil(minimalAuxPx * 1.2)，且 ≤ 主文或紧贴辅文放大', () => {
+  it('歌词译文 font-size = ceil(minimalAuxPx × 1.44)，且 ≥ 辅文', () => {
     for (const profile of PROFILES) {
       const resolved = resolvePosterTypography({
         profile,
@@ -279,7 +279,7 @@ describe('极简版式：字号公式（各 profile）', () => {
         Math.round(L.auxPx * 0.74 * scale),
         minimalMainPx - 2,
       );
-      const minimalLyricsZhPx = Math.ceil(minimalAuxPx * 1.2);
+      const minimalLyricsZhPx = Math.ceil(minimalAuxPx * 1.2 * 1.2);
       const css = compilePosterCss(resolved, {
         layoutVariant: 'minimal',
         includeFontFaces: false,

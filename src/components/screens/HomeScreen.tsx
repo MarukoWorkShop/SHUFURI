@@ -51,6 +51,7 @@ type Props = {
   prevClipboardHashRef: RefObject<string>;
   externalPrompt?: ExternalPromptRequest | null;
   onExternalPromptHandled?: () => void;
+  onHomeReset?: () => void;
 };
 
 export default function HomeScreen({
@@ -74,6 +75,7 @@ export default function HomeScreen({
   prevClipboardHashRef,
   externalPrompt,
   onExternalPromptHandled,
+  onHomeReset,
 }: Props) {
   const [faqOpen, setFaqOpen] = useState(false);
 
@@ -149,6 +151,7 @@ export default function HomeScreen({
           onFormMetaChange={onFormMetaChange}
           externalPrompt={externalPrompt}
           onExternalPromptHandled={onExternalPromptHandled}
+          onHomeReset={onHomeReset}
         />
       </div>
       <Suspense fallback={null}>

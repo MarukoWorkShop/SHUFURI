@@ -260,6 +260,9 @@ describe('导出挂载：minimal 封面', () => {
     expect(artist).toBeTruthy();
     expect(getComputedStyle(h1!).textAlign).toBe('left');
     expect(getComputedStyle(artist!).textAlign).toBe('left');
+    // html2canvas 兜底：导出挂载必须写 inline style（见 applyMinimalPosterTitleExportAlignment）
+    expect(h1!.style.getPropertyValue('text-align')).toBe('left');
+    expect(artist!.style.getPropertyValue('text-align')).toBe('left');
   });
 });
 

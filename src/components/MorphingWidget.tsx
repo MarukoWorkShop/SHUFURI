@@ -10,6 +10,7 @@ import {
   Sparkles,
   GraduationCap,
   ArrowUpRight,
+  RotateCcw,
 } from 'lucide-react';
 import { L } from '../utils/i18n';
 
@@ -25,6 +26,8 @@ type MorphingWidgetProps = {
   onPasteResult?: () => void;
   /** 是否禁用状态 A 的复制按钮 */
   disabled?: boolean;
+  /** 清空表单并回到初始态（等同刷新首页输入区） */
+  onFullReset?: () => void;
 };
 
 /** 微件内部模式：A = 复制口令 / B = 粘贴结果 */
@@ -34,6 +37,7 @@ export function MorphingWidget({
   onCopyPrompt,
   onPasteResult,
   disabled = false,
+  onFullReset,
 }: MorphingWidgetProps) {
   const [mode, setMode] = useState<WidgetMode>('A');
   const [copied, setCopied] = useState(false);
@@ -191,6 +195,21 @@ export function MorphingWidget({
           </motion.button>
         )}
       </AnimatePresence>
+
+      {/* ===== 复位：灰色旋转箭头，随时回到空白初始态 ===== */}
+      {onFullReset ? (
+        <motion.button
+          type="button"
+          layout
+          onClick={onFullReset}
+          aria-label={L('重新开始', 'Start over')}
+          title={L('清空并重新开始', 'Clear all and start over')}
+          className="morphing-widget__reset-btn"
+          whileTap={{ scale: 0.9 }}
+        >
+          <RotateCcw size={11} strokeWidth={2} aria-hidden />
+        </motion.button>
+      ) : null}
     </motion.div>
   );
 }

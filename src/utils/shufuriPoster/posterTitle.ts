@@ -97,6 +97,29 @@ export function applyPosterTitleElement(
   h1.innerHTML = buildPosterTitleInnerHtml(title, artist, lang);
 }
 
+/**
+ * 极简版式导出栅格化兜底：html2canvas 不完全尊重 minimal 皮肤里
+ * `.fv-title-artist { text-align:left !important }`，会仍按 body 基线 center 绘制。
+ * 预览 DOM 正常；PDF/PNG 需 inline style + onclone 再抹一层。
+ */
+export function applyMinimalPosterTitleExportAlignment(root: HTMLElement): void {
+  if (root.dataset.layoutVariant !== 'minimal') return;
+  const h1 = root.querySelector('h1.fv-title-h');
+  if (!(h1 instanceof HTMLElement)) return;
+  h1.style.setProperty('text-align', 'left', 'important');
+  const name = h1.querySelector('.fv-title-name');
+  if (name instanceof HTMLElement) {
+    name.style.setProperty('display', 'block', 'important');
+    name.style.setProperty('text-align', 'left', 'important');
+  }
+  const artist = h1.querySelector('.fv-title-artist');
+  if (artist instanceof HTMLElement) {
+    artist.style.setProperty('display', 'block', 'important');
+    artist.style.setProperty('text-align', 'left', 'important');
+    artist.style.setProperty('width', '100%', 'important');
+  }
+}
+
 /** 对已有歌名 markup（微调 HTML）按文案补打衬线 class */
 export function stampPosterTitleSerifClasses(h1: HTMLElement, lang: LangCode): void {
   const nameEl = h1.querySelector('.fv-title-name');

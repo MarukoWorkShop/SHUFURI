@@ -11,6 +11,7 @@ import {
   mountPosterExportPage,
   getPosterExportCanvasSize,
 } from './posterExportMount';
+import { applyMinimalPosterTitleExportAlignment } from './shufuriPoster/posterTitle';
 
 /** CSS 像素（96dpi）→ jsPDF 毫米 */
 const CSS_PX_TO_MM = 25.4 / 96;
@@ -22,12 +23,10 @@ const MIN_PDF_RASTER_SCALE = Math.ceil(TARGET_PRINT_DPI / 96);
 const MAX_RASTER_PIXELS = 24_000_000;
 /** 移动端 Web 的栅格倍率上限：降低单页像素，规避大画布 OOM/静默失败 */
 const MAX_WEB_RASTER_SCALE = 2;
-/**
- * PDF 页图用 PNG 而非 JPEG：
- * JPEG 色度抽样会在黑字抗锯齿边缘产生品红/发红伪影，打印机上更明显。
- * PNG 无损，体积更大但打印黑度与中性灰更稳。
- */
-const PDF_IMAGE_FORMAT: 'PNG' = 'PNG';
+/** JPEG 写入 PDF：NONE 减少块压缩带来的文字锯齿 */
+const JPEG_ADD_COMPRESSION: 'FAST' | 'NONE' = 'NONE';
+/** PDF 页图 JPEG 质量（0.98：体积与打印黑度的折中；中性近黑色值见 typographyConstants） */
+const PDF_JPEG_QUALITY = 0.98;
 const MIN_PDF_BYTES = 512;
 
 type Html2CanvasOpts = Parameters<typeof html2canvas>[1];
@@ -201,6 +200,7 @@ function neutralizeOverflowForHtml2CanvasClone(_clonedDoc: Document, clonedEl: H
     node.style.setProperty('overflow-x', 'visible', 'important');
     node.style.setProperty('overflow-y', 'visible', 'important');
   });
+  applyMinimalPosterTitleExportAlignment(root);
 }
 
 function buildHtml2CanvasOpts(target: HTMLElement, scale: number): Html2CanvasOpts {
@@ -480,7 +480,7 @@ function assertValidPdfBlob(blob: Blob): void {
   }
 }
 
-/** 将栅格 canvas 写入 jsPDF 当前页（PNG 无损，避免 JPEG 黑字发红） */
+/** 将栅格 canvas 写入 jsPDF 当前页（JPEG 0.98，控制 PDF 体积） */
 export function addCanvasToPdfPage(
   pdf: jsPDF,
   canvas: HTMLCanvasElement,
@@ -491,8 +491,8 @@ export function addCanvasToPdfPage(
   if (!isFirstPage) {
     pdf.addPage([wMm, hMm], hMm >= wMm ? 'portrait' : 'landscape');
   }
-  const imgData = canvas.toDataURL('image/png');
-  pdf.addImage(imgData, PDF_IMAGE_FORMAT, 0, 0, wMm, hMm, undefined, 'NONE');
+  const imgData = canvas.toDataURL('image/jpeg', PDF_JPEG_QUALITY);
+  pdf.addImage(imgData, 'JPEG', 0, 0, wMm, hMm, undefined, JPEG_ADD_COMPRESSION);
 }
 
 async function deliverDownloadBlob(blob: Blob, filename: string): Promise<void> {
