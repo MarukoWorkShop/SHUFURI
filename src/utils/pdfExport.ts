@@ -31,20 +31,26 @@ const MIN_PDF_BYTES = 512;
 
 type Html2CanvasOpts = Parameters<typeof html2canvas>[1];
 
-/** 等待节点内图片加载/解码完成 */
+/** 等待节点内图片加载/解码完成（单图超时后继续，避免坏图卡死导出） */
 export async function waitForImagesInElement(root: HTMLElement): Promise<void> {
   const imgs = root.querySelectorAll('img');
+  const PER_IMAGE_MS = 5_000;
   await Promise.all(
     Array.from(imgs).map(
       (img) =>
         new Promise<void>((resolve) => {
+          let settled = false;
           const done = () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
             img.removeEventListener('load', done);
             img.removeEventListener('error', done);
             resolve();
           };
+          const timer = setTimeout(done, PER_IMAGE_MS);
           if (img.complete) {
-            void (img.decode?.().catch(() => undefined) ?? Promise.resolve()).finally(() => resolve());
+            void (img.decode?.().catch(() => undefined) ?? Promise.resolve()).finally(done);
             return;
           }
           img.addEventListener('load', done, { once: true });
@@ -326,25 +332,37 @@ async function canvasToBlob(
   return blob;
 }
 
+/** 导出前图片/背景等待上限：避免坏链/blob 永不触发 load/error 时无限挂起 */
+const EXPORT_ASSET_WAIT_TIMEOUT_MS = 8_000;
+
+async function prepareElementAssetsForRaster(el: HTMLElement): Promise<void> {
+  await waitForLayoutStable(el);
+  await withDeadline(
+    waitForImagesInElement(el),
+    EXPORT_ASSET_WAIT_TIMEOUT_MS,
+    '导出图片加载',
+  ).catch(() => undefined);
+  await withDeadline(
+    waitForBackgroundImagesInElement(el),
+    EXPORT_ASSET_WAIT_TIMEOUT_MS,
+    '导出背景图加载',
+  ).catch(() => undefined);
+  await withDeadline(
+    preloadImagesInElementForPdf(el),
+    EXPORT_ASSET_WAIT_TIMEOUT_MS,
+    '导出图片预加载',
+  ).catch(() => undefined);
+  await waitForLayoutStable(el);
+}
+
 /** 将单页根节点栅格化为 Canvas（导出 mount 已在离屏 1:1，直接栅格化） */
 export async function rasterizePosterLayoutPageRoot(
   el: HTMLElement,
 ): Promise<HTMLCanvasElement> {
+  // 仅用 ensurePosterFontsLoaded（带超时）；勿 await document.fonts.ready
+  // —— 会等页面全部 @font-face，测量注入字体时易卡死。
   await ensurePosterFontsLoaded();
-  // 内嵌 @font-face 字体在首次栅格时可能尚未解码完成，等待文档字体就绪，
-  // 避免部分移动浏览器栅格出空白/字体错位进而静默失败。
-  if (typeof document !== 'undefined' && document.fonts?.ready) {
-    try {
-      await document.fonts.ready;
-    } catch {
-      /* 字体就绪等待失败不影响栅格，继续使用已加载字体 */
-    }
-  }
-  await waitForLayoutStable(el);
-  await waitForImagesInElement(el);
-  await waitForBackgroundImagesInElement(el);
-  await preloadImagesInElementForPdf(el);
-  await waitForLayoutStable(el);
+  await prepareElementAssetsForRaster(el);
   return await withDeadline(
     rasterizeWithHtml2canvas(el),
     RASTERIZE_PAGE_TIMEOUT_MS,
@@ -770,11 +788,7 @@ export async function rasterizePageHtmlToBlob(
   });
   mount.prepare();
   try {
-    await waitForLayoutStable(mount.root);
-    await waitForImagesInElement(mount.root);
-    await waitForBackgroundImagesInElement(mount.root);
-    await preloadImagesInElementForPdf(mount.root);
-    await waitForLayoutStable(mount.root);
+    await prepareElementAssetsForRaster(mount.root);
     const canvas = await withDeadline(
       rasterizeWithHtml2canvas(mount.root, scale, QUICK_SAVE_RASTERIZE_TIMEOUT_MS),
       QUICK_SAVE_RASTERIZE_TIMEOUT_MS,

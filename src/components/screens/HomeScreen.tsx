@@ -118,6 +118,9 @@ export default function HomeScreen({
             ? 'Pause the melody, dive into the words.'
             : '让旋律暂停，让文字浮现'}
         </h1>
+        <p className="home-hero__tagline-en" lang="en">
+          Lyrics Annotator for Language Learners
+        </p>
         <p
           className="home-hero__subtitle"
           lang={appSettings.interfaceLanguage === 'en' ? 'en' : 'zh'}

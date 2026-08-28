@@ -228,13 +228,11 @@ function ShufuriPosterSinglePage({
     rasterizingRef.current = true;
     setSaving(true);
     try {
-      // 等待布局稳定 + 字体加载
+      // 仅等两帧布局；字体由 rasterizePageHtmlToBlob → ensurePosterFontsLoaded 负责。
+      // 禁止 await document.fonts.ready：会等页面上所有 @font-face，易无限挂起 → 「正在生成图片…」转圈不结束。
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       });
-      if (document.fonts?.ready) {
-        await document.fonts.ready;
-      }
 
       const native = isNativeWebView();
 
@@ -467,7 +465,10 @@ function ShufuriPosterSinglePage({
               onClick={() => minimalImageInputRef.current?.click()}
             >
               {minimalImageUrl ? (
-                <img src={minimalImageUrl} alt="" />
+                <img
+                  src={minimalImageUrl}
+                  alt="SHUFURI lyrics annotator interface generating Pinyin and Furigana printable cards"
+                />
               ) : (
                 <span className="fv-minimal-image__placeholder">➕</span>
               )}
