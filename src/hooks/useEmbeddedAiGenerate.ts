@@ -74,9 +74,13 @@ export function useEmbeddedAiGenerate() {
 
   const lastParamsRef = useRef<GenerateStudyParams | null>(null);
 
+  /** 生成轮次序号：每启动一次新生成 / 取消一次都会递增，旧任务的一切迟到回调判为过期 */
+  const runSeqRef = useRef(0);
+
   const { tryUse } = useAiLimit();
 
   const cancel = useCallback(() => {
+    runSeqRef.current += 1; // 使在飞任务立刻过期，其迟到回调不得再写状态
     abortRef.current?.abort();
     abortRef.current = null;
     setStatus('idle');
@@ -85,6 +89,21 @@ export function useEmbeddedAiGenerate() {
 
   const generateStudy = useCallback(
     async (params: GenerateStudyParams): Promise<GenerateStudyResult> => {
+      // ===== B：新任务取代旧任务 =====
+      // 1) 强制取消上一个仍在飞行中的请求：cloudbaseGateway 内部定时器最长 190s，
+      //    不取消的话它会一直挂着，迟到的回调会反过来覆盖新任务的状态；
+      // 2) 递增轮次序号，让旧任务的一切迟到结果都判为过期、不得再写任何状态。
+      abortRef.current?.abort();
+      abortRef.current = null;
+      const runId = ++runSeqRef.current;
+      const isCurrent = (): boolean => runId === runSeqRef.current;
+      const staleAbortedResult = (): GenerateStudyResult => ({
+        status: 'error',
+        code: 'aborted',
+        message: '已取消',
+        apiInfo: {},
+      });
+
       setStatus('loading');
       setProgressMessage('正在生成词解与语法…');
       setAttemptCount((c) => c + 1);
@@ -165,6 +184,10 @@ export function useEmbeddedAiGenerate() {
       let poisonRejected = false;
       try {
         resp = await sendStudyRequest(prompt);
+        // 迟到回调（任务已被新任务取代或用户取消）：直接丢弃，防止覆盖当前状态
+        if (!isCurrent()) {
+          return staleAbortedResult();
+        }
         // 毒结果：源语非 zh 却挖出中文/拼音词头 → 用 retry prompt 再请求一次
         if (
           resp.ok &&
@@ -184,8 +207,15 @@ export function useEmbeddedAiGenerate() {
             retryReason: 'hallucination',
           });
           resp = await sendStudyRequest(retryPrompt);
+          if (!isCurrent()) {
+            return staleAbortedResult();
+          }
         }
       } catch (err) {
+        if (!isCurrent()) {
+          // 过期任务：已被更新任务取代或用户取消，静默退出不写任何状态
+          return staleAbortedResult();
+        }
         if (signal.aborted) {
           return finishStudyAborted();
         }
@@ -196,7 +226,9 @@ export function useEmbeddedAiGenerate() {
         model: resp.model,
         tokens: resp.usage,
       };
-      setLastApiInfo(apiInfo);
+      if (isCurrent()) {
+        setLastApiInfo(apiInfo);
+      }
 
       if (!resp.ok) {
         return {
@@ -247,8 +279,10 @@ export function useEmbeddedAiGenerate() {
         };
       }
 
-      setStatus('ok');
-      setProgressMessage('词解与语法已生成');
+      if (isCurrent()) {
+        setStatus('ok');
+        setProgressMessage('词解与语法已生成');
+      }
       return { status: 'ok', rawText: normalized, document: parsed, apiInfo };
 
       function finishStudyAborted(): GenerateStudyResult {
@@ -278,6 +312,7 @@ export function useEmbeddedAiGenerate() {
   );
 
   const reset = useCallback(() => {
+    runSeqRef.current += 1; // 使在飞任务立刻过期
     abortRef.current?.abort();
     abortRef.current = null;
     setStatus('idle');

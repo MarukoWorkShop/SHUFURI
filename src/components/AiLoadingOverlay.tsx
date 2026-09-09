@@ -25,13 +25,15 @@ export type AiLoadingOverlayProps = {
   visible: boolean;
   /** 界面语言：'en' 只显示英文，其余（含未传）显示中文 */
   lang?: string;
+  /** 可选：传入后遮罩底部显示「取消」按钮，用于手动中止在飞的生成任务 */
+  onCancel?: () => void;
 };
 
 /**
  * AI 生成时的统一等待遮罩：手绘咖啡杯动画 + 流动进度条 + ,random 轮换文案。
  * 进度条为装饰性不确定动画（非真实进度），用于缓解"无反应"的焦虑感。
  */
-export function AiLoadingOverlay({ visible, lang }: AiLoadingOverlayProps) {
+export function AiLoadingOverlay({ visible, lang, onCancel }: AiLoadingOverlayProps) {
   const pool = lang === 'en' ? LOADING_MESSAGES_EN : LOADING_MESSAGES_ZH;
 
   // 首次挂载随机挑一句作为起点，避免每次都从同一句开始
@@ -97,6 +99,16 @@ export function AiLoadingOverlay({ visible, lang }: AiLoadingOverlayProps) {
         <p key={messageIndex} className="ai-loading-overlay__msg">
           {msg}
         </p>
+
+        {onCancel && (
+          <button
+            type="button"
+            className="ai-loading-overlay__cancel"
+            onClick={onCancel}
+          >
+            {lang === 'en' ? 'Cancel' : '取消生成'}
+          </button>
+        )}
       </div>
     </div>
   );

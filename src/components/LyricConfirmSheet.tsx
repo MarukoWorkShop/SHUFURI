@@ -227,7 +227,9 @@ export default function LyricConfirmSheet({
           )}
         </div>
 
-        {isGeneratingStudy && <AiLoadingOverlay visible={isGeneratingStudy} lang={iface} />}
+        {isGeneratingStudy && (
+          <AiLoadingOverlay visible={isGeneratingStudy} lang={iface} onCancel={onDismiss} />
+        )}
       </div>
     </div>
   );

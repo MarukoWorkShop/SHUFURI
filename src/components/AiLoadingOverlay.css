@@ -161,6 +161,29 @@
   }
 }
 
+/* ---------- 取消按钮：可选，用于手动中止生成 ---------- */
+.ai-loading-overlay__cancel {
+  margin-top: 4px;
+  padding: 8px 28px;
+  border-radius: 999px;
+  border: 1.5px solid #3a3a3a;
+  background: transparent;
+  color: #3a3a3a;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.ai-loading-overlay__cancel:hover {
+  background: rgba(58, 58, 58, 0.08);
+}
+
+.ai-loading-overlay__cancel:active {
+  transform: scale(0.97);
+}
+
 @keyframes ai-loading-fade-in {
   from {
     opacity: 0;
@@ -188,5 +211,12 @@
   }
   .ai-loading-cup__mug {
     fill: #2f2f2f;
+  }
+  .ai-loading-overlay__cancel {
+    border-color: #e6e6e6;
+    color: #e6e6e6;
+  }
+  .ai-loading-overlay__cancel:hover {
+    background: rgba(230, 230, 230, 0.12);
   }
 }

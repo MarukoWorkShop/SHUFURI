@@ -107,6 +107,8 @@ export function useStructuredLyricsClipboardCard({
   const [externalPrompt, setExternalPrompt] = useState<ExternalPromptRequest | null>(null);
   const promptTokenRef = useRef(0);
   const studyAi = useEmbeddedAiGenerate();
+  /** 学习材料生成轮次令牌：关闭浮层 / 首页重置 / 新一轮生成都会 +1，旧轮次结果一律丢弃 */
+  const studyRunTokenRef = useRef(0);
 
   /** 自动读剪贴板失败时（如 iOS 非 focused 状态）的用户手动粘贴 modal */
   const [manualPasteOpen, setManualPasteOpen] = useState(false);
@@ -330,13 +332,18 @@ export function useStructuredLyricsClipboardCard({
   }, []);
 
   const handleConfirmDismiss = useCallback(() => {
+    // C：关闭浮层 = 放弃当前任务：立即中止在飞 AI 请求并使旧轮次过期，
+    // 防止它几秒/几分钟后在后台结束，再把用户带回"上一个未完成任务"。
+    studyRunTokenRef.current += 1;
+    studyAi.cancel();
+    setIsGeneratingStudy(false);
     if (prevClipboardHashRef.current) {
       consumedClipboardRef.current.add(prevClipboardHashRef.current);
     }
     setConfirmVisible(false);
     setConfirmStreaming(false);
     awaitingStudyPasteRef.current = false;
-  }, []);
+  }, [studyAi]);
 
   // 包装 layoutFromRaw：排版期间切换 isLayouting，驱动全屏 Loading 覆盖。
   const runLayout = useCallback(
@@ -363,6 +370,12 @@ export function useStructuredLyricsClipboardCard({
     const stream = confirmedStreamRef.current;
     if (!stream) return;
 
+    // C：本轮生成令牌。关闭浮层 / 首页重置 / 新一轮生成都会令令牌 +1；
+    // 旧轮次在 await 返回后据此直接丢弃结果，绝不触碰当前 UI 状态，
+    // 避免"旧任务结束又把用户带回上一个未完成任务"。
+    const runToken = ++studyRunTokenRef.current;
+    const isCurrentRun = (): boolean => runToken === studyRunTokenRef.current;
+
     // 优先走内部 AI 生成学习材料；失败时留在弹窗内显示错误，不自动跳到外部粘贴
     setStudyError(null);
     setIsGeneratingStudy(true);
@@ -374,15 +387,18 @@ export function useStructuredLyricsClipboardCard({
         matrix,
         pedagogicalLevel,
       });
+      if (!isCurrentRun()) return; // 已被取消/取代的旧轮次：直接丢弃
       if (result.status === 'ok') {
         try {
           const { merged, vocabCount, grammarCount } = mergeConfirmedLyricsWithStudy(
             stream,
             result.rawText,
           );
+          if (!isCurrentRun()) return;
           awaitingStudyPasteRef.current = false;
           setConfirmVisible(false);
           await runLayout(merged);
+          if (!isCurrentRun()) return;
           showToast(
             vocabCount + grammarCount > 0
               ? `${L('已生成并合并词解（V', 'Generated & merged vocab (V')}${vocabCount}/G${grammarCount})${L('并排版', 'and formatted layout.')}`
@@ -403,8 +419,9 @@ export function useStructuredLyricsClipboardCard({
       const msg = e instanceof Error ? e.message : L('网络错误', 'Network error.');
       setStudyError(`${L('生成失败：', 'Generation failed:')}${msg}`);
       showToast(`${L('生成失败：', 'Generation failed:')}${msg}`);
-    }     finally {
-      setIsGeneratingStudy(false);
+    } finally {
+      // 只有最新一轮才负责收起 loading；旧轮次不得改写新任务的 isGeneratingStudy
+      if (isCurrentRun()) setIsGeneratingStudy(false);
     }
   }, [
     confirmTitle,
