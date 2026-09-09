@@ -311,3 +311,55 @@ body.is-resizing-edit-split * {
   background: color-mix(in srgb, var(--color-kinari, #e8c84a) 10%, transparent);
   box-shadow: inset 3px 0 0 var(--color-kinari, #e8c84a);
 }
+
+/* —— 编辑画布 boot 遮罩：首帧量高（scaledH）就绪前先盖住，避免歌词库长歌
+ *    进入编辑页先闪「小稿 / 字体挤作一团」，等 onLayoutReady 后淡出即终态 —— */
+.edit-area__lyrics-pane .edit-canvas-boot {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-toolbox, 350);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--color-edit-canvas-bg);
+  opacity: 1;
+  transition: opacity 0.24s ease;
+  pointer-events: auto;
+}
+
+.edit-area__lyrics-pane .edit-canvas-boot.is-fading {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.edit-canvas-boot__ring {
+  width: 30px;
+  height: 30px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--ui-fg-secondary, #64748b) 22%, transparent);
+  border-top-color: var(--color-kinari, #c9a227);
+  animation: edit-canvas-boot-spin 0.9s linear infinite;
+}
+
+.edit-canvas-boot__label {
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--ui-fg-muted, #94a3b8);
+}
+
+@keyframes edit-canvas-boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edit-canvas-boot__ring {
+    animation: none;
+    border-top-color: var(--color-kinari, #c9a227);
+  }
+}

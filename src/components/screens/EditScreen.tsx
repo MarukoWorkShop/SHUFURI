@@ -425,6 +425,40 @@ export default function EditScreen() {
     onScrollStart: closeInkOnScrollStart,
   });
 
+  /**
+   * 进编辑画布「就绪后一次性渲染」：shufuri 画布需要首帧后 rAF 量高（scaledH），
+   * 歌词库长歌内容大时量高会占用数十~数百 ms，期间会先闪「小稿 / 字体挤作一团」。
+   * 这里在量高就绪（onLayoutReady）前用同底遮罩 + 圆环盖住画布区，就绪后再淡出。
+   */
+  const [editCanvasBoot, setEditCanvasBoot] = useState<'booting' | 'fading' | 'ready'>('booting');
+  // 遮罩开始时刻：量高很快（小内容）时直接切出，避免每次进入编辑都白闪一下圆环
+  const editCanvasBootStartedAtRef = useRef<number>(0);
+  useEffect(() => {
+    editCanvasBootStartedAtRef.current = performance.now();
+  }, []);
+
+  const revealEditCanvas = useCallback(() => {
+    setEditCanvasBoot((prev) => {
+      if (prev === 'ready') return prev;
+      const elapsed = performance.now() - editCanvasBootStartedAtRef.current;
+      // 就绪发生在遮罩还没被感知到之前 → 直接放行，零闪烁；已明显卡顿 → 淡出让用户感知「就绪」
+      return elapsed < 120 ? 'ready' : 'fading';
+    });
+  }, []);
+
+  useEffect(() => {
+    if (editCanvasBoot !== 'booting') return;
+    // 兜底：极端情况（量高/字体始终未回调）也不永久挡死编辑，6s 后强制放行
+    const t = window.setTimeout(() => setEditCanvasBoot('fading'), 6000);
+    return () => window.clearTimeout(t);
+  }, [editCanvasBoot]);
+
+  useEffect(() => {
+    if (editCanvasBoot !== 'fading') return;
+    const t = window.setTimeout(() => setEditCanvasBoot('ready'), 240);
+    return () => window.clearTimeout(t);
+  }, [editCanvasBoot]);
+
   const collapseToolbox = useCallback(() => {
     ink.setInkToolboxOpen(false);
   }, [ink]);
@@ -946,9 +980,23 @@ export default function EditScreen() {
                 language={lyricsLanguage}
                 colorTheme={colorTheme}
                 showRuby={showRubyAnnotations}
+                onLayoutReady={revealEditCanvas}
               />
             </InkFineTuneEditor>
           </div>
+
+          {editCanvasBoot !== 'ready' ? (
+            <div
+              className={`edit-canvas-boot${editCanvasBoot === 'fading' ? ' is-fading' : ''}`}
+              role="status"
+              aria-live="polite"
+            >
+              <span className="edit-canvas-boot__ring" aria-hidden="true" />
+              <span className="edit-canvas-boot__label">
+                {L('正在排版…', 'Preparing layout…')}
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {isDesktopSplit ? (

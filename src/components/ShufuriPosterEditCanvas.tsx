@@ -35,6 +35,11 @@ type Props = {
   language?: LyricsLanguage;
   colorTheme?: ColorTheme;
   showRuby?: boolean;
+  /**
+   * 首次布局量高（scaledH）+ 字体就绪后回调一次，供父级做「就绪后再一次性展示」，
+   * 避免进入编辑页时先闪「小稿 / 字体挤作一团」的半成品画布。
+   */
+  onLayoutReady?: () => void;
 };
 
 /** 高度亚像素抖动忽略阈值，避免 frame 高度微变触发 scroll 死循环 */
@@ -52,6 +57,7 @@ export default function ShufuriPosterEditCanvas({
   language = 'jp',
   colorTheme,
   showRuby = true,
+  onLayoutReady,
 }: Props) {
   const safeBody = useMemo(() => sanitizeShufuriPosterHtml(bodyHtml), [bodyHtml]);
   /**
@@ -100,6 +106,12 @@ export default function ShufuriPosterEditCanvas({
   const rootRef = useRef<HTMLDivElement>(null);
   /** 内容/缩放刚变更时允许一次高度回落；其后只升不降，切断 scrollHeight 反馈环 */
   const allowHeightShrinkRef = useRef(true);
+  /** 首次量高 + 字体就绪后放行（只放行一次），父级据此移除 boot 遮罩 */
+  const onLayoutReadyRef = useRef(onLayoutReady);
+  useLayoutEffect(() => {
+    onLayoutReadyRef.current = onLayoutReady;
+  }, [onLayoutReady]);
+  const didNotifyLayoutReadyRef = useRef(false);
   const [renderScale, setRenderScale] = useState(displayScale);
   const [scaledH, setScaledH] = useState<number | undefined>();
   const effectiveScale = renderScale * contentScaleSafe;
@@ -174,6 +186,21 @@ export default function ShufuriPosterEditCanvas({
     }
     allowHeightShrinkRef.current = true;
 
+    /**
+     * 首次量高完成 + 字体就绪后放行。之所以挂 rAF：setScaledH 是异步 state，
+     * 双 rAF 能确保 scaledH 提交、frame 高度与 transform 几何稳定后再回调父级，
+     * 父级此时才把 boot 遮罩淡出——首帧所见即终态，不再先闪「小稿/挤作一团」。
+     */
+    const notifyLayoutReady = () => {
+      if (didNotifyLayoutReadyRef.current) return;
+      didNotifyLayoutReadyRef.current = true;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          onLayoutReadyRef.current?.();
+        });
+      });
+    };
+
     let raf = 0;
     const update = () => {
       cancelAnimationFrame(raf);
@@ -190,6 +217,18 @@ export default function ShufuriPosterEditCanvas({
           allowHeightShrinkRef.current = false;
           return next;
         });
+        if (!didNotifyLayoutReadyRef.current) {
+          const fonts = document.fonts;
+          if (!fonts || fonts.status === 'loaded') {
+            notifyLayoutReady();
+          } else if (fonts.ready) {
+            // 字体仍在加载：等 fonts.ready（此时本 effect 里另一个 ready.then(update)
+            // 会用终态字体再量一次高），随后双 rAF 放行，所见即终态。
+            void fonts.ready.then(notifyLayoutReady).catch(notifyLayoutReady);
+          } else {
+            notifyLayoutReady();
+          }
+        }
       });
     };
     update();
