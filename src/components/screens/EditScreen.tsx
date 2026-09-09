@@ -177,6 +177,13 @@ export default function EditScreen() {
     }
   }, [lang, explain]);
 
+  // 方向2：预加载导出页 chunk。enterExportFlow 在切换 mode 前会先跑 buildPages，
+  // 无注释的纯歌词分页很快，如果等到切 mode 才下载 ExportScreen chunk，
+  // 用户会长时间卡在「正在打开导出页…」且无法退出。
+  useEffect(() => {
+    void import('./ExportScreen');
+  }, []);
+
   // —— 划词笔记 / 重点词汇 / 重点语法：删除与点选编辑（与划词/铅笔模式解耦） ——
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [draftTerm, setDraftTerm] = useState('');
@@ -888,7 +895,19 @@ export default function EditScreen() {
           <button
             type="button"
             className="btn-export btn-export-primary"
-            onClick={() => void enterExportFlow()}
+            onClick={async () => {
+              try {
+                await enterExportFlow();
+              } catch (e) {
+                console.error('[enter-export]', e);
+                showToast(
+                  e instanceof Error
+                    ? e.message
+                    : L('进入导出页失败，请重试', 'Failed to open export page. Please try again.'),
+                  4000,
+                );
+              }
+            }}
             disabled={!bodyHtml.trim()}
           >
             {L('导出', 'Export')}

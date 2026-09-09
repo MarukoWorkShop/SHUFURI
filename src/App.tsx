@@ -5,6 +5,7 @@ import AppLayout from './components/app/AppLayout';
 import GlobalChunkLoading, {
   EDIT_ENTRY_LOADING_TIPS,
 } from './components/GlobalChunkLoading';
+import { PulsatingDots } from './components/PulsatingDots';
 import AiLoadingOverlay from './components/AiLoadingOverlay';
 import HomeScreen from './components/screens/HomeScreen';
 // Edit/Export 屏体积大（海报排版、导出、字典等），按需懒加载以缩小首屏
@@ -46,7 +47,7 @@ function AppShell({
   onLibraryImported,
   toastMessage,
 }: AppShellProps) {
-  const { mode, openProject, isOpeningProject } = usePosterDocumentContext();
+  const { mode, openProject, isOpeningProject, handleBackToEdit } = usePosterDocumentContext();
   const homeSession = useHomeSessionContext();
   const {
     appSettings,
@@ -167,11 +168,7 @@ function AppShell({
         </ErrorBoundary>
       )}
       {mode === 'export' && (
-        <Suspense
-          fallback={
-            <GlobalChunkLoading messageZh="正在打开导出页…" messageEn="Opening export…" />
-          }
-        >
+        <Suspense fallback={<ExportChunkLoading onBack={handleBackToEdit} />}>
           <ExportScreen />
         </Suspense>
       )}
@@ -182,6 +179,25 @@ function AppShell({
 
       {isOpeningProject && <AiLoadingOverlay visible lang={appSettings.interfaceLanguage} />}
     </AppLayout>
+  );
+}
+
+type ExportChunkLoadingProps = {
+  onBack: () => void;
+};
+
+/** 导出页 chunk 加载等待：提供返回编辑按钮，避免网络异常/加载卡死时无法退出 */
+function ExportChunkLoading({ onBack }: ExportChunkLoadingProps) {
+  return (
+    <div className="global-layout-loading" role="status" aria-live="polite">
+      <div className="global-layout-loading__inner">
+        <PulsatingDots size={12} />
+        <p className="global-layout-loading__text">{L('正在打开导出页…', 'Opening export…')}</p>
+        <button type="button" className="btn-tonal" onClick={onBack}>
+          {L('返回编辑', 'Back to Editor')}
+        </button>
+      </div>
+    </div>
   );
 }
 
