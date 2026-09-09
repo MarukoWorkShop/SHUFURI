@@ -28,15 +28,6 @@ const EXPORT_HTML2CANVAS_SCALE_FUDGE = 0.98;
 
 
 
-/** 导出 backdrop 完全移出左缘：画布宽 + 视口宽 + 余量（-200vw 不足以隐藏 1080px 手机竖屏画布） */
-function getExportBackdropOffscreenLeft(canvasW: number): number {
-  const vw =
-    typeof window !== 'undefined'
-      ? Math.ceil(window.visualViewport?.width ?? window.innerWidth ?? canvasW)
-      : canvasW;
-  return -(canvasW + vw + 64);
-}
-
 function sanitizeFragmentHtml(html: string): string {
   let s = html.replace(/\r\n/g, '\n');
   s = s.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
@@ -101,28 +92,27 @@ export function mountPosterExportPage(
         : getPosterBackgroundBgColor(renderOptions?.backgroundId);
   const rootStyle = buildShufuriPosterRootStyle(layoutProfile, backgroundImage);
 
-  // 离屏 backdrop：为 html2canvas 提供白底，尺寸与画布一致，永不移入视口。
+  // 全屏 backdrop：为 html2canvas 提供干净渲染上下文与版式底色。
   // 关键约束：
   // 1) 不能使用 clip-path / opacity:0 / visibility:hidden / z-index:-1 on shell
-  //    —— html2canvas 会直接裁切或忽略不可见内容，导致栅格化全空白。
-  // 2) 禁止 100vw 全屏遮罩或 prepare 时移入视口 —— 会触发视口/缩放重算与全屏白闪。
-  // 3) left 须 ≤ -(canvasW + viewportW)：translateX(-200vw) 无法盖住 1080px 画布，会漏出左侧大字。
+  //    —— html2canvas 会直接裁切或忽略不可见内容，导致栅格化全空白 / PDF 零字节。
+  // 2) 必须让 shell 位于视口左上角 (left:0, top:0)，确保 html2canvas 默认以 (0,0)
+  //    为起点捕获；之前把 backdrop 推到 -(canvasW+viewportW) 左外侧，导致部分浏览器
+  //    中 shell 的 bounding rect 为负，html2canvas 把内容画到画布外，输出空白 PDF。
+  // 3) wrapper / shell 保持 overflow:visible，配合 RASTER_SAFE_CSS 与 onclone 中
+  //    裁剪，避免 CJK 基线偏移导致的半字形切边。
   const backdrop = doc.createElement('div');
   backdrop.setAttribute('aria-hidden', 'true');
   backdrop.style.position = 'fixed';
-  backdrop.style.left = `${getExportBackdropOffscreenLeft(canvasW)}px`;
+  backdrop.style.left = '0';
   backdrop.style.top = '0';
-  backdrop.style.width = `${canvasW}px`;
-  backdrop.style.height = `${canvasH}px`;
-  // 导出挂载勿用 overflow:hidden / contain:paint：二者都会在 html2canvas 里变成
-  // ClipEffect，把 CJK 基线偏移画出的下半字形裁掉。页边界由强制 canvas 尺寸保证。
-  backdrop.style.overflow = 'visible';
-  backdrop.style.background = '#ffffff';
+  backdrop.style.width = '100vw';
+  backdrop.style.height = '100vh';
+  backdrop.style.overflow = 'hidden';
+  backdrop.style.background = pageBgColor;
   backdrop.style.pointerEvents = 'none';
   backdrop.style.contain = 'layout style';
   backdrop.style.zIndex = '2147483646';
-  // backdrop 底色与版式底色联动，避免 html2canvas 把非白底刷白（PDF 零字节回归）
-  backdrop.style.background = pageBgColor;
 
   const wrapper = doc.createElement('div');
   wrapper.style.position = 'absolute';

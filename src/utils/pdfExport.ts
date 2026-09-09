@@ -263,6 +263,40 @@ function forceCanvasSize(
   return fixed;
 }
 
+/**
+ * 检测 canvas 是否几乎全为背景色（html2canvas 把离屏/不可见目标栅格化成空白）。
+ * 采样而非逐像素，避免大画布阻塞主线程；海报页只要有文字就应显著偏离背景色。
+ */
+function isCanvasEffectivelyBlank(canvas: HTMLCanvasElement): boolean {
+  const width = canvas.width;
+  const height = canvas.height;
+  if (width <= 1 || height <= 1) return true;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return true;
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = imageData.data;
+  // 左上角为背景色参考（html2canvas 会先用 backgroundColor 填充）
+  const r0 = data[0] ?? 255;
+  const g0 = data[1] ?? 255;
+  const b0 = data[2] ?? 255;
+  const threshold = 30;
+  const step = 8;
+  let nonBg = 0;
+  for (let y = 0; y < height; y += step) {
+    for (let x = 0; x < width; x += step) {
+      const idx = (y * width + x) * 4;
+      const r = data[idx] ?? r0;
+      const g = data[idx + 1] ?? g0;
+      const b = data[idx + 2] ?? b0;
+      if (Math.abs(r - r0) > threshold || Math.abs(g - g0) > threshold || Math.abs(b - b0) > threshold) {
+        nonBg++;
+        if (nonBg > 20) return false;
+      }
+    }
+  }
+  return true;
+}
+
 /** 给任意 Promise 加超时，超时抛出描述性错误 */
 function withDeadline<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -315,7 +349,13 @@ async function rasterizeWithHtml2canvas(
   );
   const expectedW = Math.round(w * scale);
   const expectedH = Math.round(h * scale);
-  return forceCanvasSize(rawCanvas, expectedW, expectedH);
+  const canvas = forceCanvasSize(rawCanvas, expectedW, expectedH);
+  if (isCanvasEffectivelyBlank(canvas)) {
+    throw new Error(
+      '导出栅格化结果为空（html2canvas 未捕获到内容），请检查导出挂载是否位于可视区域内。',
+    );
+  }
+  return canvas;
 }
 
 async function canvasToBlob(
